@@ -1931,27 +1931,45 @@ const _supabase = (typeof supabase !== 'undefined' && supabase.createClient)
 
 // ── OneSignal Push Notifications ──────────────────────────
 const ONESIGNAL_APP_ID = '133a857e-2a5c-4afe-b726-031f74f27586';
-window.OneSignalDeferred = window.OneSignalDeferred || [];
-OneSignalDeferred.push(async function(OneSignal) {
-  await OneSignal.init({ appId: ONESIGNAL_APP_ID });
-});
 
-// Helper: send push notification via OneSignal REST API isn't possible from client-side
-// Instead, we'll tag users so OneSignal can target them, and trigger notifications
-// from Supabase Edge Functions or manually from the OneSignal dashboard
+function initOneSignal() {
+  if (typeof OneSignal === 'undefined') return;
+  // Only init on the correct domain
+  if (location.hostname !== 'pairdups.com' && location.hostname !== 'www.pairdups.com') {
+    console.log('[PairdUps] OneSignal skipped — not on production domain');
+    return;
+  }
+  try {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        await OneSignal.init({
+          appId: ONESIGNAL_APP_ID,
+          allowLocalhostAsSecureOrigin: false
+        });
+        console.log('[PairdUps] OneSignal initialized');
+      } catch(e) { console.log('[PairdUps] OneSignal init error:', e); }
+    });
+  } catch(e) { console.log('[PairdUps] OneSignal setup error:', e); }
+}
+// Initialize after page load
+window.addEventListener('load', function() { setTimeout(initOneSignal, 1000); });
 
 function tagOneSignalUser() {
   if (typeof OneSignal === 'undefined' || !isSignedIn) return;
-  OneSignalDeferred.push(async function(OneSignal) {
-    try {
-      await OneSignal.login(currentUser.supabaseId || currentUser.email);
-      await OneSignal.User.addTags({
-        email: currentUser.email || '',
-        name: currentUser.name || '',
-        city: currentUser.loc || ''
-      });
-    } catch(e) { console.log('OneSignal tag error:', e); }
-  });
+  try {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        await OneSignal.login(currentUser.supabaseId || currentUser.email);
+        await OneSignal.User.addTags({
+          email: currentUser.email || '',
+          name: currentUser.name || '',
+          city: currentUser.loc || ''
+        });
+      } catch(e) { console.log('OneSignal tag error:', e); }
+    });
+  } catch(e) {}
 }
 
 // ── Persistent user database (localStorage fallback when Supabase unavailable) ──
