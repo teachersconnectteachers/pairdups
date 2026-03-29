@@ -1814,6 +1814,12 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" id="set-pause-account" onchange="togglePauseAccount(this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span><span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
       </div>
 
+      <div onclick="closeModal('modal-settings');openModal('modal-change-password')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--gray-light);border-radius:12px;cursor:pointer">
+        <div style="font-size:20px">🔑</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">Change Password</div><div style="font-size:10px;color:var(--gray)">Update your account password</div></div>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--gray)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
       <!-- DANGER ZONE -->
       <div style="font-size:11px;font-weight:800;color:#DC2626;text-transform:uppercase;letter-spacing:1px;padding:12px 0 2px">⚠️ Danger Zone</div>
       <div onclick="closeModal('modal-settings');openModal('modal-cancel-account')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#FEF2F2;border-radius:12px;cursor:pointer;border:1px solid #FECACA">
@@ -1850,6 +1856,28 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 </div>
 
 <!-- ACCOUNT CANCELED MODAL -->
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-bg" id="modal-change-password" onclick="if(event.target===this)closeModal('modal-change-password')" style="align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:18px;padding:28px 24px 22px;max-width:360px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.18);text-align:center;animation:slideUp 0.22s ease">
+    <div style="font-size:44px;margin-bottom:10px">🔑</div>
+    <div style="font-size:17px;font-weight:800;color:var(--dark);margin-bottom:8px">Change Password</div>
+    <div style="font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:16px">Enter your new password below.</div>
+    <div style="text-align:left;margin-bottom:12px">
+      <label style="font-size:12px;font-weight:700;color:var(--dark);display:block;margin-bottom:4px">New Password</label>
+      <input type="password" id="new-pw" placeholder="At least 6 characters" style="width:100%;padding:11px 14px;border-radius:12px;border:1.5px solid var(--gray-border);font-size:14px;box-sizing:border-box;font-family:inherit">
+    </div>
+    <div style="text-align:left;margin-bottom:20px">
+      <label style="font-size:12px;font-weight:700;color:var(--dark);display:block;margin-bottom:4px">Confirm New Password</label>
+      <input type="password" id="confirm-new-pw" placeholder="Re-enter password" style="width:100%;padding:11px 14px;border-radius:12px;border:1.5px solid var(--gray-border);font-size:14px;box-sizing:border-box;font-family:inherit">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="closeModal('modal-change-password')" style="flex:1;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px 16px;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="doChangePassword()" style="flex:1;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 16px;font-weight:700;font-size:13px;cursor:pointer">Update Password</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-account-canceled" style="align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:18px;padding:28px 24px 22px;max-width:340px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.18);text-align:center;animation:slideUp 0.22s ease">
     <div style="font-size:44px;margin-bottom:10px">😢</div>
@@ -2245,6 +2273,32 @@ async function sendReset() {
   }
   showToast('Reset link sent! 📧');
   setTimeout(()=>goTo('screen-signin'),1500);
+}
+async function doChangePassword() {
+  var newPw = document.getElementById('new-pw').value;
+  var confirmPw = document.getElementById('confirm-new-pw').value;
+  if (!newPw || newPw.length < 6) { showToast('Password must be at least 6 characters.'); return; }
+  if (newPw !== confirmPw) { showToast('Passwords do not match.'); return; }
+  if (_supabase) {
+    try {
+      var { error } = await _supabase.auth.updateUser({ password: newPw });
+      if (error) { showToast('Error: ' + error.message); return; }
+      showToast('Password updated! 🔒');
+      closeModal('modal-change-password');
+      document.getElementById('new-pw').value = '';
+      document.getElementById('confirm-new-pw').value = '';
+    } catch(e) { showToast('Something went wrong. Please try again.'); }
+  } else {
+    if (currentUser.email && USER_DB[currentUser.email]) {
+      currentUser.password = newPw;
+      USER_DB[currentUser.email].password = newPw;
+      _saveDB(USER_DB); _saveSession(currentUser);
+      showToast('Password updated! 🔒');
+      closeModal('modal-change-password');
+      document.getElementById('new-pw').value = '';
+      document.getElementById('confirm-new-pw').value = '';
+    }
+  }
 }
 async function logOut() {
   if (_supabase) { await _supabase.auth.signOut().catch(()=>{}); }
@@ -5443,6 +5497,22 @@ document.getElementById('chat-messages').addEventListener('click', function(e) {
 });
 
 window.addEventListener('load', async function() {
+  // Check if this is a password reset redirect (URL contains type=recovery)
+  var _isPasswordReset = false;
+  if (_supabase) {
+    var hashParams = new URLSearchParams(window.location.hash.substring(1));
+    var urlParams = new URLSearchParams(window.location.search);
+    if (hashParams.get('type') === 'recovery' || urlParams.get('type') === 'recovery') {
+      _isPasswordReset = true;
+    }
+    // Listen for PASSWORD_RECOVERY event
+    _supabase.auth.onAuthStateChange(function(event, session) {
+      if (event === 'PASSWORD_RECOVERY') {
+        setTimeout(function() { openModal('modal-change-password'); }, 500);
+      }
+    });
+  }
+
   // Check for Supabase session first
   if (_supabase) {
     try {
