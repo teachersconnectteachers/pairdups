@@ -3,17 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
-<meta name="theme-color" content="#FF3B7F">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="PairdUps">
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
-<meta property="og:title" content="PairdUps — Find Your Activity Partner">
-<meta property="og:description" content="Find activity partners and dates near you. Sports, dining, concerts, coffee, and more!">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://pairdups.com">
-<meta name="twitter:card" content="summary">
 <title>PairdUps</title>
 <style>
 .map-svg-wrap{width:100%;height:220px;border-radius:14px;overflow:hidden;position:relative;cursor:grab;user-select:none;background:#e8f0dc;touch-action:none}
@@ -3240,6 +3229,58 @@ function renderUserListing(d) {
   }
 }
 
+async function loadSupabaseListings() {
+  if (!_supabase) return;
+  try {
+    // Fetch all active listings with their poster's profile data
+    var { data: rows, error } = await _supabase
+      .from('listings')
+      .select('*, profiles!listings_owner_id_fkey(name, age, location, bio, photo_url, face_pos, interests, email)')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    if (error || !rows) { console.log('Listings load error:', error); return; }
+    
+    // Clear existing user-created cards from Discover (keep sample cards for now)
+    document.querySelectorAll('.listing-card[data-owner-email]').forEach(function(c) {
+      if (c.dataset.ownerEmail) c.remove();
+    });
+    // Clear my-listings container of dynamic cards
+    document.querySelectorAll('#my-listings-container .my-card').forEach(function(c) { c.remove(); });
+    
+    // Build listing data and render
+    userListings = [];
+    rows.forEach(function(row) {
+      var p = row.profiles || {};
+      var d = {
+        id: 'sb-' + row.id, supabaseId: row.id,
+        title: row.title || '', desc: row.description || '',
+        venue: row.venue || '', dateVal: row.date_val || '',
+        timeVal: row.time_val || '', endTimeVal: row.end_time_val || '',
+        city: row.city || '', catName: row.category || 'Other',
+        pairType: row.pair_type || 'Just for Fun',
+        lookingFor: row.looking_for || 'M/F',
+        groupType: row.group_type || 'One-on-One',
+        dateStr: row.date_str || '', emoji: row.emoji || '🎉',
+        userName: p.name || 'Anonymous', userAge: p.age || '',
+        userLoc: p.location || row.city || '',
+        userPhoto: p.photo_url || _DEFAULT_AVATAR,
+        userBio: p.bio || '', userInterests: p.interests || [],
+        userFacePos: p.face_pos || 'center 20%',
+        ownerEmail: p.email || ''
+      };
+      userListings.push(d);
+      renderUserListing(d);
+    });
+    _saveListings(userListings);
+    toggleMyListingsEmpty();
+    // Re-apply face centering for new images
+    setTimeout(applyFaceCentering, 300);
+    // Re-sort expired cards
+    setTimeout(function() { filterExpiredFromDiscover(); markExpiredCards(); }, 500);
+    console.log('[PairdUps] Loaded ' + rows.length + ' listings from Supabase');
+  } catch(e) { console.log('Supabase listings error:', e); }
+}
+
 function restoreUserListings() {
   userListings = _getListings();
   var changed = false;
@@ -5397,8 +5438,12 @@ window.addEventListener('load', async function() {
       }
     } catch(e) {}
   }
-  // Restore user-created PairdUps from localStorage
+  // Restore user-created PairdUps from localStorage first (instant)
   restoreUserListings();
+  // Then load from Supabase (async, replaces localStorage data with cloud data)
+  if (_supabase) {
+    loadSupabaseListings();
+  }
   // Ensure all discover cards are visible (including expired)
   document.querySelectorAll('#screen-discover .listing-card').forEach(function(c) { c.style.display = ''; });
   // Restore conversations
@@ -5497,15 +5542,6 @@ window.addEventListener('load', async function() {
   setTimeout(function() { filterExpiredFromDiscover(); }, 800);
 });
 
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(reg => {
-      console.log('[PairdUps] Service Worker registered');
-    }).catch(err => console.log('[PairdUps] SW registration failed:', err));
-  });
-}
 </script>
 </body>
 </html>
