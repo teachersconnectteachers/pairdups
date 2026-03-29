@@ -469,6 +469,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 </head>
 <body>
 <div style="position:relative;width:390px;height:844px;overflow:hidden;border-radius:50px;box-shadow:0 30px 80px rgba(0,0,0,0.3),inset 0 0 0 2px #1A1A2E;flex-shrink:0">
@@ -1928,6 +1929,31 @@ const _supabase = (typeof supabase !== 'undefined' && supabase.createClient)
   ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
+// ── OneSignal Push Notifications ──────────────────────────
+const ONESIGNAL_APP_ID = 'e13a857e-2a5c-4a9e-b736-a01bf4ef2faa';
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(async function(OneSignal) {
+  await OneSignal.init({ appId: ONESIGNAL_APP_ID });
+});
+
+// Helper: send push notification via OneSignal REST API isn't possible from client-side
+// Instead, we'll tag users so OneSignal can target them, and trigger notifications
+// from Supabase Edge Functions or manually from the OneSignal dashboard
+
+function tagOneSignalUser() {
+  if (typeof OneSignal === 'undefined' || !isSignedIn) return;
+  OneSignalDeferred.push(async function(OneSignal) {
+    try {
+      await OneSignal.login(currentUser.supabaseId || currentUser.email);
+      await OneSignal.User.addTags({
+        email: currentUser.email || '',
+        name: currentUser.name || '',
+        city: currentUser.loc || ''
+      });
+    } catch(e) { console.log('OneSignal tag error:', e); }
+  });
+}
+
 // ── Persistent user database (localStorage fallback when Supabase unavailable) ──
 function _getDB()      { try { var r=localStorage.getItem("pu_db"); return r?JSON.parse(r):{}; } catch(e){return{};} }
 function _saveDB(db)   { try { localStorage.setItem("pu_db", JSON.stringify(db)); }  catch(e){} }
@@ -2072,6 +2098,7 @@ async function signIn() {
   syncProfileForm();
   showTopbarAvatar();
   showToast('Welcome back, ' + currentUser.name + '! 👋');
+  tagOneSignalUser();
   goTo('screen-discover');
 }
 async function register() {
@@ -2143,6 +2170,7 @@ async function register() {
   syncProfileForm();
   showTopbarAvatar();
   showToast('Account created! Let\'s set up your profile 🎉');
+  tagOneSignalUser();
   goTo('screen-discover');
   setTimeout(function() { openEditProfile(); }, 300);
 }
@@ -5411,7 +5439,7 @@ window.addEventListener('load', async function() {
           document.getElementById('screen-discover').classList.add('active');
           syncProfileForm();
           showTopbarAvatar();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); }, 500);
         }
       }
     } catch(e) { console.log('Supabase session check:', e); }
