@@ -2231,10 +2231,17 @@ function closeAvatarMenu() {
   if (dd) dd.style.display = 'none';
 }
 async function sendReset() {
-  var emailEl = document.querySelector('#screen-reset input[type=email]');
+  var emailEl = document.querySelector('#screen-forgot input[type=email]');
   var email = emailEl ? emailEl.value.trim().toLowerCase() : '';
-  if (_supabase && email) {
-    await _supabase.auth.resetPasswordForEmail(email).catch(()=>{});
+  if (!email) { showToast('Please enter your email address.'); return; }
+  if (_supabase) {
+    try {
+      var { error } = await _supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://www.pairdups.com'
+      });
+      if (error) { console.log('Reset email error:', error); showToast('Error: ' + error.message); return; }
+      console.log('[PairdUps] Password reset email sent to:', email);
+    } catch(e) { console.log('Reset error:', e); showToast('Something went wrong. Please try again.'); return; }
   }
   showToast('Reset link sent! 📧');
   setTimeout(()=>goTo('screen-signin'),1500);
