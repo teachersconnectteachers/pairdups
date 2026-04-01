@@ -229,6 +229,11 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
 .act-btn.edit{background:var(--pink-pale);color:var(--pink)}
 .act-btn.delete{background:#FEE2E2;color:#DC2626}
 .my-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0;align-self:flex-start}
+.idea-chip{background:var(--pink-pale);color:var(--pink-dark);font-size:12px;font-weight:600;padding:7px 14px;border-radius:50px;cursor:pointer;transition:all 0.15s;border:1.5px solid transparent}
+.idea-chip:hover{background:var(--pink);color:#fff;transform:scale(1.03)}
+.idea-chip:active{transform:scale(0.97)}
+.dark-mode .idea-chip{background:#2A1A22;color:var(--pink);border-color:#3A2A32}
+.dark-mode .idea-chip:hover{background:var(--pink);color:#fff}
 .expired-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;background:#FFEBEE;color:#C62828;margin-left:4px}
 /* Toggle switch */
 input[type=checkbox]:checked + span{background:var(--pink)!important}
@@ -847,7 +852,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <div class="screen" id="screen-create">
   <div class="screen-header"><button class="back-btn" onclick="checkUnsavedChanges(goBack)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button><span class="screen-title" id="create-screen-title">Create a PairdUp</span></div>
   <div class="scroll-area"><div class="create-form">
-    <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" placeholder="e.g. Coffee &amp; Conversation" id="cf-title" maxlength="60" oninput="markFormDirty()"></div>
+    <div class="form-group"><label class="form-label" style="display:flex;justify-content:space-between;align-items:center">Title * <span onclick="openModal('modal-pairdup-ideas')" style="font-size:12px;font-weight:700;color:var(--pink);cursor:pointer;display:flex;align-items:center;gap:3px">💡 Need Ideas?</span></label><input type="text" class="form-input" placeholder="e.g. Coffee &amp; Conversation" id="cf-title" maxlength="60" oninput="markFormDirty()"></div>
     <div class="form-group"><span class="form-section-label">Activity Type *</span>
       <div class="pill-group">
         <div class="pill" onclick="togglePill(this,'act')">🎳 Bowling/Games</div>
@@ -1891,6 +1896,148 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div style="font-size:17px;font-weight:800;color:var(--dark);margin-bottom:8px">Ooops!</div>
     <div style="font-size:13px;color:var(--gray);line-height:1.7;margin-bottom:20px">We didn't find an account with this email address. Please check the spelling or create a new account.</div>
     <button onclick="closeModal('modal-email-not-found')" style="width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 16px;font-weight:700;font-size:14px;cursor:pointer">OK</button>
+  </div>
+</div>
+
+<!-- PAIRDUP IDEAS MODAL -->
+
+<!-- FRIENDLY DECLINE REASON MODAL -->
+<div class="modal-bg" id="modal-decline-reason" onclick="if(event.target===this)closeModal('modal-decline-reason')" style="align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:18px;padding:28px 24px 22px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.18);text-align:center;animation:slideUp 0.22s ease">
+    <div style="font-size:44px;margin-bottom:10px">💛</div>
+    <div style="font-size:17px;font-weight:800;color:var(--dark);margin-bottom:6px">Let Them Down Easy</div>
+    <div style="font-size:12px;color:var(--gray);line-height:1.6;margin-bottom:16px">Choose a friendly message so they don't take it personally — rejection is part of the journey!</div>
+    <select id="decline-reason-select" style="width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--dark);background:#fff;appearance:auto;cursor:pointer;font-family:inherit;margin-bottom:16px">
+      <option value="">— Select a reason —</option>
+      <option value="I already found my PairdUp partner!">🎉 I already found my PairdUp partner!</option>
+      <option value="Wish I'd seen you sooner — already paired up!">⏰ Wish I'd seen you sooner — already paired up!</option>
+      <option value="Not this time, but apply to my next one!">🔜 Not this time, but apply to my next one!</option>
+      <option value="Scheduling didn't work out this time">📅 Scheduling didn't work out this time</option>
+      <option value="Group is full — keep an eye out for my next PairdUp!">👥 Group is full — keep an eye out for my next PairdUp!</option>
+      <option value="Keep posting — you'll find a great match!">💪 Keep posting — you'll find a great match!</option>
+      <option value="Nothing personal — just went a different direction">🌟 Nothing personal — just went a different direction</option>
+      <option value="Try creating your own PairdUp — you'd get tons of responses!">🚀 Try creating your own PairdUp — you'd get tons of responses!</option>
+      <option value="Maybe next time — I hope we cross paths again!">🤞 Maybe next time — I hope we cross paths again!</option>
+    </select>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="closeModal('modal-decline-reason')" style="flex:1;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px 16px;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="doDeclineWithReason()" style="flex:1;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 16px;font-weight:700;font-size:13px;cursor:pointer">Send Response</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAIRDUP IDEAS MODAL -->
+<div class="modal-bg" id="modal-pairdup-ideas" onclick="if(event.target===this)closeModal('modal-pairdup-ideas')" style="align-items:flex-end">
+  <div style="background:#fff;border-radius:22px 22px 0 0;padding:22px 20px 28px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 -4px 30px rgba(0,0,0,.12);animation:slideUp 0.22s ease">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="width:36px;height:4px;background:#ddd;border-radius:4px;margin:0 auto 14px"></div>
+      <div style="font-size:20px;font-weight:900;color:var(--dark)">💡 PairdUp Ideas</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px">Tap any idea to use it — then make it your own!</div>
+    </div>
+    <div id="ideas-list" style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🏃 Active & Outdoors</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" class="ideas-cat">
+          <span class="idea-chip" onclick="pickIdea(this)">Hiking Adventure</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Rock Climbing</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Pickleball Partner</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Tennis Match</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Cycling Buddy</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Kayaking Trip</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Yoga in the Park</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Beach Volleyball</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Jogging Partner</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Ski / Snowboard Trip</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">☕ Food & Drinks</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" class="ideas-cat">
+          <span class="idea-chip" onclick="pickIdea(this)">Coffee & Conversation</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Brunch Date</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Wine Tasting</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Try a New Restaurant</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Cooking Class</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Food Truck Tour</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Boba Tea Run</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Happy Hour Hangout</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Dinner & Drinks</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🎭 Arts & Culture</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" class="ideas-cat">
+          <span class="idea-chip" onclick="pickIdea(this)">Museum Visit</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Art Gallery Tour</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Live Theater Night</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Comedy Show</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Poetry / Open Mic Night</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Book Club Meetup</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Dance Class</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🎵 Music & Events</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" class="ideas-cat">
+          <span class="idea-chip" onclick="pickIdea(this)">Concert Buddy</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Karaoke Night</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Jazz Club Evening</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Music Festival</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Live DJ Set</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Battle of the Bands</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🎮 Fun & Games</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" class="ideas-cat">
+          <span class="idea-chip" onclick="pickIdea(this)">Board Game Night</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Bowling Night</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Escape Room</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Mini Golf</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Arcade Hangout</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Trivia Night</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Poker Night</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Pool / Billiards</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🌆 Explore & Adventure</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" class="ideas-cat">
+          <span class="idea-chip" onclick="pickIdea(this)">City Walking Tour</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Farmers Market</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Flea Market Hunt</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Road Trip</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Photography Walk</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Stargazing Night</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Trail Walk</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Beach Day</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🎬 Watch & Chill</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" class="ideas-cat">
+          <span class="idea-chip" onclick="pickIdea(this)">Movie Night</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Sports Watch Party</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Documentary Screening</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Binge-Watch Buddy</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Drive-In Movie</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛍️ Lifestyle</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" class="ideas-cat">
+          <span class="idea-chip" onclick="pickIdea(this)">Shopping Trip</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Thrift Store Hunt</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Gym Buddy</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Dog Park Hangout</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Volunteer Together</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Plant / Garden Shopping</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Study / Work Buddy</span>
+          <span class="idea-chip" onclick="pickIdea(this)">Attend a Party Together</span>
+        </div>
+      </div>
+    </div>
+    <button onclick="closeModal('modal-pairdup-ideas')" style="margin-top:18px;width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:14px;cursor:pointer">Close</button>
   </div>
 </div>
 
@@ -3190,6 +3337,19 @@ function openEditProfile() {
   goTo('screen-editprofile');
 }
 
+function pickIdea(el) {
+  var idea = el.textContent.trim();
+  var titleField = document.getElementById('cf-title');
+  if (titleField) {
+    titleField.value = idea;
+    titleField.focus();
+    // Place cursor at end so user can easily edit
+    titleField.setSelectionRange(idea.length, idea.length);
+    markFormDirty();
+  }
+  closeModal('modal-pairdup-ideas');
+  showToast('Great pick! Edit the title to make it yours ✨');
+}
 function goToCreate() {
   if (!isSignedIn) { showAuthPrompt('my'); return; }
   document.getElementById('create-screen-title').textContent = 'Create a PairdUp';
@@ -4316,25 +4476,40 @@ function acceptReq(btn) {
   showToast('Request accepted! 🎉');
   updateReqBadge();
 }
+var _declineTargetBtn = null;
 function declineReq(btn) {
-  const card=btn.closest('.req-card');
-  // Remove only accept/decline buttons, keep profile button
+  _declineTargetBtn = btn;
+  openModal('modal-decline-reason');
+}
+function doDeclineWithReason() {
+  var select = document.getElementById('decline-reason-select');
+  var reason = select ? select.value : '';
+  if (!reason) { showToast('Please select a reason.'); return; }
+  closeModal('modal-decline-reason');
+  var btn = _declineTargetBtn;
+  if (!btn) return;
+  const card = btn.closest('.req-card');
   var acceptBtn = card.querySelector('.req-accept');
   var declineBtn = card.querySelector('.req-decline');
   if (acceptBtn) acceptBtn.remove();
   if (declineBtn) declineBtn.remove();
-  // Add status badge before profile button
   var actions = card.querySelector('.req-actions');
   if (actions) {
     var badge = document.createElement('span');
     badge.style.cssText = 'background:#FEE2E2;color:#DC2626;padding:6px 14px;border-radius:50px;font-size:12px;font-weight:700';
     badge.textContent = '✗ Declined';
     actions.insertBefore(badge, actions.firstChild);
+    // Show the reason below the card
+    var reasonDiv = document.createElement('div');
+    reasonDiv.style.cssText = 'font-size:11px;color:var(--gray);padding:6px 14px 0;font-style:italic';
+    reasonDiv.textContent = '💬 "' + reason + '"';
+    card.appendChild(reasonDiv);
   }
   card.dataset.status = 'declined';
   card.style.opacity = '0.6';
-  showToast('Request declined.');
+  showToast('Response sent with kindness 💛');
   updateReqBadge();
+  _declineTargetBtn = null;
 }
 function updateReqBadge() {
   var cards = document.querySelectorAll('.req-card');
