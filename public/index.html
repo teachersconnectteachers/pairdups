@@ -937,7 +937,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
       <div id="create-new-btn-wrap" style="padding:0 16px 20px;display:none"><button class="btn-primary" onclick="goToCreate()">+ Create New PairdUp</button></div>
     </div>
     <div id="content-applied" style="display:none">
-      <div style="padding:0 16px 4px;display:flex;justify-content:flex-end">
+      <div id="applied-delete-wrap" style="padding:0 16px 4px;display:flex;justify-content:flex-end">
         <div style="position:relative">
           <button onclick="toggleAppliedDeleteMenu(event)" style="background:#1E3A5F;border:none;border-radius:50px;padding:9px 18px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(30,58,95,0.3);display:flex;align-items:center;gap:6px">🗑 Delete <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
           <div id="applied-delete-menu" style="display:none;position:absolute;top:36px;right:0;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.15);padding:4px;min-width:260px;z-index:200;border:1px solid var(--gray-border)">
@@ -951,15 +951,16 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
       </div>
       <div class="my-cards" id="applied-cards-container">
         <div id="applied-empty" style="text-align:center;padding:40px 20px;display:none">
-          <div style="font-size:40px;margin-bottom:12px">📭</div>
-          <div style="font-size:15px;font-weight:700;color:var(--dark)">No Applications Yet</div>
-          <div style="font-size:13px;color:var(--gray);margin-top:6px">When you request to join a PairdUp, it will appear here.</div>
+          <div style="font-size:48px;margin-bottom:12px">🙋‍♂️</div>
+          <div style="font-size:17px;font-weight:800;color:var(--dark);margin-bottom:8px">No Applications Yet!</div>
+          <div style="font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:20px">You haven't applied to any PairdUps yet! This is where you'll see and manage all of your PairdUps once you've applied. Try applying to a PairdUp and come back here to see it! Have fun!</div>
+          <button onclick="goTo('screen-discover')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(255,59,127,0.3)">🔍 Browse PairdUps</button>
         </div>
       </div>
       </div>
     </div>
     <div id="content-req" style="display:none">
-      <div style="padding:0 16px 4px;display:flex;justify-content:flex-end">
+      <div id="req-delete-wrap" style="padding:0 16px 4px;display:flex;justify-content:flex-end">
         <div style="position:relative">
           <button onclick="toggleReqDeleteMenu(event)" style="background:#1E3A5F;border:none;border-radius:50px;padding:9px 18px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(30,58,95,0.3);display:flex;align-items:center;gap:6px">🗑 Delete <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
           <div id="req-delete-menu" style="display:none;position:absolute;top:36px;right:0;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.15);padding:4px;min-width:220px;z-index:200;border:1px solid var(--gray-border)">
@@ -972,9 +973,10 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
       </div>
       <div class="my-cards" id="req-cards-container">
         <div id="req-empty" style="text-align:center;padding:40px 20px;display:none">
-          <div style="font-size:40px;margin-bottom:12px">📬</div>
-          <div style="font-size:15px;font-weight:700;color:var(--dark)">No Requests Yet</div>
-          <div style="font-size:13px;color:var(--gray);margin-top:6px">When someone wants to join your PairdUp, it will appear here.</div>
+          <div style="font-size:48px;margin-bottom:12px">📬</div>
+          <div style="font-size:17px;font-weight:800;color:var(--dark);margin-bottom:8px">No Requests Yet!</div>
+          <div style="font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:20px">When someone wants to join one of your PairdUps, their request will show up right here! You'll be able to view their profile, accept, or decline. Create a PairdUp to start getting requests!</div>
+          <button onclick="goToCreate()" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(255,59,127,0.3)">✨ Create a PairdUp</button>
         </div>
       </div>
     </div>
@@ -3114,11 +3116,14 @@ function renderAppliedCards() {
   container.querySelectorAll('.applied-card').forEach(function(c) { c.remove(); });
   var appliedConvos = conversations.filter(function(c) { return c.iAmRequester === true; });
   var emptyEl = document.getElementById('applied-empty');
+  var delWrap = document.getElementById('applied-delete-wrap');
   if (appliedConvos.length === 0) {
     if (emptyEl) emptyEl.style.display = '';
+    if (delWrap) delWrap.style.display = 'none';
     return;
   }
   if (emptyEl) emptyEl.style.display = 'none';
+  if (delWrap) delWrap.style.display = 'flex';
 
   appliedConvos.forEach(function(c) {
     var statusClass = 'status-pending';
@@ -3165,11 +3170,14 @@ function renderRequestCards() {
   container.querySelectorAll('.req-card').forEach(function(c) { c.remove(); });
   var reqConvos = conversations.filter(function(c) { return c.iAmRequester === false; });
   var emptyEl = document.getElementById('req-empty');
+  var delWrap = document.getElementById('req-delete-wrap');
   if (reqConvos.length === 0) {
     if (emptyEl) emptyEl.style.display = '';
+    if (delWrap) delWrap.style.display = 'none';
     return;
   }
   if (emptyEl) emptyEl.style.display = 'none';
+  if (delWrap) delWrap.style.display = 'flex';
 
   reqConvos.forEach(function(c) {
     var photo = c.posterPhoto || _DEFAULT_AVATAR;
