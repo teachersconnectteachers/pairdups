@@ -56,6 +56,8 @@
 .dark-mode .cat-pill{background:#2A2A2E!important;color:#bbb!important;border-color:#444!important}
 .dark-mode .cat-pill.active{background:var(--pink)!important;color:#fff!important;border-color:var(--pink)!important}
 .dark-mode .poster-name{color:#ddd!important}
+.dark-mode #my-profile-email{color:#888!important}
+.dark-mode #my-profile-email svg{stroke:#888!important}
 .dark-mode .poster-loc{color:#888!important}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:'Segoe UI',system-ui,sans-serif}
 body{background:#d0d0d8;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
@@ -345,9 +347,9 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 .profile-avatar-wrap{position:absolute;bottom:-38px;left:18px}
 .profile-avatar{width:76px;height:76px;border-radius:50%;overflow:hidden;border:4px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,0.15)}
 .profile-avatar img{width:100%;height:100%;object-fit:cover;object-position:center 15%;transition:object-position 0.3s}
-.profile-info{padding:46px 18px 18px}
+.profile-info{padding:24px 18px 18px}
 .profile-name{font-size:21px;font-weight:900;color:var(--dark)}
-.profile-loc{font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;margin-bottom:11px}
+.profile-loc{font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;margin-bottom:3px}
 .profile-loc svg{width:12px;height:12px;stroke:var(--pink);fill:none;stroke-width:2}
 .profile-bio{font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:14px}
 .interests{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
@@ -602,7 +604,8 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
           <div id="avatar-dropdown" style="display:none;position:absolute;top:42px;right:0;background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,0.18);padding:6px;min-width:190px;z-index:500;animation:fadeIn 0.18s ease;border:1px solid var(--gray-border)">
             <div style="padding:10px 14px 8px;border-bottom:1px solid var(--gray-border);margin-bottom:4px">
               <div id="avatar-menu-name" style="font-weight:800;font-size:14px;color:var(--dark)"></div>
-              <div id="avatar-menu-email" style="font-size:11px;color:var(--gray)"></div>
+              <div id="avatar-menu-loc" style="font-size:11px;color:var(--gray);display:flex;align-items:center;gap:3px;margin-top:1px"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="var(--pink)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span id="avatar-menu-loc-text"></span></div>
+              <div id="avatar-menu-email" style="font-size:11px;color:var(--gray);margin-top:1px"></div>
             </div>
             <div class="avatar-menu-item" onclick="closeAvatarMenu();goToCreate()">
               <div class="avatar-menu-icon" style="background:#FFF0F5;color:var(--pink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
@@ -992,6 +995,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="profile-info">
       <div class="profile-name" id="my-profile-name">My Profile</div>
       <div class="profile-loc"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span id="my-profile-loc"></span></div>
+      <div id="my-profile-email" style="font-size:12px;color:var(--gray);margin-top:2px;margin-bottom:14px;display:flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--gray)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span id="my-profile-email-text"></span></div>
       <div class="photo-notice"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p><strong>Your profile photo = your listing photo.</strong> The picture here appears on every PairdUp you create. Keep it current! 📸</p></div>
       <p class="profile-bio" id="my-profile-bio"></p>
       <div class="interests" id="my-profile-interests"></div>
@@ -2275,19 +2279,27 @@ function showTopbarAvatar() {
   // Populate menu header
   const nameEl = document.getElementById('avatar-menu-name');
   const emailEl = document.getElementById('avatar-menu-email');
-  if (nameEl) nameEl.textContent = currentUser.name || 'My Account';
+  const locEl = document.getElementById('avatar-menu-loc-text');
+  const locWrap = document.getElementById('avatar-menu-loc');
+  if (nameEl) nameEl.textContent = (currentUser.name || 'My Account') + (currentUser.age ? ', ' + currentUser.age : '');
   if (emailEl) emailEl.textContent = currentUser.email || '';
+  if (locEl) locEl.textContent = currentUser.loc || '';
+  if (locWrap) locWrap.style.display = currentUser.loc ? 'flex' : 'none';
 }
 function toggleAvatarMenu(e) {
   e.stopPropagation();
   const dd = document.getElementById('avatar-dropdown');
   const isOpen = dd.style.display === 'block';
   dd.style.display = isOpen ? 'none' : 'block';
-  // Update name/email in case it changed
+  // Update name/email/loc in case they changed
   const nameEl = document.getElementById('avatar-menu-name');
   const emailEl = document.getElementById('avatar-menu-email');
-  if (nameEl) nameEl.textContent = currentUser.name || 'My Account';
+  const locEl = document.getElementById('avatar-menu-loc-text');
+  const locWrap = document.getElementById('avatar-menu-loc');
+  if (nameEl) nameEl.textContent = (currentUser.name || 'My Account') + (currentUser.age ? ', ' + currentUser.age : '');
   if (emailEl) emailEl.textContent = currentUser.email || '';
+  if (locEl) locEl.textContent = currentUser.loc || '';
+  if (locWrap) locWrap.style.display = currentUser.loc ? 'flex' : 'none';
 }
 function closeAvatarMenu() {
   const dd = document.getElementById('avatar-dropdown');
@@ -4250,6 +4262,10 @@ function syncProfileForm() {
   const nameAge = currentUser.name + (currentUser.age ? ', '+currentUser.age : '');
   document.getElementById('my-profile-name').textContent = nameAge;
   document.getElementById('my-profile-loc').textContent = currentUser.loc || '';
+  var profileEmailText = document.getElementById('my-profile-email-text');
+  var profileEmailWrap = document.getElementById('my-profile-email');
+  if (profileEmailText) profileEmailText.textContent = currentUser.email || '';
+  if (profileEmailWrap) profileEmailWrap.style.display = currentUser.email ? 'flex' : 'none';
   document.getElementById('my-profile-bio').textContent = currentUser.bio || '';
   var photo   = currentUser.photo   || '';
   var defaultAvatar = _DEFAULT_AVATAR_SQ;
@@ -4275,8 +4291,12 @@ function syncProfileForm() {
   // Update topbar avatar menu header
   const nameEl  = document.getElementById('avatar-menu-name');
   const emailEl = document.getElementById('avatar-menu-email');
-  if (nameEl)  nameEl.textContent  = currentUser.name  || 'My Account';
+  const locMenuEl = document.getElementById('avatar-menu-loc-text');
+  const locMenuWrap = document.getElementById('avatar-menu-loc');
+  if (nameEl)  nameEl.textContent  = (currentUser.name || 'My Account') + (currentUser.age ? ', ' + currentUser.age : '');
   if (emailEl) emailEl.textContent = currentUser.email || '';
+  if (locMenuEl) locMenuEl.textContent = currentUser.loc || '';
+  if (locMenuWrap) locMenuWrap.style.display = currentUser.loc ? 'flex' : 'none';
 
   // Member Since date (year only)
   var msEl = document.getElementById('member-since-date');
