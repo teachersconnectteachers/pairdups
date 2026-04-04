@@ -2078,7 +2078,14 @@ function navTo(tab) {
   if (tab === 'profile' && isSignedIn) { syncProfileForm(); renderProfileCompletion(); }
   if (tab === 'messages') renderConversations();
   // Clear location filters when navigating to Discover
-  if (tab === 'my') { markExpiredCards(); }
+  if (tab === 'my') {
+    markExpiredCards();
+    // Refresh from Supabase to pick up any listing edits from other sessions
+    if (_supabase && isSignedIn && currentUser.supabaseId) {
+      loadSupabaseListings();
+      loadSupabaseConversations();
+    }
+  }
   if (tab === 'discover') {
     filterExpiredFromDiscover();
     var cards = document.querySelectorAll('#screen-discover .listing-card');
@@ -2092,6 +2099,8 @@ function navTo(tab) {
     if (stateEl) stateEl.selectedIndex = 0;
     if (provEl) provEl.selectedIndex = 0;
     document.getElementById('filter-city').innerHTML='<option value="">— All Cities —</option>';
+    // Refresh from Supabase to pick up listing edits from other users
+    if (_supabase && isSignedIn) { loadSupabaseListings(); }
   }
 }
 
@@ -3838,6 +3847,8 @@ function saveListing() {
   }
 
   if (editingCard) {
+    // Capture old title before DOM update for conversation matching
+    var oldTitle = editingCard.querySelector('.my-card-title')?.textContent || '';
     // ── Update the My PairdUps card ──
     editingCard.querySelector('.my-card-title').textContent = title;
     var myMeta = editingCard.querySelector('.my-card-meta');
@@ -3950,22 +3961,26 @@ function saveListing() {
     if (_supabase && editedListing && editedListing.supabaseId) {
       (async function() {
         try {
-          await _supabase.from('listings').update({
+          var { error: updateErr } = await _supabase.from('listings').update({
             title: title, description: desc, category: catName,
             pair_type: pairType, group_type: groupType, looking_for: lookingFor,
             date_val: dateVal || null, date_str: dateStr, time_val: timeVal,
             end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji
           }).eq('id', editedListing.supabaseId);
+          if (updateErr) { console.log('[PairdUps] Listing update error:', updateErr); }
+          else { console.log('[PairdUps] Listing updated in Supabase:', editedListing.supabaseId); }
           // Also update the listing_title on any conversations that reference this listing
-          await _supabase.from('conversations').update({ listing_title: title }).eq('listing_id', editedListing.supabaseId);
-          console.log('[PairdUps] Listing updated in Supabase:', editedListing.supabaseId);
+          var { error: convoErr } = await _supabase.from('conversations').update({ listing_title: title }).eq('listing_id', editedListing.supabaseId);
+          if (convoErr) { console.log('[PairdUps] Conversation title update error:', convoErr); }
         } catch(e) { console.log('Listing update sync error:', e); }
       })();
+    } else {
+      console.log('[PairdUps] Skipped Supabase update — supabase:', !!_supabase, 'listing:', !!editedListing, 'supabaseId:', editedListing?.supabaseId);
     }
     // Update local conversations that reference this listing
     var convoListingId = editedListing ? editedListing.supabaseId : null;
     conversations.forEach(function(c) {
-      if ((convoListingId && c.listingId === convoListingId) || c.title === editingCard.querySelector('.my-card-title')?.textContent) {
+      if ((convoListingId && c.listingId === convoListingId) || c.title === oldTitle) {
         c.title = title;
         c.venue = venue;
         c.dateStr = dateStr;
