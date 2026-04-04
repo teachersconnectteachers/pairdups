@@ -2154,6 +2154,19 @@ async function signIn() {
   showTopbarAvatar();
   showToast('Welcome back, ' + currentUser.name + '! 👋');
   tagOneSignalUser();
+  // Clear stale data from previous user session, then reload for this user
+  conversations = [];
+  _saveConvos(conversations);
+  document.querySelectorAll('#my-listings-container .my-card').forEach(function(c) { c.remove(); });
+  document.querySelectorAll('#applied-cards-container .applied-card').forEach(function(c) { c.remove(); });
+  document.querySelectorAll('#req-cards-container .req-card').forEach(function(c) { c.remove(); });
+  restoreUserListings();
+  if (_supabase && currentUser.supabaseId) {
+    loadSupabaseListings();
+    loadSupabaseConversations();
+  }
+  renderConversations();
+  updateMsgBadge();
   goTo('screen-discover');
 }
 async function register() {
@@ -2226,6 +2239,19 @@ async function register() {
   showTopbarAvatar();
   showToast('Account created! Let\'s set up your profile 🎉');
   tagOneSignalUser();
+  // Clear stale data from any previous user session
+  conversations = [];
+  _saveConvos(conversations);
+  document.querySelectorAll('#my-listings-container .my-card').forEach(function(c) { c.remove(); });
+  document.querySelectorAll('#applied-cards-container .applied-card').forEach(function(c) { c.remove(); });
+  document.querySelectorAll('#req-cards-container .req-card').forEach(function(c) { c.remove(); });
+  restoreUserListings();
+  if (_supabase && currentUser.supabaseId) {
+    loadSupabaseListings();
+    loadSupabaseConversations();
+  }
+  renderConversations();
+  updateMsgBadge();
   goTo('screen-discover');
   setTimeout(function() { openEditProfile(); }, 300);
 }
@@ -2327,6 +2353,25 @@ async function logOut() {
   isSignedIn = false;
   screenHistory = [];
   currentUser = { name:'', age:'', loc:'', bio:'', email:'', password:'', interests:[], photo:'', facePos:'center 20%', isNewUser:false };
+  // Clear user-specific data so next login starts clean
+  conversations = [];
+  _saveConvos(conversations);
+  renderConversations();
+  updateMsgBadge();
+  // Clear My Listings DOM cards
+  document.querySelectorAll('#my-listings-container .my-card').forEach(function(c) { c.remove(); });
+  toggleMyListingsEmpty();
+  // Clear Applied and Requests
+  document.querySelectorAll('#applied-cards-container .applied-card').forEach(function(c) { c.remove(); });
+  document.querySelectorAll('#req-cards-container .req-card').forEach(function(c) { c.remove(); });
+  var appliedEmpty = document.getElementById('applied-empty');
+  if (appliedEmpty) appliedEmpty.style.display = '';
+  var reqEmpty = document.getElementById('req-empty');
+  if (reqEmpty) reqEmpty.style.display = '';
+  var appliedBadge = document.getElementById('applied-badge');
+  if (appliedBadge) appliedBadge.style.display = 'none';
+  var reqBadge = document.getElementById('req-badge');
+  if (reqBadge) reqBadge.style.display = 'none';
   const av = document.getElementById('topbar-avatar');
   const avWrap = document.getElementById('topbar-avatar-wrap');
   if (av) av.style.display = 'none';
@@ -3125,7 +3170,7 @@ function renderRequestCards() {
   var pendingCount = reqConvos.filter(function(c) { return c.status === 'pending'; }).length;
   var reqBadge = document.getElementById('req-badge');
   if (reqBadge) {
-    if (pendingCount > 0) { reqBadge.textContent = pendingCount; reqBadge.style.display = 'flex'; }
+    if (pendingCount > 0) { reqBadge.textContent = pendingCount; reqBadge.style.display = 'inline-flex'; }
     else { reqBadge.style.display = 'none'; }
   }
 }
