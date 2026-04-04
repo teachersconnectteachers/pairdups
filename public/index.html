@@ -711,7 +711,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <p class="detail-desc" id="d-desc"></p>
     <div class="detail-meta-box">
       <div class="detail-meta-row"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span id="d-date"></span></div>
-      <div class="detail-meta-row"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><a id="d-venue" onclick="openMap(this.dataset.v)"></a></div>
+      <div class="detail-meta-row"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><a id="d-venue" onclick="openMap(this.dataset.v,this.dataset.city)"></a></div>
     </div>
     <div class="detail-poster-card" id="d-poster-card" onclick="">
       <div class="detail-poster-avatar"><img id="d-poster-img" src="" alt=""></div>
@@ -3105,7 +3105,7 @@ function renderAppliedCards() {
     html += '<div class="applied-by" onclick="openMiniFromConvo(\''+c.id+'\')">By '+c.posterName+(c.posterAge?', '+c.posterAge:'')+' →</div>';
     if (venue) {
       html += '<div class="applied-venue"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#FF3B7F" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ';
-      html += '<a onclick="openMap(\''+venue.replace(/'/g,"\\'")+'\')" style="color:#FF3B7F;cursor:pointer;text-decoration:underline">'+venue+'</a></div>';
+      html += '<a onclick="openMap(\''+venue.replace(/'/g,"\\'")+'\',\''+(c.city||'').replace(/'/g,"\\'")+'\' )" style="color:#FF3B7F;cursor:pointer;text-decoration:underline">'+venue+'</a></div>';
     }
     if (dateStr) html += '<div class="applied-date" data-date="'+(c.dateVal||'')+'">📅 '+dateStr+'</div>';
     html += '<span class="status-badge '+statusClass+'">'+statusLabel+'</span>';
@@ -3156,7 +3156,7 @@ function renderRequestCards() {
     if (dateStr) html += '<div class="applied-date" data-date="'+(c.dateVal||'')+'">📅 '+dateStr+'</div>';
     if (venue) {
       html += '<div><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FF3B7F" stroke-width="2" style="vertical-align:-2px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ';
-      html += '<a onclick="openMap(\''+venue.replace(/'/g,"\\'")+'\')" style="color:#FF3B7F;cursor:pointer;text-decoration:underline">'+venue+'</a></div>';
+      html += '<a onclick="openMap(\''+venue.replace(/'/g,"\\'")+'\',\''+(c.city||'').replace(/'/g,"\\'")+'\' )" style="color:#FF3B7F;cursor:pointer;text-decoration:underline">'+venue+'</a></div>';
     }
     html += '</div>';
 
@@ -3944,6 +3944,38 @@ function saveListing() {
       }
     }
     _saveListings(userListings);
+    // Sync edit to Supabase so other users see changes
+    var editId = editingCard.dataset.listingId;
+    var editedListing = userListings.find(function(l) { return l.id === editId; });
+    if (_supabase && editedListing && editedListing.supabaseId) {
+      (async function() {
+        try {
+          await _supabase.from('listings').update({
+            title: title, description: desc, category: catName,
+            pair_type: pairType, group_type: groupType, looking_for: lookingFor,
+            date_val: dateVal || null, date_str: dateStr, time_val: timeVal,
+            end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji
+          }).eq('id', editedListing.supabaseId);
+          // Also update the listing_title on any conversations that reference this listing
+          await _supabase.from('conversations').update({ listing_title: title }).eq('listing_id', editedListing.supabaseId);
+          console.log('[PairdUps] Listing updated in Supabase:', editedListing.supabaseId);
+        } catch(e) { console.log('Listing update sync error:', e); }
+      })();
+    }
+    // Update local conversations that reference this listing
+    var convoListingId = editedListing ? editedListing.supabaseId : null;
+    conversations.forEach(function(c) {
+      if ((convoListingId && c.listingId === convoListingId) || c.title === editingCard.querySelector('.my-card-title')?.textContent) {
+        c.title = title;
+        c.venue = venue;
+        c.dateStr = dateStr;
+        c.dateVal = dateVal;
+        c.city = city;
+      }
+    });
+    _saveConvos(conversations);
+    renderAppliedCards();
+    renderRequestCards();
     showToast('PairdUp updated! ✓');
     clearFormDirty();
   } else {
@@ -4065,6 +4097,13 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   document.getElementById('d-photo').src = photo;
   const dv = document.getElementById('d-venue');
   dv.textContent = venue; dv.dataset.v = venue;
+  // Find city from the source discover card for map fallback
+  var detailCity = '';
+  document.querySelectorAll('.listing-card').forEach(function(c) {
+    var ct = c.querySelector('.card-title');
+    if (ct && ct.textContent.trim() === title) { detailCity = c.dataset.city || ''; }
+  });
+  dv.dataset.city = detailCity;
   const tb = document.getElementById('d-type');
   if (type==='Date') { tb.textContent='💕 Date'; tb.className='card-type-badge badge-date'; }
   else { tb.textContent='🎉 Just for Fun'; tb.className='card-type-badge badge-fun'; }
@@ -4837,10 +4876,13 @@ function openMap(loc, city) {
           {headers:{'Accept-Language':'en','User-Agent':'PairdUps/1.0'}})
         .then(function(r2){ return r2.json(); })
         .then(function(data2){
-          var lat = 40.75, lon = -73.98;
-          if (data2 && data2[0]) { lat = parseFloat(data2[0].lat); lon = parseFloat(data2[0].lon); }
-          if (notFoundEl) notFoundEl.style.display = '';
-          showMapAt(lat, lon, loc);
+          if (data2 && data2[0]) {
+            if (notFoundEl) notFoundEl.style.display = '';
+            showMapAt(parseFloat(data2[0].lat), parseFloat(data2[0].lon), loc);
+          } else {
+            if (notFoundEl) notFoundEl.style.display = '';
+            showMapAt(40.75, -73.98, loc);
+          }
         })
         .catch(function(){ if (notFoundEl) notFoundEl.style.display = ''; showMapAt(40.75, -73.98, loc); });
       } else {
@@ -4848,7 +4890,23 @@ function openMap(loc, city) {
         showMapAt(40.75, -73.98, loc);
       }
     })
-    .catch(function(){ if (notFoundEl) notFoundEl.style.display = ''; showMapAt(40.75, -73.98, loc); });
+    .catch(function(){
+      // Network error on venue geocode — try city fallback before defaulting
+      if (city) {
+        var q3 = encodeURIComponent(city);
+        fetch('https://nominatim.openstreetmap.org/search?format=json&q='+q3+'&limit=1',
+          {headers:{'Accept-Language':'en','User-Agent':'PairdUps/1.0'}})
+        .then(function(r3){ return r3.json(); })
+        .then(function(data3){
+          if (data3 && data3[0]) { showMapAt(parseFloat(data3[0].lat), parseFloat(data3[0].lon), loc); }
+          else { showMapAt(40.75, -73.98, loc); }
+          if (notFoundEl) notFoundEl.style.display = '';
+        })
+        .catch(function(){ if (notFoundEl) notFoundEl.style.display = ''; showMapAt(40.75, -73.98, loc); });
+      } else {
+        if (notFoundEl) notFoundEl.style.display = ''; showMapAt(40.75, -73.98, loc);
+      }
+    });
   }, 100);
 }
 
