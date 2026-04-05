@@ -2182,6 +2182,7 @@ async function signIn() {
   // Clear stale data from previous user session, then reload for this user
   conversations = [];
   _saveConvos(conversations);
+  _clearDeletedConvoIds();
   document.querySelectorAll('#my-listings-container .my-card').forEach(function(c) { c.remove(); });
   document.querySelectorAll('#applied-cards-container .applied-card').forEach(function(c) { c.remove(); });
   document.querySelectorAll('#req-cards-container .req-card').forEach(function(c) { c.remove(); });
@@ -3097,12 +3098,21 @@ function deleteActiveConvo() {
     var convo = conversations.find(function(c) { return c.id === activeId; });
     conversations = conversations.filter(function(c) { return c.id !== activeId; });
     _saveConvos(conversations);
+    // Track both the local id and supabaseId so background poll skips this conversation
     _trackDeletedConvo(activeId);
+    if (convo && convo.supabaseId && convo.supabaseId !== activeId) _trackDeletedConvo(convo.supabaseId);
     chatArea.dataset.activeConvo = '';
     renderConversations();
+    renderAppliedCards();
+    renderRequestCards();
+    updateMsgBadge();
     // Delete from Supabase
     if (_supabase && convo && convo.supabaseId) {
-      _supabase.from('conversations').delete().eq('id', convo.supabaseId).then(function(){});
+      _supabase.from('conversations').delete().eq('id', convo.supabaseId)
+        .then(function(res) {
+          if (res.error) console.log('[PairdUps] Supabase delete error:', res.error);
+          else console.log('[PairdUps] Conversation deleted from Supabase');
+        });
     }
   }
   showToast('Conversation deleted.');
@@ -3249,6 +3259,7 @@ function doDeleteAllChats() {
   // Track all deleted IDs and delete from Supabase
   conversations.forEach(function(c) {
     _trackDeletedConvo(c.id);
+    if (c.supabaseId && c.supabaseId !== c.id) _trackDeletedConvo(c.supabaseId);
     if (_supabase && c.supabaseId) {
       _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){});
     }
@@ -3256,6 +3267,8 @@ function doDeleteAllChats() {
   conversations = [];
   _saveConvos(conversations);
   renderConversations();
+  renderAppliedCards();
+  renderRequestCards();
   updateMsgBadge();
   showToast('All chats deleted.');
 }
@@ -3300,6 +3313,7 @@ function doBulkDeleteReqs() {
     idsToRemove.forEach(function(id) {
       _trackDeletedConvo(id);
       var c = conversations.find(function(cv) { return cv.id === id; });
+      if (c && c.supabaseId && c.supabaseId !== id) _trackDeletedConvo(c.supabaseId);
       if (_supabase && c && c.supabaseId) {
         _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){});
       }
@@ -3307,6 +3321,8 @@ function doBulkDeleteReqs() {
     conversations = conversations.filter(function(c) { return idsToRemove.indexOf(c.id) === -1; });
     _saveConvos(conversations);
     renderConversations();
+    renderAppliedCards();
+    renderRequestCards();
   }
   showToast(count > 0 ? count + ' request(s) deleted.' : 'No matching requests found.');
   updateReqBadge();
@@ -3365,6 +3381,7 @@ function doBulkDeleteApplied() {
     idsToRemove.forEach(function(id) {
       _trackDeletedConvo(id);
       var c = conversations.find(function(cv) { return cv.id === id; });
+      if (c && c.supabaseId && c.supabaseId !== id) _trackDeletedConvo(c.supabaseId);
       if (_supabase && c && c.supabaseId) {
         _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){});
       }
@@ -3372,6 +3389,8 @@ function doBulkDeleteApplied() {
     conversations = conversations.filter(function(c) { return idsToRemove.indexOf(c.id) === -1; });
     _saveConvos(conversations);
     renderConversations();
+    renderAppliedCards();
+    renderRequestCards();
   }
   showToast(count > 0 ? count + ' application(s) deleted.' : 'No matching applications found.');
 }
@@ -3381,18 +3400,18 @@ function confirmBulkDeleteMsgs(type) {
   if (type === 'declined') {
     var before = conversations.length;
     var toDelete = conversations.filter(function(c) { return c.messages.length <= 2; });
-    toDelete.forEach(function(c) { _trackDeletedConvo(c.id); if (_supabase && c.supabaseId) _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){}); });
+    toDelete.forEach(function(c) { _trackDeletedConvo(c.id); if (c.supabaseId && c.supabaseId !== c.id) _trackDeletedConvo(c.supabaseId); if (_supabase && c.supabaseId) _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){}); });
     conversations = conversations.filter(function(c) { return c.messages.length > 2; });
-    _saveConvos(conversations); renderConversations(); updateMsgBadge();
+    _saveConvos(conversations); renderConversations(); renderAppliedCards(); renderRequestCards(); updateMsgBadge();
     showToast((before - conversations.length) + ' low-activity chat(s) deleted.');
   } else if (type === 'no-reply') {
     var before2 = conversations.length;
     var toDelete2 = conversations.filter(function(c) { return !c.messages.some(function(m) { return m.from === 'them'; }); });
-    toDelete2.forEach(function(c) { _trackDeletedConvo(c.id); if (_supabase && c.supabaseId) _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){}); });
+    toDelete2.forEach(function(c) { _trackDeletedConvo(c.id); if (c.supabaseId && c.supabaseId !== c.id) _trackDeletedConvo(c.supabaseId); if (_supabase && c.supabaseId) _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){}); });
     conversations = conversations.filter(function(c) {
       return c.messages.some(function(m) { return m.from === 'them'; });
     });
-    _saveConvos(conversations); renderConversations(); updateMsgBadge();
+    _saveConvos(conversations); renderConversations(); renderAppliedCards(); renderRequestCards(); updateMsgBadge();
     showToast((before2 - conversations.length) + ' no-reply chat(s) deleted.');
   }
 }
@@ -4489,10 +4508,19 @@ function doBlock() {
   var chatArea = document.getElementById('chat-messages');
   var activeId = chatArea ? chatArea.dataset.activeConvo : null;
   if (activeId) {
+    var convo = conversations.find(function(c) { return c.id === activeId; });
     conversations = conversations.filter(function(c) { return c.id !== activeId; });
     _saveConvos(conversations);
+    _trackDeletedConvo(activeId);
+    if (convo && convo.supabaseId && convo.supabaseId !== activeId) _trackDeletedConvo(convo.supabaseId);
     chatArea.dataset.activeConvo = '';
     renderConversations();
+    renderAppliedCards();
+    renderRequestCards();
+    updateMsgBadge();
+    if (_supabase && convo && convo.supabaseId) {
+      _supabase.from('conversations').delete().eq('id', convo.supabaseId).then(function(){});
+    }
   }
   showToast('User blocked & conversation removed.');
   setTimeout(goBack, 800);
