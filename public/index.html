@@ -2125,6 +2125,7 @@ let currentUser = {
 };
 let cardToDelete = null;
 let editingCard  = null;
+var _listingJustCreated = false;
 
 // ── Persistent user-created listings (survives page reloads / app updates) ──
 function _getListings() { try { var r=localStorage.getItem("pu_listings"); return r?JSON.parse(r):[]; } catch(e){return[];} }
@@ -2186,7 +2187,8 @@ function navTo(tab) {
     if (provEl) provEl.selectedIndex = 0;
     document.getElementById('filter-city').innerHTML='<option value="">— All Cities —</option>';
     // Refresh from Supabase to pick up listing edits from other users
-    if (_supabase && isSignedIn) { loadSupabaseListings(); }
+    // Skip if we just created a listing (Supabase insert may still be in flight)
+    if (_supabase && isSignedIn && !_listingJustCreated) { loadSupabaseListings(); }
   }
 }
 
@@ -4384,12 +4386,14 @@ function saveListing() {
             end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji,
             recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit, recur_count: 0
           }).select().single();
-          if (insertErr) { console.log('Listing insert error:', insertErr); }
+          if (insertErr) { console.log('[PairdUps] Listing insert error:', insertErr); }
           else if (insertedRow) {
             // Update local listing with Supabase UUID
             listingData.supabaseId = insertedRow.id;
             _saveListings(userListings);
             console.log('[PairdUps] Listing saved to Supabase:', insertedRow.id);
+          } else {
+            console.log('[PairdUps] Listing insert: no row returned');
           }
         } catch(e) { console.log('Listing sync error:', e); }
       })();
@@ -4419,6 +4423,8 @@ function saveListing() {
     showConfetti();
     clearFormDirty();
   }
+  _listingJustCreated = true;
+  setTimeout(function() { _listingJustCreated = false; }, 5000);
   setTimeout(()=>{ screenHistory=[]; navTo('discover'); }, 900);
 }
 let cardToDeleteEl = null;
