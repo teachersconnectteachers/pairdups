@@ -2188,6 +2188,7 @@ async function signIn() {
   }
   renderConversations();
   updateMsgBadge();
+  startBackgroundPolling();
   goTo('screen-discover');
 }
 async function register() {
@@ -2273,6 +2274,7 @@ async function register() {
   }
   renderConversations();
   updateMsgBadge();
+  startBackgroundPolling();
   goTo('screen-discover');
   setTimeout(function() { openEditProfile(); }, 300);
 }
@@ -2406,6 +2408,8 @@ async function logOut() {
   if (av) av.style.display = 'none';
   if (avWrap) avWrap.style.display = 'none';
   closeAvatarMenu();
+  stopBackgroundPolling();
+  stopChatPolling();
   syncBookmarkIcons();
   goTo('screen-welcome');
   showToast('Signed out. See you soon! 👋');
@@ -3486,6 +3490,54 @@ function startChatPolling(convoId) {
 }
 function stopChatPolling() {
   if (_chatPollInterval) { clearInterval(_chatPollInterval); _chatPollInterval = null; }
+}
+
+// ── Background polling for new conversations and messages ──
+var _bgPollInterval = null;
+function startBackgroundPolling() {
+  stopBackgroundPolling();
+  if (!_supabase || !isSignedIn || !currentUser.supabaseId) return;
+  _bgPollInterval = setInterval(function() {
+    if (!isSignedIn || !currentUser.supabaseId) { stopBackgroundPolling(); return; }
+    // Don't poll if we're inside an active chat (chat polling handles that)
+    var chatScreen = document.getElementById('screen-chat');
+    if (chatScreen && chatScreen.classList.contains('active') && _chatPollInterval) return;
+    // Quick check: count conversations in Supabase and compare to local
+    _supabase.from('conversations')
+      .select('id, last_message_at, requester_unread, poster_unread, requester_id, status, listing_title', { count: 'exact' })
+      .or('requester_id.eq.' + currentUser.supabaseId + ',poster_id.eq.' + currentUser.supabaseId)
+      .order('last_message_at', { ascending: false })
+      .then(function(result) {
+        if (result.error || !result.data) return;
+        var serverConvos = result.data;
+        var localSupabaseIds = conversations.filter(function(c) { return c.supabaseId; }).map(function(c) { return c.supabaseId; });
+        var needsRefresh = false;
+        // Check for new conversations not in local
+        for (var i = 0; i < serverConvos.length; i++) {
+          if (localSupabaseIds.indexOf(serverConvos[i].id) === -1) { needsRefresh = true; break; }
+        }
+        // Check for unread changes or new messages (compare last_message_at)
+        if (!needsRefresh) {
+          for (var j = 0; j < serverConvos.length; j++) {
+            var sc = serverConvos[j];
+            var lc = conversations.find(function(c) { return c.supabaseId === sc.id || c.id === sc.id; });
+            if (lc) {
+              var serverTime = sc.last_message_at ? new Date(sc.last_message_at).getTime() : 0;
+              if (serverTime > (lc.lastUpdated || 0) + 1000) { needsRefresh = true; break; }
+              // Check status changes (accepted/declined)
+              if (sc.status && sc.status !== lc.status) { needsRefresh = true; break; }
+            }
+          }
+        }
+        if (needsRefresh) {
+          console.log('[PairdUps] Background poll: new data detected, refreshing...');
+          loadSupabaseConversations();
+        }
+      });
+  }, 5000); // Poll every 5 seconds
+}
+function stopBackgroundPolling() {
+  if (_bgPollInterval) { clearInterval(_bgPollInterval); _bgPollInterval = null; }
 }
 function openEditProfile() {
   syncProfileForm();   // always refresh form with latest currentUser data
@@ -6186,6 +6238,8 @@ window.addEventListener('load', async function() {
   // Sort expired cards to bottom with divider after all init completes
   setTimeout(function() { filterExpiredFromDiscover(); syncBookmarkIcons(); }, 300);
   setTimeout(function() { filterExpiredFromDiscover(); }, 800);
+  // Start background polling for new conversations/messages
+  if (isSignedIn) setTimeout(startBackgroundPolling, 2000);
 });
 
 </script>
