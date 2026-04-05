@@ -2062,6 +2062,7 @@ function goTo(id) {
 }
 function goBack() {
   if (!screenHistory.length) return;
+  stopChatPolling();
   document.querySelector('.screen.active').classList.remove('active');
   document.getElementById(screenHistory.pop()).classList.add('active');
 }
@@ -2073,10 +2074,17 @@ function navTo(tab) {
   }
   const map = {discover:'screen-discover',my:'screen-my',messages:'screen-messages',profile:'screen-profile'};
   screenHistory = [];
+  stopChatPolling();
   document.querySelector('.screen.active')?.classList.remove('active');
   document.getElementById(map[tab]).classList.add('active');
   if (tab === 'profile' && isSignedIn) { syncProfileForm(); renderProfileCompletion(); }
-  if (tab === 'messages') renderConversations();
+  if (tab === 'messages') {
+    renderConversations();
+    // Refresh from Supabase to pick up new messages from other users
+    if (_supabase && isSignedIn && currentUser.supabaseId) {
+      loadSupabaseConversations();
+    }
+  }
   // Clear location filters when navigating to Discover
   if (tab === 'my') {
     markExpiredCards();
@@ -3392,7 +3400,80 @@ function openConvoChat(convoId) {
   // Store active convo id for sendMsg
   chatArea.dataset.activeConvo = convoId;
   chatArea.scrollTop = 9999;
+  // Mark as read in Supabase
+  if (_supabase && currentUser.supabaseId && convo.supabaseId) {
+    var readUpdate = convo.iAmRequester ? { requester_unread: false } : { poster_unread: false };
+    _supabase.from('conversations').update(readUpdate).eq('id', convo.supabaseId).then(function(){});
+  }
+  // Start polling for new messages while chat is open
+  startChatPolling(convoId);
   goTo('screen-chat');
+}
+
+// ── Chat message polling ──────────────────────────────────
+var _chatPollInterval = null;
+function startChatPolling(convoId) {
+  stopChatPolling();
+  if (!_supabase || !currentUser.supabaseId) return;
+  var convo = conversations.find(function(c){ return c.id === convoId; });
+  if (!convo || !convo.supabaseId) return;
+  _chatPollInterval = setInterval(function() {
+    // Only poll if the chat screen is still active
+    var chatScreen = document.getElementById('screen-chat');
+    if (!chatScreen || !chatScreen.classList.contains('active')) { stopChatPolling(); return; }
+    var activeId = document.getElementById('chat-messages')?.dataset?.activeConvo;
+    if (activeId !== convoId) { stopChatPolling(); return; }
+    // Fetch messages from Supabase
+    _supabase.from('messages')
+      .select('*')
+      .eq('conversation_id', convo.supabaseId)
+      .order('created_at', { ascending: true })
+      .then(function(result) {
+        if (result.error || !result.data) return;
+        var serverMsgs = result.data;
+        var localCount = convo.messages.length;
+        if (serverMsgs.length <= localCount) return;
+        // New messages found — update local conversation
+        var formatted = serverMsgs.map(function(m) {
+          var t = new Date(m.created_at);
+          var timeStr = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+          var from = m.sender_id === currentUser.supabaseId ? 'me' : 'them';
+          if (m.text.startsWith('📋')) from = 'system';
+          return { from: from, text: m.text, time: timeStr };
+        });
+        convo.messages = formatted;
+        convo.lastUpdated = Date.now();
+        _saveConvos(conversations);
+        // Render only the new messages into the chat UI
+        var chatArea = document.getElementById('chat-messages');
+        if (!chatArea) return;
+        var myPhoto = currentUser.photo||_DEFAULT_AVATAR_SQ;
+        var posterPhoto = convo.posterPhoto||_DEFAULT_AVATAR_SQ;
+        for (var i = localCount; i < formatted.length; i++) {
+          var m = formatted[i];
+          var wrap = document.createElement('div');
+          if (m.from === 'system') {
+            wrap.className = 'bubble-wrap';
+            wrap.innerHTML = '<div style="text-align:center;padding:8px 0"><span style="background:var(--gray-light);color:var(--gray);font-size:12px;padding:4px 12px;border-radius:12px;font-weight:600">'+escHtml(m.text)+'</span></div>';
+          } else if (m.from === 'me') {
+            wrap.className = 'bubble-wrap me';
+            wrap.innerHTML = '<div class="bubble-row"><div class="bubble">'+escHtml(m.text)+'</div><div class="mini-avatar" data-profile="my" style="cursor:pointer"><img src="'+myPhoto+'" style="width:100%;height:100%;object-fit:cover;object-position:top"></div></div><div class="bubble-time">'+m.time+'</div>';
+          } else {
+            wrap.className = 'bubble-wrap them';
+            wrap.innerHTML = '<div class="bubble-row"><div class="mini-avatar" data-profile="poster" style="cursor:pointer"><img src="'+posterPhoto+'" alt=""></div><div class="bubble">'+escHtml(m.text)+'</div></div><div class="bubble-time">'+m.time+'</div>';
+          }
+          chatArea.appendChild(wrap);
+        }
+        chatArea.scrollTop = 9999;
+        renderConversations();
+        // Mark as read
+        var readUpdate = convo.iAmRequester ? { requester_unread: false } : { poster_unread: false };
+        _supabase.from('conversations').update(readUpdate).eq('id', convo.supabaseId).then(function(){});
+      });
+  }, 3000); // Poll every 3 seconds
+}
+function stopChatPolling() {
+  if (_chatPollInterval) { clearInterval(_chatPollInterval); _chatPollInterval = null; }
 }
 function openEditProfile() {
   syncProfileForm();   // always refresh form with latest currentUser data
@@ -4183,7 +4264,6 @@ function sendMsg() {
   chatArea.scrollTop=9999;
   // Add read receipt to sent message
   addReadReceipt(wrap);
-  // Auto-reply removed — real users will respond via Supabase messaging
   // Update activity timestamp
   updateMyActivity();
   // Persist to conversation if active
@@ -4196,6 +4276,31 @@ function sendMsg() {
       convo.lastUpdated = Date.now();
       _saveConvos(conversations);
       renderConversations();
+      // Send message to Supabase so the other user receives it
+      var convoSupabaseId = convo.supabaseId || convo.id;
+      if (_supabase && currentUser.supabaseId && convoSupabaseId) {
+        (async function() {
+          try {
+            await _supabase.from('messages').insert({
+              conversation_id: convoSupabaseId,
+              sender_id: currentUser.supabaseId,
+              text: text
+            });
+            // Update conversation last_message and mark other user as unread
+            var updateData = {
+              last_message_text: text,
+              last_message_at: new Date().toISOString()
+            };
+            // Set the OTHER user's unread flag to true
+            if (convo.iAmRequester) {
+              updateData.poster_unread = true;
+            } else {
+              updateData.requester_unread = true;
+            }
+            await _supabase.from('conversations').update(updateData).eq('id', convoSupabaseId);
+          } catch(e) { console.log('Message send error:', e); }
+        })();
+      }
     }
   }
 }
