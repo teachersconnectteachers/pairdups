@@ -3650,33 +3650,29 @@ function startBackgroundPolling() {
         var serverConvos = result.data.filter(function(sc) { return deletedIds.indexOf(sc.id) === -1; });
         var localSupabaseIds = conversations.filter(function(c) { return c.supabaseId; }).map(function(c) { return c.supabaseId; });
         var needsRefresh = false;
-        // Check for new conversations not in local
-        for (var i = 0; i < serverConvos.length; i++) {
-          if (localSupabaseIds.indexOf(serverConvos[i].id) === -1) { needsRefresh = true; break; }
-        }
-        // Check for unread changes or new messages (compare last_message_at)
-        if (!needsRefresh) {
-          for (var j = 0; j < serverConvos.length; j++) {
-            var sc = serverConvos[j];
-            var lc = conversations.find(function(c) { return c.supabaseId === sc.id || c.id === sc.id; });
-            if (lc) {
-              var serverTime = sc.last_message_at ? new Date(sc.last_message_at).getTime() : 0;
-              if (serverTime > (lc.lastUpdated || 0) + 1000) { needsRefresh = true; break; }
-              // Check status changes (accepted/declined)
-              if (sc.status && sc.status !== lc.status) {
-                needsRefresh = true;
-                // If MY request was just accepted, celebrate!
-                if (sc.status === 'accepted' && lc.status === 'pending' && lc.iAmRequester) {
-                  setTimeout(function() {
-                    showConfetti();
-                    showToast('🎉 Your PairdUp request was accepted! Check Messages!');
-                  }, 500);
-                }
-                break;
+        
+        // ALWAYS check for status changes (acceptance/decline celebrations)
+        for (var j = 0; j < serverConvos.length; j++) {
+          var sc = serverConvos[j];
+          var lc = conversations.find(function(c) { return c.supabaseId === sc.id || c.id === sc.id; });
+          if (lc) {
+            if (sc.status && sc.status !== lc.status) {
+              needsRefresh = true;
+              if (sc.status === 'accepted' && lc.status === 'pending' && lc.iAmRequester) {
+                setTimeout(function() {
+                  showConfetti();
+                  showToast('🎉 Your PairdUp request was accepted! Check Messages!');
+                }, 1000);
               }
             }
+            var serverTime = sc.last_message_at ? new Date(sc.last_message_at).getTime() : 0;
+            if (serverTime > (lc.lastUpdated || 0) + 1000) { needsRefresh = true; }
+          } else {
+            // New conversation not in local
+            needsRefresh = true;
           }
         }
+        
         if (needsRefresh) {
           console.log('[PairdUps] Background poll: new data detected, refreshing...');
           loadSupabaseConversations();
@@ -5111,23 +5107,28 @@ function acceptReq(btn) {
     (async function() {
       try {
         // Update conversation status and mark requester as unread so they see the notification
-        await _supabase.from('conversations').update({
+        var { error: statusErr } = await _supabase.from('conversations').update({
           status: 'accepted',
           requester_unread: true,
           last_message_text: '✅ Request accepted!',
           last_message_at: new Date().toISOString()
         }).eq('id', convoId);
+        if (statusErr) { console.log('[PairdUps] Accept status update error:', statusErr); }
+        else { console.log('[PairdUps] Accept status updated in Supabase for:', convoId); }
         // Add acceptance system message to the conversation
         if (currentUser.supabaseId) {
-          await _supabase.from('messages').insert({
+          var { error: msgErr } = await _supabase.from('messages').insert({
             conversation_id: convoId,
             sender_id: currentUser.supabaseId,
             text: '✅ Request accepted! You\'re PairdUp for "' + (convo ? convo.title : '') + '"! 🎉'
           });
+          if (msgErr) { console.log('[PairdUps] Accept message insert error:', msgErr); }
+          else { console.log('[PairdUps] Accept system message sent OK'); }
         }
-        console.log('[PairdUps] Accepted conversation:', convoId);
       } catch(e) { console.log('[PairdUps] Accept error:', e); }
     })();
+  } else {
+    console.log('[PairdUps] Accept skipped Supabase — supabase:', !!_supabase, 'convoId:', convoId);
   }
   updateReqBadge();
 }
