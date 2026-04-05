@@ -803,6 +803,53 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     </div>
     <div class="form-group"><label class="form-label">Country *</label><select class="form-input" id="cf-country"><option value="USA">USA</option><option value="Canada">CANADA</option></select></div>
     <div class="form-group"><label class="form-label">Venue / Meeting Spot * <span style="font-size:10px;font-weight:400;color:var(--gray)">(be specific — include full name &amp; area, e.g. "Starbucks, 5th Ave, Manhattan")</span></label><input type="text" class="form-input" placeholder="e.g. Starbucks, 5th Ave, Manhattan, NY" id="cf-venue" maxlength="100" oninput="markFormDirty()"></div>
+
+    <!-- RECURRING PAIRDUP -->
+    <div class="form-group" id="cf-recurring-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--gray-light);border-radius:12px;cursor:pointer" onclick="toggleRecurringOptions()">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">🔄</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--dark)">Repeat this PairdUp</div>
+            <div style="font-size:10px;color:var(--gray)">Auto-renew when the date passes</div>
+          </div>
+        </div>
+        <label style="position:relative;width:44px;height:24px;flex-shrink:0" onclick="event.stopPropagation()">
+          <input type="checkbox" id="cf-recurring" onchange="toggleRecurringOptions()" style="opacity:0;width:0;height:0">
+          <span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span>
+          <span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span>
+        </label>
+      </div>
+      <div id="cf-recurring-options" style="display:none;margin-top:10px;padding:14px;background:var(--pink-pale);border-radius:12px;border:1.5px solid rgba(255,59,127,0.15)">
+        <div style="margin-bottom:10px">
+          <label class="form-label" style="font-size:12px;margin-bottom:4px">How often?</label>
+          <select class="form-input" id="cf-recur-interval" style="padding:9px 12px;font-size:13px" onchange="markFormDirty()">
+            <option value="7">Every week</option>
+            <option value="14">Every 2 weeks</option>
+            <option value="30">Every month</option>
+            <option value="custom">Custom interval</option>
+          </select>
+        </div>
+        <div id="cf-recur-custom-wrap" style="display:none;margin-bottom:10px">
+          <label class="form-label" style="font-size:12px;margin-bottom:4px">Repeat every how many days?</label>
+          <input type="number" class="form-input" id="cf-recur-custom-days" min="1" max="365" value="7" placeholder="e.g. 10" style="padding:9px 12px;font-size:13px" oninput="markFormDirty()">
+        </div>
+        <div>
+          <label class="form-label" style="font-size:12px;margin-bottom:4px">How many times?</label>
+          <select class="form-input" id="cf-recur-limit" style="padding:9px 12px;font-size:13px" onchange="markFormDirty()">
+            <option value="0">Ongoing (until I stop it)</option>
+            <option value="2">2 times</option>
+            <option value="3">3 times</option>
+            <option value="4">4 times</option>
+            <option value="5">5 times</option>
+          </select>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--gray);line-height:1.5">
+          💡 When your PairdUp date passes, it will automatically renew with a new date — keeping it fresh in the Discover feed without any effort from you!
+        </div>
+      </div>
+    </div>
+
     <button class="btn-primary" id="create-save-btn" onclick="saveListing()" style="margin-top:6px;margin-bottom:28px">🎉 Post My PairdUp!</button>
   </div></div>
 </div>
@@ -3673,9 +3720,20 @@ function goToCreate() {
     var btns = row.querySelectorAll('.toggle-btn');
     btns.forEach(function(b,i) { b.classList.toggle('active', i===0); });
   });
+  // Reset recurring fields
+  var recurCb = document.getElementById('cf-recurring');
+  if (recurCb) recurCb.checked = false;
+  var recurOpts = document.getElementById('cf-recurring-options');
+  if (recurOpts) recurOpts.style.display = 'none';
+  var intervalSel = document.getElementById('cf-recur-interval');
+  if (intervalSel) intervalSel.value = '7';
+  var limitSel = document.getElementById('cf-recur-limit');
+  if (limitSel) limitSel.value = '0';
+  var customWrap = document.getElementById('cf-recur-custom-wrap');
+  if (customWrap) customWrap.style.display = 'none';
   goTo('screen-create');
 }
-function editListing(btn, title, desc, venue, dateVal, timeVal, city, catName, pairType, lookingFor, groupType, endTimeVal) {
+function editListing(btn, title, desc, venue, dateVal, timeVal, city, catName, pairType, lookingFor, groupType, endTimeVal, recurring, recurInterval, recurLimit) {
   document.getElementById('create-screen-title').textContent = 'Edit PairdUp';
   document.getElementById('create-save-btn').textContent = '💾 Save Changes';
   document.getElementById('cf-title').value  = title    || '';
@@ -3754,6 +3812,23 @@ function editListing(btn, title, desc, venue, dateVal, timeVal, city, catName, p
     });
   }
   editingCard = btn.closest('.my-card');
+  // Restore recurring fields
+  var recurCb = document.getElementById('cf-recurring');
+  if (recurCb) recurCb.checked = !!recurring;
+  var recurOpts = document.getElementById('cf-recurring-options');
+  if (recurOpts) recurOpts.style.display = recurring ? '' : 'none';
+  var intervalSel = document.getElementById('cf-recur-interval');
+  if (intervalSel) {
+    var ri = recurInterval || 7;
+    if ([7,14,30].indexOf(ri) >= 0) { intervalSel.value = String(ri); }
+    else { intervalSel.value = 'custom'; }
+  }
+  var customWrap = document.getElementById('cf-recur-custom-wrap');
+  var customDays = document.getElementById('cf-recur-custom-days');
+  if (customWrap && intervalSel) customWrap.style.display = intervalSel.value === 'custom' ? '' : 'none';
+  if (customDays && recurInterval) customDays.value = recurInterval;
+  var limitSel = document.getElementById('cf-recur-limit');
+  if (limitSel) limitSel.value = String(recurLimit || 0);
   goTo('screen-create');
 }
 function renderUserListing(d) {
@@ -3774,6 +3849,7 @@ function renderUserListing(d) {
     +'<div class="card-cat-badge">'+d.catName+'</div>'
     +'<div class="card-type-badge '+typeClass+'">'+typeEmoji+' '+d.pairType+'</div>'
     +'<div class="card-type-badge '+typeClass+'" style="top:36px;left:10px;font-size:10px;padding:3px 10px">'+(d.groupType==='Group'?'👥 Group':'👤 One-on-One')+'</div>'
+    +(d.recurring ? '<div style="position:absolute;bottom:10px;left:10px;background:rgba(46,125,50,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;backdrop-filter:blur(4px)">🔄 Recurring</div>' : '')
     +'</div>'
     +'<div class="card-body">'
     +'<div style="margin-bottom:4px"><span class="card-tag"'+(tagStyle?' style="'+tagStyle+'"':'')+'>Activity Partner &middot; '+(d.lookingFor==='M/F'?'M/F':d.lookingFor)+'</span></div>'
@@ -3804,18 +3880,19 @@ function renderUserListing(d) {
     var myCard = document.createElement('div');
     myCard.className = 'my-card';
     myCard.dataset.listingId = d.id;
+    var recurBadge = d.recurring ? '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;background:#E8F5E9;color:#2E7D32;margin-left:4px">🔄 Recurring</span>' : '';
     myCard.innerHTML = '<div class="my-emoji-box">'+d.emoji+'</div>'
-      +'<div class="my-info"><div class="my-card-title">'+d.title+'</div>'
+      +'<div class="my-info"><div class="my-card-title">'+d.title+recurBadge+'</div>'
       +'<div class="my-card-meta">📅 '+d.dateStr+' · '+d.venue+'</div>'
       +'<div class="my-actions">'
       +'<button class="act-btn edit">✏️ Edit</button>'
       +'<button class="act-btn delete" onclick="confirmDeleteListing(this)">🗑 Delete</button>'
       +'</div></div>'
       +'<div class="my-badge" style="background:#E0F7FA;color:#00796B">'+(d.pairType==='Date'?'Date':'Fun')+'</div>';
-    // Attach edit handler with closure over current data
+    // Attach edit handler with closure over current data including recurring
     var editBtn = myCard.querySelector('.act-btn.edit');
     editBtn.onclick = function() {
-      editListing(this, d.title, d.desc, d.venue, d.dateVal, d.timeVal, d.city, d.catName, d.pairType, d.lookingFor, d.groupType, d.endTimeVal);
+      editListing(this, d.title, d.desc, d.venue, d.dateVal, d.timeVal, d.city, d.catName, d.pairType, d.lookingFor, d.groupType, d.endTimeVal, d.recurring, d.recurInterval, d.recurLimit);
     };
     myContainer.insertBefore(myCard, myContainer.firstChild);
   }
@@ -3853,6 +3930,8 @@ async function loadSupabaseListings() {
         lookingFor: row.looking_for || 'M/F',
         groupType: row.group_type || 'One-on-One',
         dateStr: row.date_str || '', emoji: row.emoji || '🎉',
+        recurring: !!row.recurring, recurInterval: row.recur_interval || 7,
+        recurLimit: row.recur_limit || 0, recurCount: row.recur_count || 0,
         userName: p.name || 'Anonymous', userAge: p.age || '',
         userLoc: p.location || row.city || '',
         userPhoto: p.photo_url || _DEFAULT_AVATAR,
@@ -3869,6 +3948,8 @@ async function loadSupabaseListings() {
     setTimeout(applyFaceCentering, 300);
     // Re-sort expired cards
     setTimeout(function() { filterExpiredFromDiscover(); markExpiredCards(); }, 500);
+    // Auto-renew any expired recurring listings
+    setTimeout(autoRenewRecurringListings, 600);
     console.log('[PairdUps] Loaded ' + rows.length + ' listings from Supabase');
   } catch(e) { console.log('Supabase listings error:', e); }
 }
@@ -4098,6 +4179,25 @@ function saveListing() {
     if (chars.length && chars[0].codePointAt(0) > 127) emoji = chars[0];
   }
 
+  // Recurring PairdUp fields
+  var recurringCb = document.getElementById('cf-recurring');
+  var recurring = recurringCb ? recurringCb.checked : false;
+  var recurInterval = 7;
+  var recurLimit = 0;
+  if (recurring) {
+    var intervalSel = document.getElementById('cf-recur-interval');
+    if (intervalSel) {
+      if (intervalSel.value === 'custom') {
+        var customDays = document.getElementById('cf-recur-custom-days');
+        recurInterval = customDays ? parseInt(customDays.value) || 7 : 7;
+      } else {
+        recurInterval = parseInt(intervalSel.value) || 7;
+      }
+    }
+    var limitSel = document.getElementById('cf-recur-limit');
+    recurLimit = limitSel ? parseInt(limitSel.value) || 0 : 0;
+  }
+
   if (editingCard) {
     // Capture old title before DOM update for conversation matching
     var oldTitle = editingCard.querySelector('.my-card-title')?.textContent || '';
@@ -4109,7 +4209,7 @@ function saveListing() {
     var editBtn = editingCard.querySelector('.act-btn.edit');
     if (editBtn) {
       editBtn.onclick = function() {
-        editListing(this, title, desc, venue, dateVal, timeVal, city, catName, pairType, lookingFor, groupType, endTimeVal);
+        editListing(this, title, desc, venue, dateVal, timeVal, city, catName, pairType, lookingFor, groupType, endTimeVal, recurring, recurInterval, recurLimit);
       };
     }
 
@@ -4203,6 +4303,10 @@ function saveListing() {
         userListings[li].lookingFor = lookingFor; userListings[li].groupType = groupType;
         userListings[li].dateStr = dateStr;
         userListings[li].emoji = emoji;
+        userListings[li].recurring = recurring;
+        userListings[li].recurInterval = recurInterval;
+        userListings[li].recurLimit = recurLimit;
+        if (!recurring) { userListings[li].recurCount = 0; }
         break;
       }
     }
@@ -4217,7 +4321,8 @@ function saveListing() {
             title: title, description: desc, category: catName,
             pair_type: pairType, group_type: groupType, looking_for: lookingFor,
             date_val: dateVal || null, date_str: dateStr, time_val: timeVal,
-            end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji
+            end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji,
+            recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit
           }).eq('id', editedListing.supabaseId);
           if (updateErr) { console.log('[PairdUps] Listing update error:', updateErr); }
           else { console.log('[PairdUps] Listing updated in Supabase:', editedListing.supabaseId); }
@@ -4256,6 +4361,7 @@ function saveListing() {
       id: newId, title: title, desc: desc, venue: venue, dateVal: dateVal,
       timeVal: timeVal, endTimeVal: endTimeVal, city: city, catName: catName, pairType: pairType,
       lookingFor: lookingFor, groupType: groupType, dateStr: dateStr, emoji: emoji,
+      recurring: recurring, recurInterval: recurInterval, recurLimit: recurLimit, recurCount: 0,
       userName: currentUser.name || 'You', userAge: currentUser.age || '',
       userLoc: currentUser.loc || city, userPhoto: currentUser.photo || _DEFAULT_AVATAR,
       userBio: currentUser.bio || '', userInterests: currentUser.interests || [],
@@ -4275,7 +4381,8 @@ function saveListing() {
             description: desc, category: catName, pair_type: pairType,
             group_type: groupType, looking_for: lookingFor,
             date_val: dateVal || null, date_str: dateStr, time_val: timeVal,
-            end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji
+            end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji,
+            recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit, recur_count: 0
           }).select().single();
           if (insertErr) { console.log('Listing insert error:', insertErr); }
           else if (insertedRow) {
@@ -5342,6 +5449,107 @@ function clearLocationFilter() {
 }
 
 // ── Pills/toggles ──────────────────────────────────────────
+function toggleRecurringOptions() {
+  var cb = document.getElementById('cf-recurring');
+  var opts = document.getElementById('cf-recurring-options');
+  if (!cb || !opts) return;
+  opts.style.display = cb.checked ? '' : 'none';
+  markFormDirty();
+  // Show/hide custom days input
+  var sel = document.getElementById('cf-recur-interval');
+  var customWrap = document.getElementById('cf-recur-custom-wrap');
+  if (sel && customWrap) customWrap.style.display = sel.value === 'custom' ? '' : 'none';
+  // Attach change listener for interval dropdown
+  if (sel && !sel._recurBound) {
+    sel._recurBound = true;
+    sel.addEventListener('change', function() {
+      var cw = document.getElementById('cf-recur-custom-wrap');
+      if (cw) cw.style.display = this.value === 'custom' ? '' : 'none';
+    });
+  }
+}
+
+// ── Auto-renew expired recurring PairdUps ─────────────────
+function autoRenewRecurringListings() {
+  if (!isSignedIn || !currentUser.email) return;
+  var now = new Date();
+  var todayNum = now.getFullYear()*10000 + (now.getMonth()+1)*100 + now.getDate();
+  var changed = false;
+
+  userListings.forEach(function(d) {
+    if (!d.recurring || !d.dateVal || d.ownerEmail !== currentUser.email) return;
+    // Parse the listing date
+    var parts = d.dateVal.split('-');
+    if (parts.length < 3) return;
+    var dateNum = parseInt(parts[0])*10000 + parseInt(parts[1])*100 + parseInt(parts[2]);
+    if (dateNum >= todayNum) return; // Not expired yet
+
+    // Check recurrence limit
+    var count = d.recurCount || 0;
+    var limit = d.recurLimit || 0; // 0 = ongoing
+    if (limit > 0 && count >= limit) {
+      // Hit the limit — turn off recurring
+      d.recurring = false;
+      changed = true;
+      return;
+    }
+
+    // Calculate next date
+    var interval = d.recurInterval || 7;
+    var oldDate = new Date(d.dateVal + 'T12:00:00');
+    var nextDate = new Date(oldDate);
+    // Keep advancing until we're in the future
+    while (nextDate <= now) {
+      nextDate.setDate(nextDate.getDate() + interval);
+      count++;
+      if (limit > 0 && count >= limit) break;
+    }
+
+    // Update the listing
+    var newDateVal = nextDate.getFullYear() + '-' + String(nextDate.getMonth()+1).padStart(2,'0') + '-' + String(nextDate.getDate()).padStart(2,'0');
+    var newDateStr = nextDate.toLocaleDateString('en-US', {weekday:'short',month:'short',day:'numeric',year:'numeric'});
+    // Preserve time info
+    if (d.timeVal) {
+      var tp = d.timeVal.split(':');
+      var hr = parseInt(tp[0]), ampm = hr >= 12 ? 'PM' : 'AM';
+      newDateStr += ' · ' + (hr % 12 || 12) + ':' + tp[1] + ' ' + ampm;
+    }
+    if (d.endTimeVal === 'Flexible') {
+      newDateStr += ' - Flexible';
+    } else if (d.endTimeVal) {
+      var ep = d.endTimeVal.split(':');
+      var eh = parseInt(ep[0]), eampm = eh >= 12 ? 'PM' : 'AM';
+      newDateStr += ' - ' + (eh % 12 || 12) + ':' + ep[1] + ' ' + eampm;
+    }
+
+    d.dateVal = newDateVal;
+    d.dateStr = newDateStr;
+    d.recurCount = count;
+    changed = true;
+    console.log('[PairdUps] Auto-renewed "' + d.title + '" → ' + newDateStr + ' (renewal ' + count + (limit ? '/' + limit : '/∞') + ')');
+
+    // Update Supabase
+    if (_supabase && d.supabaseId) {
+      _supabase.from('listings').update({
+        date_val: newDateVal, date_str: newDateStr,
+        recur_count: count, recurring: d.recurring
+      }).eq('id', d.supabaseId).then(function(res) {
+        if (res.error) console.log('[PairdUps] Recurring update error:', res.error);
+      });
+    }
+  });
+
+  if (changed) {
+    _saveListings(userListings);
+    // Refresh the Discover cards and My Listings
+    document.querySelectorAll('.listing-card[data-owner-email]').forEach(function(c) { if (c.dataset.ownerEmail) c.remove(); });
+    document.querySelectorAll('#my-listings-container .my-card').forEach(function(c) { c.remove(); });
+    userListings.forEach(function(d) { renderUserListing(d); });
+    toggleMyListingsEmpty();
+    setTimeout(function() { filterExpiredFromDiscover(); markExpiredCards(); }, 300);
+  }
+}
+
 function togglePill(el,group) {
   el.closest('.pill-group').querySelectorAll('.pill').forEach(function(p) {
     if (group !== 'int') {
@@ -6334,6 +6542,8 @@ window.addEventListener('load', async function() {
   }
   // Restore user-created PairdUps from localStorage first (instant)
   restoreUserListings();
+  // Auto-renew any expired recurring listings from localStorage
+  autoRenewRecurringListings();
   // Then load from Supabase (async, replaces localStorage data with cloud data)
   if (_supabase) {
     loadSupabaseListings();
