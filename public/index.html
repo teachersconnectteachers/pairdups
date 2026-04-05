@@ -2871,6 +2871,7 @@ async function sendJoinRequest() {
 
   var now = new Date();
   var timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  var supabaseConvoId = null;
 
   // Try to create conversation in Supabase
   if (_supabase && currentUser.supabaseId && poster.ownerEmail) {
@@ -2897,6 +2898,7 @@ async function sendJoinRequest() {
 
         if (convoErr) { console.log('Convo create error:', convoErr); }
         else if (newConvo) {
+          supabaseConvoId = newConvo.id;
           // Add the initial message(s)
           var systemMsg = { conversation_id: newConvo.id, sender_id: currentUser.supabaseId, text: '📋 Join request sent for "' + poster.title + '"' };
           await _supabase.from('messages').insert(systemMsg);
@@ -2910,7 +2912,8 @@ async function sendJoinRequest() {
   }
 
   // Also save locally for instant UI feedback
-  var convoId = 'convo_' + Date.now();
+  // Use the Supabase conversation ID if available so messages sync correctly
+  var convoId = supabaseConvoId || ('convo_' + Date.now());
   var msgs = [];
   msgs.push({ from:'system', text:'📋 Join request sent for "'+poster.title+'"', time: timeStr });
   if (msg) {
@@ -2918,6 +2921,7 @@ async function sendJoinRequest() {
   }
   var convo = {
     id: convoId,
+    supabaseId: supabaseConvoId,
     posterName: poster.name,
     posterPhoto: poster.photo,
     posterAge: poster.age || '',
@@ -4281,11 +4285,12 @@ function sendMsg() {
       if (_supabase && currentUser.supabaseId && convoSupabaseId) {
         (async function() {
           try {
-            await _supabase.from('messages').insert({
+            var { error: msgErr } = await _supabase.from('messages').insert({
               conversation_id: convoSupabaseId,
               sender_id: currentUser.supabaseId,
               text: text
             });
+            if (msgErr) { console.log('[PairdUps] Message insert error:', msgErr, 'convoId:', convoSupabaseId); return; }
             // Update conversation last_message and mark other user as unread
             var updateData = {
               last_message_text: text,
@@ -4297,9 +4302,13 @@ function sendMsg() {
             } else {
               updateData.requester_unread = true;
             }
-            await _supabase.from('conversations').update(updateData).eq('id', convoSupabaseId);
-          } catch(e) { console.log('Message send error:', e); }
+            var { error: updateErr } = await _supabase.from('conversations').update(updateData).eq('id', convoSupabaseId);
+            if (updateErr) { console.log('[PairdUps] Conversation update error:', updateErr); }
+            else { console.log('[PairdUps] Message sent to Supabase OK'); }
+          } catch(e) { console.log('[PairdUps] Message send error:', e); }
         })();
+      } else {
+        console.log('[PairdUps] Skipped Supabase message — no supabaseId. convo.id:', convo.id, 'convo.supabaseId:', convo.supabaseId);
       }
     }
   }
