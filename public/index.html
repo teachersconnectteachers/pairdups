@@ -2013,6 +2013,10 @@ function _clearSession(){ try { localStorage.removeItem("pu_ses"); }            
 // ── Conversations persistence ──
 function _getConvos() { try { var r=localStorage.getItem("pu_convos"); return r?JSON.parse(r):[]; } catch(e){return[];} }
 function _saveConvos(c){ try { localStorage.setItem("pu_convos", JSON.stringify(c)); } catch(e){} }
+// ── Deleted conversation tracking (prevents background poll from restoring them) ──
+function _getDeletedConvoIds() { try { return JSON.parse(localStorage.getItem('pu_deleted_convos') || '[]'); } catch(e) { return []; } }
+function _trackDeletedConvo(id) { try { var d = _getDeletedConvoIds(); if (d.indexOf(id) === -1) { d.push(id); localStorage.setItem('pu_deleted_convos', JSON.stringify(d)); } } catch(e) {} }
+function _clearDeletedConvoIds() { localStorage.removeItem('pu_deleted_convos'); }
 // Clear stale sample data from older versions
 var _APP_VERSION = 'v3_live';
 if (localStorage.getItem('pu_version') !== _APP_VERSION) {
@@ -2387,6 +2391,7 @@ async function logOut() {
   // Clear user-specific data so next login starts clean
   conversations = [];
   _saveConvos(conversations);
+  _clearDeletedConvoIds();
   renderConversations();
   updateMsgBadge();
   // Clear My Listings DOM cards
@@ -3089,10 +3094,16 @@ function deleteActiveConvo() {
   var chatArea = document.getElementById('chat-messages');
   var activeId = chatArea ? chatArea.dataset.activeConvo : null;
   if (activeId) {
+    var convo = conversations.find(function(c) { return c.id === activeId; });
     conversations = conversations.filter(function(c) { return c.id !== activeId; });
     _saveConvos(conversations);
+    _trackDeletedConvo(activeId);
     chatArea.dataset.activeConvo = '';
     renderConversations();
+    // Delete from Supabase
+    if (_supabase && convo && convo.supabaseId) {
+      _supabase.from('conversations').delete().eq('id', convo.supabaseId).then(function(){});
+    }
   }
   showToast('Conversation deleted.');
   setTimeout(goBack, 800);
@@ -3235,6 +3246,13 @@ function openDeleteAllChatsModal() {
 }
 function doDeleteAllChats() {
   closeModal('modal-delete-all-chats');
+  // Track all deleted IDs and delete from Supabase
+  conversations.forEach(function(c) {
+    _trackDeletedConvo(c.id);
+    if (_supabase && c.supabaseId) {
+      _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){});
+    }
+  });
   conversations = [];
   _saveConvos(conversations);
   renderConversations();
@@ -3279,6 +3297,13 @@ function doBulkDeleteReqs() {
     }
   });
   if (idsToRemove.length > 0) {
+    idsToRemove.forEach(function(id) {
+      _trackDeletedConvo(id);
+      var c = conversations.find(function(cv) { return cv.id === id; });
+      if (_supabase && c && c.supabaseId) {
+        _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){});
+      }
+    });
     conversations = conversations.filter(function(c) { return idsToRemove.indexOf(c.id) === -1; });
     _saveConvos(conversations);
     renderConversations();
@@ -3337,6 +3362,13 @@ function doBulkDeleteApplied() {
   });
   // Remove from local conversations array
   if (idsToRemove.length > 0) {
+    idsToRemove.forEach(function(id) {
+      _trackDeletedConvo(id);
+      var c = conversations.find(function(cv) { return cv.id === id; });
+      if (_supabase && c && c.supabaseId) {
+        _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){});
+      }
+    });
     conversations = conversations.filter(function(c) { return idsToRemove.indexOf(c.id) === -1; });
     _saveConvos(conversations);
     renderConversations();
@@ -3347,16 +3379,16 @@ function doBulkDeleteApplied() {
 // ── Bulk delete for Messages ──────────────────────────────
 function confirmBulkDeleteMsgs(type) {
   if (type === 'declined') {
-    // Delete conversations where the last message indicates a decline (simulated)
-    // In production, conversations would have a status field
-    // For now, remove conversations that have only 1-2 messages (likely no engagement)
     var before = conversations.length;
+    var toDelete = conversations.filter(function(c) { return c.messages.length <= 2; });
+    toDelete.forEach(function(c) { _trackDeletedConvo(c.id); if (_supabase && c.supabaseId) _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){}); });
     conversations = conversations.filter(function(c) { return c.messages.length > 2; });
     _saveConvos(conversations); renderConversations(); updateMsgBadge();
     showToast((before - conversations.length) + ' low-activity chat(s) deleted.');
   } else if (type === 'no-reply') {
-    // Delete conversations where poster never replied (only system + me messages)
     var before2 = conversations.length;
+    var toDelete2 = conversations.filter(function(c) { return !c.messages.some(function(m) { return m.from === 'them'; }); });
+    toDelete2.forEach(function(c) { _trackDeletedConvo(c.id); if (_supabase && c.supabaseId) _supabase.from('conversations').delete().eq('id', c.supabaseId).then(function(){}); });
     conversations = conversations.filter(function(c) {
       return c.messages.some(function(m) { return m.from === 'them'; });
     });
@@ -3509,7 +3541,8 @@ function startBackgroundPolling() {
       .order('last_message_at', { ascending: false })
       .then(function(result) {
         if (result.error || !result.data) return;
-        var serverConvos = result.data;
+        var deletedIds = _getDeletedConvoIds();
+        var serverConvos = result.data.filter(function(sc) { return deletedIds.indexOf(sc.id) === -1; });
         var localSupabaseIds = conversations.filter(function(c) { return c.supabaseId; }).map(function(c) { return c.supabaseId; });
         var needsRefresh = false;
         // Check for new conversations not in local
@@ -3796,10 +3829,16 @@ async function loadSupabaseConversations() {
 
     if (error) { console.log('Load conversations error:', error); return; }
     
-    // Preserve any local-only conversations (ones without supabaseId that were just created)
-    var localOnlyConvos = conversations.filter(function(c) { return !c.supabaseId && c.id && c.id.indexOf('convo_') === 0; });
+    // Get list of locally deleted conversation IDs to skip
+    var deletedIds = _getDeletedConvoIds();
     
-    if (!convos || convos.length === 0) {
+    // Preserve any local-only conversations (ones without supabaseId that were just created)
+    var localOnlyConvos = conversations.filter(function(c) { return !c.supabaseId && c.id && c.id.indexOf('convo_') === 0 && deletedIds.indexOf(c.id) === -1; });
+    
+    // Filter out deleted conversations from Supabase results
+    var filteredConvos = (convos || []).filter(function(c) { return deletedIds.indexOf(c.id) === -1; });
+    
+    if (filteredConvos.length === 0) {
       // No Supabase conversations — keep only local-only ones
       conversations = localOnlyConvos;
       _saveConvos(conversations);
@@ -3809,8 +3848,8 @@ async function loadSupabaseConversations() {
     }
 
     conversations = [];
-    for (var i = 0; i < convos.length; i++) {
-      var c = convos[i];
+    for (var i = 0; i < filteredConvos.length; i++) {
+      var c = filteredConvos[i];
       var iAmRequester = (c.requester_id === currentUser.supabaseId);
       var otherUser = iAmRequester ? c.poster : c.requester;
 
