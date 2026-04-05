@@ -2873,16 +2873,20 @@ async function sendJoinRequest() {
   var timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   var supabaseConvoId = null;
 
+  console.log('[PairdUps] sendJoinRequest — poster:', poster.name, 'ownerEmail:', poster.ownerEmail, 'title:', poster.title);
+
   // Try to create conversation in Supabase
   if (_supabase && currentUser.supabaseId && poster.ownerEmail) {
     try {
       // Find the poster's Supabase ID from their email
-      var { data: posterProfile } = await _supabase.from('profiles').select('id').eq('email', poster.ownerEmail).maybeSingle();
+      var { data: posterProfile, error: profileErr } = await _supabase.from('profiles').select('id').eq('email', poster.ownerEmail).maybeSingle();
+      console.log('[PairdUps] posterProfile lookup:', posterProfile, 'error:', profileErr);
       if (posterProfile) {
         // Find the listing's Supabase ID
         var listingId = null;
         var matchedListing = userListings.find(function(l) { return l.title === poster.title && l.ownerEmail === poster.ownerEmail; });
         if (matchedListing && matchedListing.supabaseId) listingId = matchedListing.supabaseId;
+        console.log('[PairdUps] listingId:', listingId);
 
         // Create conversation in Supabase
         var { data: newConvo, error: convoErr } = await _supabase.from('conversations').insert({
@@ -2896,24 +2900,27 @@ async function sendJoinRequest() {
           requester_unread: false
         }).select().single();
 
-        if (convoErr) { console.log('Convo create error:', convoErr); }
+        if (convoErr) { console.log('[PairdUps] Convo create error:', convoErr); }
         else if (newConvo) {
           supabaseConvoId = newConvo.id;
-          // Add the initial message(s)
-          var systemMsg = { conversation_id: newConvo.id, sender_id: currentUser.supabaseId, text: '📋 Join request sent for "' + poster.title + '"' };
-          await _supabase.from('messages').insert(systemMsg);
-          if (msg) {
-            await _supabase.from('messages').insert({ conversation_id: newConvo.id, sender_id: currentUser.supabaseId, text: msg });
-          }
           console.log('[PairdUps] Conversation created in Supabase:', newConvo.id);
+          // Add the initial message(s)
+          var { error: sysMsgErr } = await _supabase.from('messages').insert({ conversation_id: newConvo.id, sender_id: currentUser.supabaseId, text: '📋 Join request sent for "' + poster.title + '"' });
+          if (sysMsgErr) console.log('[PairdUps] System msg error:', sysMsgErr);
+          if (msg) {
+            var { error: userMsgErr } = await _supabase.from('messages').insert({ conversation_id: newConvo.id, sender_id: currentUser.supabaseId, text: msg });
+            if (userMsgErr) console.log('[PairdUps] User msg error:', userMsgErr);
+          }
         }
       }
-    } catch(e) { console.log('Join request Supabase error:', e); }
+    } catch(e) { console.log('[PairdUps] Join request Supabase error:', e); }
+  } else {
+    console.log('[PairdUps] Skipped Supabase convo — supabase:', !!_supabase, 'supabaseId:', currentUser.supabaseId, 'ownerEmail:', poster.ownerEmail);
   }
 
-  // Also save locally for instant UI feedback
-  // Use the Supabase conversation ID if available so messages sync correctly
+  // Save locally for instant UI feedback
   var convoId = supabaseConvoId || ('convo_' + Date.now());
+  console.log('[PairdUps] Local convo id:', convoId, 'supabaseConvoId:', supabaseConvoId);
   var msgs = [];
   msgs.push({ from:'system', text:'📋 Join request sent for "'+poster.title+'"', time: timeStr });
   if (msg) {
@@ -2940,6 +2947,7 @@ async function sendJoinRequest() {
   conversations.push(convo);
   _saveConvos(conversations);
   renderConversations();
+  updateMsgBadge();
   showToast(msg ? 'Request sent with message! ✨' : 'Request sent! ✨');
 }
 
@@ -3735,12 +3743,16 @@ async function loadSupabaseConversations() {
       .order('last_message_at', { ascending: false });
 
     if (error) { console.log('Load conversations error:', error); return; }
+    
+    // Preserve any local-only conversations (ones without supabaseId that were just created)
+    var localOnlyConvos = conversations.filter(function(c) { return !c.supabaseId && c.id && c.id.indexOf('convo_') === 0; });
+    
     if (!convos || convos.length === 0) {
-      // No conversations found for this user
-      conversations = [];
+      // No Supabase conversations — keep only local-only ones
+      conversations = localOnlyConvos;
       _saveConvos(conversations);
       renderConversations();
-      console.log('[PairdUps] No conversations found in Supabase');
+      console.log('[PairdUps] No conversations found in Supabase, keeping', localOnlyConvos.length, 'local');
       return;
     }
 
@@ -3808,12 +3820,20 @@ async function loadSupabaseConversations() {
       conversations.push(convo);
     }
 
+    // Re-add any local-only conversations that aren't yet in Supabase
+    var supabaseIds = conversations.map(function(c) { return c.supabaseId || c.id; });
+    localOnlyConvos.forEach(function(lc) {
+      if (supabaseIds.indexOf(lc.id) === -1) {
+        conversations.push(lc);
+      }
+    });
+
     _saveConvos(conversations);
     renderConversations();
     renderAppliedCards();
     renderRequestCards();
     updateMsgBadge();
-    console.log('[PairdUps] Loaded ' + convos.length + ' conversations from Supabase');
+    console.log('[PairdUps] Loaded ' + convos.length + ' conversations from Supabase +', localOnlyConvos.length, 'local');
   } catch(e) { console.log('Supabase conversations error:', e); }
 }
 
