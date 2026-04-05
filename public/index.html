@@ -3663,7 +3663,17 @@ function startBackgroundPolling() {
               var serverTime = sc.last_message_at ? new Date(sc.last_message_at).getTime() : 0;
               if (serverTime > (lc.lastUpdated || 0) + 1000) { needsRefresh = true; break; }
               // Check status changes (accepted/declined)
-              if (sc.status && sc.status !== lc.status) { needsRefresh = true; break; }
+              if (sc.status && sc.status !== lc.status) {
+                needsRefresh = true;
+                // If MY request was just accepted, celebrate!
+                if (sc.status === 'accepted' && lc.status === 'pending' && lc.iAmRequester) {
+                  setTimeout(function() {
+                    showConfetti();
+                    showToast('🎉 Your PairdUp request was accepted! Check Messages!');
+                  }, 500);
+                }
+                break;
+              }
             }
           }
         }
@@ -5083,14 +5093,41 @@ function acceptReq(btn) {
   }
   card.dataset.status = 'accepted';
   showToast('Request accepted! 🎉');
-  // Update local conversations array
+  showConfetti();
+  // Update local conversations array and add system message
   var convo = conversations.find(function(c) { return c.id === convoId; });
-  if (convo) { convo.status = 'accepted'; _saveConvos(conversations); renderAppliedCards(); }
-  // Update Supabase
+  if (convo) {
+    convo.status = 'accepted';
+    var timeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    var acceptMsg = '✅ Request accepted! You\'re PairdUp for "' + convo.title + '"! 🎉';
+    convo.messages.push({ from:'system', text: acceptMsg, time: timeStr });
+    convo.lastUpdated = Date.now();
+    _saveConvos(conversations);
+    renderAppliedCards();
+    renderConversations();
+  }
+  // Update Supabase — status, unread for requester, and add system message
   if (_supabase && convoId) {
-    _supabase.from('conversations').update({ status: 'accepted' }).eq('id', convoId).then(function() {
-      console.log('[PairdUps] Accepted conversation:', convoId);
-    });
+    (async function() {
+      try {
+        // Update conversation status and mark requester as unread so they see the notification
+        await _supabase.from('conversations').update({
+          status: 'accepted',
+          requester_unread: true,
+          last_message_text: '✅ Request accepted!',
+          last_message_at: new Date().toISOString()
+        }).eq('id', convoId);
+        // Add acceptance system message to the conversation
+        if (currentUser.supabaseId) {
+          await _supabase.from('messages').insert({
+            conversation_id: convoId,
+            sender_id: currentUser.supabaseId,
+            text: '✅ Request accepted! You\'re PairdUp for "' + (convo ? convo.title : '') + '"! 🎉'
+          });
+        }
+        console.log('[PairdUps] Accepted conversation:', convoId);
+      } catch(e) { console.log('[PairdUps] Accept error:', e); }
+    })();
   }
   updateReqBadge();
 }
@@ -5133,12 +5170,35 @@ function doDeclineWithReason() {
   showToast('Response sent with kindness 💛');
   // Update local conversations array
   var convo = conversations.find(function(c) { return c.id === convoId; });
-  if (convo) { convo.status = 'declined'; convo.declineReason = reason; _saveConvos(conversations); renderAppliedCards(); }
+  if (convo) {
+    convo.status = 'declined'; convo.declineReason = reason;
+    var timeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    convo.messages.push({ from:'system', text: '💛 Request was not selected this time. Reason: "' + reason + '"', time: timeStr });
+    convo.lastUpdated = Date.now();
+    _saveConvos(conversations);
+    renderAppliedCards();
+    renderConversations();
+  }
   // Update Supabase
   if (_supabase && convoId) {
-    _supabase.from('conversations').update({ status: 'declined', decline_reason: reason }).eq('id', convoId).then(function() {
-      console.log('[PairdUps] Declined conversation:', convoId);
-    });
+    (async function() {
+      try {
+        await _supabase.from('conversations').update({
+          status: 'declined', decline_reason: reason,
+          requester_unread: true,
+          last_message_text: '💛 Request was not selected',
+          last_message_at: new Date().toISOString()
+        }).eq('id', convoId);
+        if (currentUser.supabaseId) {
+          await _supabase.from('messages').insert({
+            conversation_id: convoId,
+            sender_id: currentUser.supabaseId,
+            text: '💛 Request was not selected this time. Reason: "' + reason + '"'
+          });
+        }
+        console.log('[PairdUps] Declined conversation:', convoId);
+      } catch(e) { console.log('[PairdUps] Decline error:', e); }
+    })();
   }
   updateReqBadge();
   _declineTargetBtn = null;
