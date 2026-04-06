@@ -2878,6 +2878,15 @@ function joinListing(btn) {
       // Extract date string from the first meta row
       var dateRow = card.querySelector('.card-meta-row');
       var pairupDateStr = dateRow ? dateRow.textContent.trim() : '';
+      // Extract venue from the third meta row (the one with the map link)
+      var metaRows = card.querySelectorAll('.card-meta-row');
+      var pairupVenue = '';
+      if (metaRows[2]) {
+        var venueLink = metaRows[2].querySelector('a');
+        pairupVenue = venueLink ? venueLink.textContent.trim() : metaRows[2].textContent.trim();
+      }
+      // Extract city from card data attribute
+      var pairupCity = card.dataset.city || '';
       // Extract bio, interests, ownerEmail by invoking showMiniProfile's data
       // We capture the data by temporarily intercepting the card-poster click
       var posterBio = '';
@@ -2908,7 +2917,7 @@ function joinListing(btn) {
         if (keyMatch && keyMatch[1]) posterOwnerEmail = keyMatch[1];
       }
       if (posterName && title) {
-        openJoinModal(posterName, posterPhoto, title, posterAge, posterLoc, posterBio, posterInterests, posterOwnerEmail, pairupDateStr);
+        openJoinModal(posterName, posterPhoto, title, posterAge, posterLoc, posterBio, posterInterests, posterOwnerEmail, pairupDateStr, pairupVenue, pairupCity);
         return;
       }
     }
@@ -2916,16 +2925,24 @@ function joinListing(btn) {
   // Fallback — just open join modal with whatever is stashed
   openJoinModal();
 }
-function openJoinModal(posterName, posterPhoto, pairupTitle, posterAge, posterLoc, posterBio, posterInterests, posterOwnerEmail, pairupDateStr) {
+function openJoinModal(posterName, posterPhoto, pairupTitle, posterAge, posterLoc, posterBio, posterInterests, posterOwnerEmail, pairupDateStr, pairupVenue, pairupCity) {
   if (!isSignedIn) { showAuthPrompt('request'); return; }
   // If called with args (from card buttons), stash them; otherwise use detail stash
   if (posterName) {
-    _currentDetailPoster = { name: posterName, photo: posterPhoto, title: pairupTitle, age: posterAge||'', loc: posterLoc||'', bio: posterBio||'', interests: posterInterests||[], ownerEmail: posterOwnerEmail||'', dateStr: pairupDateStr||'' };
+    _currentDetailPoster = { name: posterName, photo: posterPhoto, title: pairupTitle, age: posterAge||'', loc: posterLoc||'', bio: posterBio||'', interests: posterInterests||[], ownerEmail: posterOwnerEmail||'', dateStr: pairupDateStr||'', venue: pairupVenue||'', city: pairupCity||'' };
   }
-  // Also capture date from detail screen if not passed
+  // Also capture date and venue from detail screen if not passed
   if (!_currentDetailPoster.dateStr) {
     var dDateEl = document.getElementById('d-date');
     if (dDateEl && dDateEl.textContent) _currentDetailPoster.dateStr = dDateEl.textContent.trim();
+  }
+  if (!_currentDetailPoster.venue) {
+    var dVenueEl = document.getElementById('d-venue');
+    if (dVenueEl && dVenueEl.textContent) _currentDetailPoster.venue = dVenueEl.textContent.trim();
+  }
+  if (!_currentDetailPoster.city) {
+    var dVenueEl2 = document.getElementById('d-venue');
+    if (dVenueEl2 && dVenueEl2.dataset.city) _currentDetailPoster.city = dVenueEl2.dataset.city;
   }
   // Self-join prevention: check if user is trying to join their own listing
   var ownerCheck = _currentDetailPoster ? _currentDetailPoster.ownerEmail : posterOwnerEmail;
@@ -2933,10 +2950,25 @@ function openJoinModal(posterName, posterPhoto, pairupTitle, posterAge, posterLo
     openModal('modal-self-join');
     return;
   }
-  // Duplicate request prevention
+  // Duplicate request prevention — block if there's an existing conversation for this listing
+  // Allow re-application if the listing was edited (title, date, venue, or city changed)
   var checkTitle = _currentDetailPoster ? _currentDetailPoster.title : pairupTitle;
   var checkName = _currentDetailPoster ? _currentDetailPoster.name : posterName;
-  var alreadySent = conversations.find(function(c) { return c.title === checkTitle && c.posterName === checkName; });
+  var checkDateStr = _currentDetailPoster ? _currentDetailPoster.dateStr : '';
+  var checkVenue = _currentDetailPoster ? _currentDetailPoster.venue : '';
+  var checkCity = _currentDetailPoster ? _currentDetailPoster.city : '';
+  var alreadySent = conversations.find(function(c) {
+    if (c.posterName !== checkName) return false;
+    // Match by title — if title changed, it's a new/edited listing
+    if (c.title !== checkTitle) return false;
+    // Allow re-apply if date changed
+    if (c.dateStr && checkDateStr && c.dateStr !== checkDateStr) return false;
+    // Allow re-apply if venue changed
+    if (c.venue && checkVenue && c.venue !== checkVenue) return false;
+    // Allow re-apply if city changed
+    if (c.city && checkCity && c.city !== checkCity) return false;
+    return true;
+  });
   if (alreadySent) {
     openModal('modal-duplicate-request');
     return;
@@ -3033,6 +3065,9 @@ async function sendJoinRequest() {
     posterInterests: poster.interests || [],
     posterOwnerEmail: poster.ownerEmail || '',
     title: poster.title,
+    dateStr: poster.dateStr || '',
+    venue: poster.venue || '',
+    city: poster.city || '',
     messages: msgs,
     lastTime: 'Just now',
     lastUpdated: Date.now(),
@@ -4519,7 +4554,7 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   document.getElementById('d-poster-img').src = photo;
   // Stash poster info so join modal can use it
   const parts2 = posterKey.split('~');
-  _currentDetailPoster = { name: fname, photo: photo, title: title, age: age, loc: loc, bio: parts2[3]||'', interests: parts2[4] ? parts2[4].split('|') : [], ownerEmail: parts2[5]||'' };
+  _currentDetailPoster = { name: fname, photo: photo, title: title, age: age, loc: loc, bio: parts2[3]||'', interests: parts2[4] ? parts2[4].split('|') : [], ownerEmail: parts2[5]||'', dateStr: date||'', venue: venue||'', city: detailCity||'' };
   // Parse poster data for mini profile
   const parts = posterKey.split('~');
   const interests = parts[4] ? parts[4].split('|') : [];
