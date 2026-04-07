@@ -4486,7 +4486,8 @@ function saveListing() {
             group_type: groupType, looking_for: lookingFor,
             date_val: dateVal || null, date_str: dateStr, time_val: timeVal,
             end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji,
-            recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit, recur_count: 0
+            recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit, recur_count: 0,
+            is_active: true
           }).select().single();
           if (insertErr) { console.log('[PairdUps] Listing insert error:', insertErr); }
           else if (insertedRow) {
