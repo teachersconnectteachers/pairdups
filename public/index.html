@@ -3217,21 +3217,35 @@ function updateMsgBadge() {
 }
 
 function updateMyPairdupBadge() {
-  var count = 0;
+  var reqCount = 0;
+  var appliedUnackCount = 0;
   for (var i = 0; i < conversations.length; i++) {
     var c = conversations[i];
-    // Count ALL pending requests where I'm the poster — stays until accepted/declined
-    if (!c.iAmRequester && c.status === 'pending') count++;
+    // Count pending requests where I'm the poster
+    if (!c.iAmRequester && c.status === 'pending') reqCount++;
+    // Count unacknowledged accepted/declined where I'm the requester
+    if (c.iAmRequester && (c.status === 'accepted' || c.status === 'declined') && !c._appliedAck) appliedUnackCount++;
   }
+  var total = reqCount + appliedUnackCount;
   var badges = document.querySelectorAll('.my-pairdup-badge');
   badges.forEach(function(b) {
-    if (count > 0) {
-      b.textContent = count;
+    if (total > 0) {
+      b.textContent = total;
       b.style.display = 'flex';
     } else {
       b.style.display = 'none';
     }
   });
+}
+
+function ackApplied(convoId) {
+  var convo = conversations.find(function(c) { return c.id === convoId; });
+  if (convo) {
+    convo._appliedAck = true;
+    _saveConvos(conversations);
+    renderAppliedCards();
+    updateMyPairdupBadge();
+  }
 }
 
 function deleteActiveConvo() {
@@ -3295,6 +3309,14 @@ function renderAppliedCards() {
       declineNote = '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:4px">💛 "'+c.declineReason+'"</div>';
     }
 
+    // "Got it" acknowledgement button for responded requests
+    var ackBtn = '';
+    if ((c.status === 'accepted' || c.status === 'declined') && !c._appliedAck) {
+      var ackColor = c.status === 'accepted' ? '#16A34A' : '#DC2626';
+      var ackBg = c.status === 'accepted' ? '#F0FDF4' : '#FEF2F2';
+      ackBtn = '<button onclick="ackApplied(\''+c.id+'\')" style="margin-top:8px;padding:6px 16px;border-radius:50px;border:1.5px solid '+ackColor+';background:'+ackBg+';color:'+ackColor+';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Got it ✓</button>';
+    }
+
     var html = '<div class="applied-card" data-convo-id="'+c.id+'" data-status="'+c.status+'" data-date="'+(c.dateVal||'')+'">';
     html += '<div class="applied-avatar" onclick="openMiniFromConvo(\''+c.id+'\')"><img src="'+photo+'" alt="'+c.posterName+'" style="object-position:'+(c.posterFacePos||'center 20%')+'"></div>';
     html += '<div class="applied-info">';
@@ -3307,14 +3329,17 @@ function renderAppliedCards() {
     if (dateStr) html += '<div class="applied-date" data-date="'+(c.dateVal||'')+'">📅 '+dateStr+'</div>';
     html += '<span class="status-badge '+statusClass+'">'+statusLabel+'</span>';
     html += declineNote;
+    html += ackBtn;
     html += '</div></div>';
     container.insertAdjacentHTML('beforeend', html);
   });
-  // Update badge
-  var pendingCount = appliedConvos.filter(function(c) { return c.status === 'pending'; }).length;
+  // Update Applied tab badge — count unacknowledged accepted/declined responses
+  var unackCount = appliedConvos.filter(function(c) {
+    return (c.status === 'accepted' || c.status === 'declined') && !c._appliedAck;
+  }).length;
   var appliedBadge = document.getElementById('applied-badge');
   if (appliedBadge) {
-    if (pendingCount > 0) { appliedBadge.textContent = pendingCount; appliedBadge.style.display = 'inline-flex'; }
+    if (unackCount > 0) { appliedBadge.textContent = unackCount; appliedBadge.style.display = 'inline-flex'; }
     else { appliedBadge.style.display = 'none'; }
   }
 }
@@ -4053,7 +4078,7 @@ async function loadSupabaseConversations() {
     var _prevFlags = {};
     conversations.forEach(function(c) {
       var key = c.supabaseId || c.id;
-      _prevFlags[key] = { _requestSeen: c._requestSeen, _statusSeen: c._statusSeen };
+      _prevFlags[key] = { _requestSeen: c._requestSeen, _statusSeen: c._statusSeen, _appliedAck: c._appliedAck };
     });
 
     conversations = [];
@@ -4122,6 +4147,7 @@ async function loadSupabaseConversations() {
       if (_prevFlags[prevKey]) {
         convo._requestSeen = _prevFlags[prevKey]._requestSeen;
         convo._statusSeen = _prevFlags[prevKey]._statusSeen;
+        convo._appliedAck = _prevFlags[prevKey]._appliedAck;
       }
       conversations.push(convo);
     }
