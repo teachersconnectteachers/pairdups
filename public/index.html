@@ -2167,13 +2167,7 @@ function navTo(tab) {
   // Clear location filters when navigating to Discover
   if (tab === 'my') {
     markExpiredCards();
-    // Mark all applied status changes as seen (clears the footer badge)
-    conversations.forEach(function(c) {
-      if (c.iAmRequester && (c.status === 'accepted' || c.status === 'declined')) {
-        c._statusSeen = c.status;
-      }
-    });
-    _saveConvos(conversations);
+    updateReqBadge();
     updateMyPairdupBadge();
     // Refresh from Supabase to pick up any listing edits from other sessions
     if (_supabase && isSignedIn && currentUser.supabaseId) {
@@ -3226,11 +3220,8 @@ function updateMyPairdupBadge() {
   var count = 0;
   for (var i = 0; i < conversations.length; i++) {
     var c = conversations[i];
-    // Count pending requests where I'm the poster (new requests to review)
+    // Count ALL pending requests where I'm the poster — stays until accepted/declined
     if (!c.iAmRequester && c.status === 'pending') count++;
-    // Count status changes where I'm the requester and haven't seen yet (accepted/declined)
-    if (c.iAmRequester && c.status === 'accepted' && c._statusSeen !== 'accepted') count++;
-    if (c.iAmRequester && c.status === 'declined' && c._statusSeen !== 'declined') count++;
   }
   var badges = document.querySelectorAll('.my-pairdup-badge');
   badges.forEach(function(b) {
@@ -3657,7 +3648,7 @@ function startChatPolling(convoId) {
           var t = new Date(m.created_at);
           var timeStr = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
           var from = m.sender_id === currentUser.supabaseId ? 'me' : 'them';
-          if (m.text.startsWith('📋')) from = 'system';
+          if (m.text.startsWith('📋') || m.text.startsWith('✅') || m.text.startsWith('💛')) from = 'system';
           return { from: from, text: m.text, time: timeStr };
         });
         convo.messages = formatted;
@@ -4058,6 +4049,13 @@ async function loadSupabaseConversations() {
       return;
     }
 
+    // Preserve local UI flags from existing conversations before rebuilding
+    var _prevFlags = {};
+    conversations.forEach(function(c) {
+      var key = c.supabaseId || c.id;
+      _prevFlags[key] = { _requestSeen: c._requestSeen, _statusSeen: c._statusSeen };
+    });
+
     conversations = [];
     for (var i = 0; i < filteredConvos.length; i++) {
       var c = filteredConvos[i];
@@ -4074,7 +4072,7 @@ async function loadSupabaseConversations() {
         var t = new Date(m.created_at);
         var timeStr = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         var from = m.sender_id === currentUser.supabaseId ? 'me' : 'them';
-        if (m.text.startsWith('📋')) from = 'system';
+        if (m.text.startsWith('📋') || m.text.startsWith('✅') || m.text.startsWith('💛')) from = 'system';
         return { from: from, text: m.text, time: timeStr };
       });
 
@@ -4118,6 +4116,12 @@ async function loadSupabaseConversations() {
           convo.dateVal = matchedListing.dateVal || '';
           convo.city = matchedListing.city || '';
         }
+      }
+      // Restore UI flags from previous local state
+      var prevKey = convo.supabaseId || convo.id;
+      if (_prevFlags[prevKey]) {
+        convo._requestSeen = _prevFlags[prevKey]._requestSeen;
+        convo._statusSeen = _prevFlags[prevKey]._statusSeen;
       }
       conversations.push(convo);
     }
