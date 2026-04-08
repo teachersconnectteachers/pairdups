@@ -2969,6 +2969,7 @@ function doUnblockFromChat() {
         var unreadUpdate = convo.iAmRequester ? { poster_unread: true } : { requester_unread: true };
         unreadUpdate.last_message_text = '✅ User unblocked';
         unreadUpdate.last_message_at = new Date().toISOString();
+        unreadUpdate.blocked_by = null;
         await _supabase.from('conversations').update(unreadUpdate).eq('id', convo.supabaseId);
       } catch(e) { console.log('[PairdUps] Unblock notification error:', e); }
 
@@ -3947,7 +3948,16 @@ function openConvoChat(convoId) {
   var blockedBar = document.getElementById('chat-blocked-bar');
   if (convo._blocked) {
     if (normalBar) normalBar.style.display = 'none';
-    if (blockedBar) blockedBar.style.display = '';
+    if (blockedBar) {
+      blockedBar.style.display = '';
+      if (convo._blockedByMe) {
+        // I blocked them — show unblock button
+        blockedBar.innerHTML = '<div style="font-size:12px;color:#DC2626;font-weight:600;margin-bottom:8px">🚫 You have blocked this user</div><button onclick="confirmUnblockFromChat()" style="background:#fff;color:#DC2626;border:1.5px solid #DC2626;border-radius:50px;padding:7px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Unblock User</button>';
+      } else {
+        // They blocked me — show message only, no input
+        blockedBar.innerHTML = '<div style="font-size:12px;color:#DC2626;font-weight:600">🚫 This user has blocked you. You cannot send messages.</div>';
+      }
+    }
   } else {
     if (normalBar) normalBar.style.display = 'flex';
     if (blockedBar) blockedBar.style.display = 'none';
@@ -4035,7 +4045,7 @@ function startBackgroundPolling() {
     if (chatScreen && chatScreen.classList.contains('active') && _chatPollInterval) return;
     // Quick check: count conversations in Supabase and compare to local
     _supabase.from('conversations')
-      .select('id, last_message_at, requester_unread, poster_unread, requester_id, status, listing_title', { count: 'exact' })
+      .select('id, last_message_at, requester_unread, poster_unread, requester_id, status, listing_title, blocked_by', { count: 'exact' })
       .or('requester_id.eq.' + currentUser.supabaseId + ',poster_id.eq.' + currentUser.supabaseId)
       .order('last_message_at', { ascending: false })
       .then(function(result) {
@@ -4444,7 +4454,9 @@ async function loadSupabaseConversations() {
         unread: iAmRequester ? c.requester_unread : c.poster_unread,
         status: c.status || 'pending',
         iAmRequester: iAmRequester,
-        declineReason: c.decline_reason || ''
+        declineReason: c.decline_reason || '',
+        _blocked: !!c.blocked_by,
+        _blockedByMe: c.blocked_by === currentUser.supabaseId
       };
       // Look up listing details for venue/date
       if (convo.listingId) {
@@ -4954,12 +4966,16 @@ function sendMsg() {
   const inp = document.getElementById('chat-input-field');
   const text = inp.value.trim();
   if (!text) return;
-  // Check if this conversation is blocked
+  // Check if this conversation is blocked (either direction)
   var activeId = document.getElementById('chat-messages')?.dataset?.activeConvo;
   if (activeId) {
     var checkConvo = conversations.find(function(c) { return c.id === activeId; });
     if (checkConvo && checkConvo._blocked) {
-      showToast('You have blocked this user. Unblock to send messages.');
+      if (checkConvo._blockedByMe) {
+        showToast('You have blocked this user. Unblock to send messages.');
+      } else {
+        showToast('This user has blocked you. You cannot send messages.');
+      }
       return;
     }
   }
@@ -5114,7 +5130,7 @@ function doBlock() {
       renderConversations(); renderAppliedCards(); renderRequestCards(); updateMsgBadge();
       openConvoChat(activeId);
 
-      // Notify the blocked user via Supabase (system message + unread flag)
+      // Notify the blocked user via Supabase (system message + unread flag + blocked_by)
       if (_supabase && convo.supabaseId && currentUser.supabaseId) {
         (async function() {
           try {
@@ -5124,11 +5140,13 @@ function doBlock() {
               sender_id: currentUser.supabaseId,
               text: '🚫 ' + blockerName + ' has blocked you in this conversation. You can no longer send messages here.'
             });
-            // Mark the other user as unread so they see the notification
-            var unreadUpdate = convo.iAmRequester ? { poster_unread: true } : { requester_unread: true };
-            unreadUpdate.last_message_text = '🚫 User blocked';
-            unreadUpdate.last_message_at = new Date().toISOString();
-            await _supabase.from('conversations').update(unreadUpdate).eq('id', convo.supabaseId);
+            // Set blocked_by on the conversation + mark other user unread
+            var updateData = { blocked_by: currentUser.supabaseId };
+            if (convo.iAmRequester) { updateData.poster_unread = true; }
+            else { updateData.requester_unread = true; }
+            updateData.last_message_text = '🚫 User blocked';
+            updateData.last_message_at = new Date().toISOString();
+            await _supabase.from('conversations').update(updateData).eq('id', convo.supabaseId);
             console.log('[PairdUps] Block notification sent to Supabase');
           } catch(e) { console.log('[PairdUps] Block notification error:', e); }
 
