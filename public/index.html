@@ -5940,7 +5940,14 @@ function openMap(loc, city) {
   var notFoundEl = document.getElementById('map-not-found');
   if (titleEl) titleEl.textContent = loc;
   if (addrEl)  addrEl.textContent  = loc;
-  if (notFoundEl) notFoundEl.style.display = 'none';
+  if (notFoundEl) {
+    notFoundEl.style.display = 'none';
+    // Reset banner text to default
+    var nfTitle = notFoundEl.querySelector('div:first-child');
+    var nfSub = notFoundEl.querySelector('div:nth-child(2)');
+    if (nfTitle) nfTitle.textContent = '📍 Exact location not found';
+    if (nfSub) nfSub.textContent = 'Showing the approximate area instead. The venue name may be informal or misspelled.';
+  }
   document.getElementById('modal-map').classList.add('open');
   // Init map if needed, then invalidate size since container just became visible
   setTimeout(function() {
@@ -5957,7 +5964,15 @@ function openMap(loc, city) {
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (data && data[0]) {
-        if (notFoundEl) notFoundEl.style.display = 'none';
+        // Check if venue is vague (no street number, no specific address indicators)
+        var isVague = !/\d/.test(loc) && !/\b(ave|avenue|st|street|blvd|boulevard|rd|road|dr|drive|ln|lane|way|hwy|highway|pkwy|parkway|plaza|sq|square|court|ct|circle|terr|trail|place|pl)\b/i.test(loc);
+        if (isVague && notFoundEl) {
+          notFoundEl.querySelector('div:first-child').textContent = '📍 Approximate location shown';
+          notFoundEl.querySelector('div:nth-child(2)').textContent = 'The venue "' + loc + '" may have multiple locations. Contact the poster for the exact spot.';
+          notFoundEl.style.display = '';
+        } else {
+          if (notFoundEl) notFoundEl.style.display = 'none';
+        }
         showMapAt(parseFloat(data[0].lat), parseFloat(data[0].lon), loc);
       } else if (city) {
         // Fallback: geocode just the city and show not-found banner
