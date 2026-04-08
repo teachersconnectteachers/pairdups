@@ -4981,6 +4981,37 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   const ownerEmail = parts[5] || '';
   document.getElementById('d-poster-card').onclick = ()=>showMiniProfile(fname,age,loc,parts[3]||'',interests,photo,ownerEmail);
   goTo('screen-detail');
+
+  // Fetch fresh profile data from Supabase for the poster (in case they updated their profile)
+  if (_supabase && ownerEmail && (!isSignedIn || ownerEmail !== currentUser.email)) {
+    _supabase.from('profiles').select('name, age, location, photo_url, bio, interests').eq('email', ownerEmail).maybeSingle()
+      .then(function(res) {
+        if (!res.data) return;
+        var p = res.data;
+        var freshName = p.name || fname;
+        var freshAge = p.age || age;
+        var freshLoc = p.location || loc;
+        var freshPhoto = p.photo_url || photo;
+        var freshBio = p.bio || '';
+        var freshInterests = p.interests || [];
+        // Update detail screen elements
+        document.getElementById('d-poster-name').textContent = freshName + ', ' + freshAge;
+        document.getElementById('d-poster-loc').textContent = freshLoc;
+        document.getElementById('d-poster-img').src = freshPhoto;
+        document.getElementById('d-photo').src = freshPhoto;
+        // Update stashed poster data for join modal
+        _currentDetailPoster.name = freshName;
+        _currentDetailPoster.age = freshAge;
+        _currentDetailPoster.loc = freshLoc;
+        _currentDetailPoster.photo = freshPhoto;
+        _currentDetailPoster.bio = freshBio;
+        _currentDetailPoster.interests = freshInterests;
+        // Update mini profile click
+        document.getElementById('d-poster-card').onclick = function() {
+          showMiniProfile(freshName, freshAge, freshLoc, freshBio, freshInterests, freshPhoto, ownerEmail);
+        };
+      });
+  }
 }
 
 // ── Chat ───────────────────────────────────────────────────
@@ -5769,14 +5800,13 @@ function updateReqBadge() {
 // ── Mini profile ───────────────────────────────────────────
 // ownerEmail is optional: when provided, we pull live bio+interests from the DB or currentUser
 function showMiniProfile(name, age, loc, bio, interests, photo, ownerEmail) {
-  // If ownerEmail provided, look up live profile data (bio + interests) so they're always current
+  // If ownerEmail provided, look up live profile data so they're always current
   var liveBio = bio;
   var liveInterests = interests;
   if (ownerEmail) {
     if (isSignedIn && currentUser && currentUser.email === ownerEmail) {
       liveBio = currentUser.bio || '';
       liveInterests = currentUser.interests || [];
-      // Also pull live name/age/loc/photo from currentUser
       name = currentUser.name || name;
       age = currentUser.age || age;
       loc = currentUser.loc || loc;
@@ -5791,18 +5821,16 @@ function showMiniProfile(name, age, loc, bio, interests, photo, ownerEmail) {
       photo = u.photo || photo;
     }
   }
+  // Show modal immediately with available data
   document.getElementById('mini-photo').src = photo || '';
   document.getElementById('mini-name').textContent = name + (age ? ', ' + age : '');
   document.getElementById('mini-loc').textContent = loc ? '📍 ' + loc : '';
-  // Last Active indicator
   var activeLabel = getLastActiveLabel(ownerEmail);
   var activeEl = document.getElementById('mini-active');
   if (activeEl) { activeEl.textContent = activeLabel; activeEl.style.display = activeLabel ? '' : 'none'; }
-  // Bio in shaded box
   var bioEl = document.getElementById('mini-bio');
   bioEl.textContent = liveBio || '';
   bioEl.style.display = liveBio ? '' : 'none';
-  // Interest pills
   var wrap = document.getElementById('mini-interests');
   wrap.innerHTML = '';
   var intArr = Array.isArray(liveInterests) ? liveInterests : [];
@@ -5811,6 +5839,35 @@ function showMiniProfile(name, age, loc, bio, interests, photo, ownerEmail) {
     var t = document.createElement('span'); t.className = 'interest-tag'; t.textContent = i; wrap.appendChild(t);
   });
   openModal('modal-mini');
+
+  // Then fetch latest from Supabase and update in-place (for other users' profiles)
+  if (_supabase && ownerEmail && (!isSignedIn || ownerEmail !== currentUser.email)) {
+    _supabase.from('profiles').select('name, age, location, bio, interests, photo_url').eq('email', ownerEmail).maybeSingle()
+      .then(function(res) {
+        if (!res.data) return;
+        var p = res.data;
+        var freshName = p.name || name;
+        var freshAge = p.age || age;
+        var freshLoc = p.location || loc;
+        var freshBio = p.bio || '';
+        var freshInterests = p.interests || [];
+        var freshPhoto = p.photo_url || photo;
+        // Update the modal if it's still open
+        var miniModal = document.getElementById('modal-mini');
+        if (!miniModal || miniModal.style.display === 'none') return;
+        document.getElementById('mini-photo').src = freshPhoto;
+        document.getElementById('mini-name').textContent = freshName + (freshAge ? ', ' + freshAge : '');
+        document.getElementById('mini-loc').textContent = freshLoc ? '📍 ' + freshLoc : '';
+        var bioEl2 = document.getElementById('mini-bio');
+        bioEl2.textContent = freshBio; bioEl2.style.display = freshBio ? '' : 'none';
+        var wrap2 = document.getElementById('mini-interests');
+        wrap2.innerHTML = '';
+        (Array.isArray(freshInterests) ? freshInterests : []).forEach(function(i) {
+          if (!i) return;
+          var t = document.createElement('span'); t.className = 'interest-tag'; t.textContent = i; wrap2.appendChild(t);
+        });
+      });
+  }
 }
 
 // ── Utility ────────────────────────────────────────────────
