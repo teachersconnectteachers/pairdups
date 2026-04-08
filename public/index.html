@@ -3981,6 +3981,37 @@ function startChatPolling(convoId) {
     if (!chatScreen || !chatScreen.classList.contains('active')) { stopChatPolling(); return; }
     var activeId = document.getElementById('chat-messages')?.dataset?.activeConvo;
     if (activeId !== convoId) { stopChatPolling(); return; }
+
+    // Check conversation blocked_by status
+    _supabase.from('conversations').select('blocked_by').eq('id', convo.supabaseId).single()
+      .then(function(convoRes) {
+        if (convoRes.data) {
+          var wasBlocked = convo._blocked;
+          convo._blocked = !!convoRes.data.blocked_by;
+          convo._blockedByMe = convoRes.data.blocked_by === currentUser.supabaseId;
+          // If block status changed, update the chat UI
+          if (convo._blocked !== wasBlocked) {
+            _saveConvos(conversations);
+            var normalBar = document.getElementById('chat-input-bar-normal');
+            var blockedBar = document.getElementById('chat-blocked-bar');
+            if (convo._blocked) {
+              if (normalBar) normalBar.style.display = 'none';
+              if (blockedBar) {
+                blockedBar.style.display = '';
+                if (convo._blockedByMe) {
+                  blockedBar.innerHTML = '<div style="font-size:12px;color:#DC2626;font-weight:600;margin-bottom:8px">🚫 You have blocked this user</div><button onclick="confirmUnblockFromChat()" style="background:#fff;color:#DC2626;border:1.5px solid #DC2626;border-radius:50px;padding:7px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Unblock User</button>';
+                } else {
+                  blockedBar.innerHTML = '<div style="font-size:12px;color:#DC2626;font-weight:600">🚫 This user has blocked you. You cannot send messages.</div>';
+                }
+              }
+            } else {
+              if (normalBar) normalBar.style.display = 'flex';
+              if (blockedBar) blockedBar.style.display = 'none';
+            }
+          }
+        }
+      });
+
     // Fetch messages from Supabase
     _supabase.from('messages')
       .select('*')
