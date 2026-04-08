@@ -1086,7 +1086,8 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="photo-notice"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p><strong>Your photo = your listing photo.</strong> Choose a clear, friendly photo — it appears on all your PairdUp listings!</p></div>
     <div class="form-group"><label class="form-label">Name * <span style="font-size:11px;font-weight:400;color:var(--gray)">(first name only)</span></label><input type="text" class="form-input" id="edit-name" value="" placeholder="Your first name" maxlength="30"></div>
     <div class="form-group"><label class="form-label">Email * <span style="font-size:10px;font-weight:400;color:var(--gray)">(Users will NEVER see your email — it's only used by PairdUps to send you notifications)</span></label><input type="email" class="form-input" id="edit-email" value=""></div>
-    <div class="form-group"><label class="form-label">Age <span style="font-size:10px;font-weight:400;color:var(--gray)">(please be honest here! — oh ya, you must be 18+ too!)</span></label><input type="number" class="form-input" id="edit-age" value="" min="18" max="99" placeholder="Your age"></div>
+    <div class="form-group"><label class="form-label">Birthday 🎂 <span style="font-size:10px;font-weight:400;color:var(--gray)">(auto-calculates your age — we'll also send you a birthday greeting!)</span></label><input type="date" class="form-input" id="edit-birthday" onchange="calcAgeFromBirthday()"></div>
+    <div class="form-group"><label class="form-label">Age <span style="font-size:10px;font-weight:400;color:var(--gray)">(auto-filled from birthday — you must be 18+)</span></label><input type="number" class="form-input" id="edit-age" value="" min="18" max="99" placeholder="Your age" readonly style="background:#f9fafb;color:var(--gray)"></div>
     <div class="form-group">
       <label class="form-label">Location <span style="font-size:10px;font-weight:400;color:var(--gray)">(City, State/Province — e.g. Manhattan, NY)</span></label>
       <div style="position:relative">
@@ -1741,6 +1742,51 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--gray)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
 
+      <!-- EMAIL PREFERENCES SECTION -->
+      <div style="font-size:11px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;padding:12px 0 2px">📧 Email Preferences</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FEF2F2;border-radius:12px;border:1px solid #FECACA;margin-bottom:2px">
+        <div><div style="font-size:13px;font-weight:700;color:#DC2626">Unsubscribe from All</div><div style="font-size:10px;color:#DC2626;opacity:0.7">Turn off all non-essential emails</div></div>
+        <label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" id="set-email-unsub-all" onchange="saveEmailPref('unsubscribe_all',this.checked);toggleEmailPrefsDisabled(this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span><span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+      </div>
+      <div id="email-prefs-list" style="display:flex;flex-direction:column;gap:2px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">🎉 PairdUp Created</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="set-email-pairdup-created" checked onchange="saveEmailPref('pairdup_created',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">🙋 Join Requests</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="set-email-join-request" checked onchange="saveEmailPref('join_request',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">✅ Request Accepted/Declined</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="set-email-request-status" checked onchange="saveEmailPref('request_accepted',this.checked);saveEmailPref('request_declined',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">⏰ Listing Expired/Renewed</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="set-email-listing-status" checked onchange="saveEmailPref('listing_expired',this.checked);saveEmailPref('listing_renewed',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">💬 Unread Messages Reminder</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="set-email-unread-msgs" checked onchange="saveEmailPref('unread_messages',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">👋 Inactivity Reminders</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="set-email-inactivity" checked onchange="saveEmailPref('inactivity_reminder',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">📍 New PairdUps Nearby</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="set-email-nearby" checked onchange="saveEmailPref('new_nearby_pairdups',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">🎂 Birthday Greeting</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="set-email-birthday" checked onchange="saveEmailPref('birthday_greeting',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">🎄 Holiday Greetings</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="set-email-holidays" checked onchange="saveEmailPref('holiday_greetings',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+      </div>
+
       <!-- DANGER ZONE -->
       <div style="font-size:11px;font-weight:800;color:#DC2626;text-transform:uppercase;letter-spacing:1px;padding:12px 0 2px">⚠️ Danger Zone</div>
       <div onclick="closeModal('modal-settings');openModal('modal-cancel-account')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#FEF2F2;border-radius:12px;cursor:pointer;border:1px solid #FECACA">
@@ -2241,6 +2287,7 @@ async function signIn() {
       name: profile?.name || '', age: profile?.age || '', loc: profile?.location || '',
       bio: profile?.bio || '', email: email, interests: profile?.interests || [],
       photo: profile?.photo_url || '', facePos: profile?.face_pos || 'center 20%',
+      birthday: profile?.birthday || '',
       memberSince: profile?.member_since || new Date().toISOString().slice(0,10),
       supabaseId: data.user.id, isNewUser: false
     };
@@ -2608,6 +2655,75 @@ function loadSettings() {
   if (s.darkMode) applyDarkMode(true);
   // Timezone
   el = document.getElementById('set-timezone'); if (el) el.value = s.timezone || '';
+  // Load email preferences from Supabase
+  loadEmailPreferences();
+}
+
+// ── Birthday / Age calculation ────────────────────────────
+function calcAgeFromBirthday() {
+  var bdEl = document.getElementById('edit-birthday');
+  var ageEl = document.getElementById('edit-age');
+  if (!bdEl || !bdEl.value || !ageEl) return;
+  var bd = new Date(bdEl.value + 'T12:00:00');
+  var today = new Date();
+  var age = today.getFullYear() - bd.getFullYear();
+  var m = today.getMonth() - bd.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
+  if (age < 18) { showToast('You must be 18 or older to use PairdUps.'); ageEl.value = ''; return; }
+  if (age > 120) { showToast('Please enter a valid birthday.'); ageEl.value = ''; return; }
+  ageEl.value = age;
+}
+
+// ── Email Preferences (Supabase sync) ─────────────────────
+var _emailPrefs = {};
+function loadEmailPreferences() {
+  if (!_supabase || !currentUser.supabaseId) return;
+  _supabase.from('email_preferences').select('*').eq('user_id', currentUser.supabaseId).maybeSingle()
+    .then(function(res) {
+      if (res.error || !res.data) return;
+      _emailPrefs = res.data;
+      // Populate UI checkboxes
+      var map = {
+        'set-email-unsub-all': 'unsubscribe_all',
+        'set-email-pairdup-created': 'pairdup_created',
+        'set-email-join-request': 'join_request',
+        'set-email-request-status': 'request_accepted',
+        'set-email-listing-status': 'listing_expired',
+        'set-email-unread-msgs': 'unread_messages',
+        'set-email-inactivity': 'inactivity_reminder',
+        'set-email-nearby': 'new_nearby_pairdups',
+        'set-email-birthday': 'birthday_greeting',
+        'set-email-holidays': 'holiday_greetings'
+      };
+      Object.keys(map).forEach(function(elId) {
+        var el = document.getElementById(elId);
+        if (el) {
+          var val = _emailPrefs[map[elId]];
+          if (elId === 'set-email-unsub-all') {
+            el.checked = !!val;
+          } else {
+            el.checked = val !== false; // default to true
+          }
+        }
+      });
+      // Disable individual toggles if unsubscribe_all is on
+      toggleEmailPrefsDisabled(!!_emailPrefs.unsubscribe_all);
+    });
+}
+function saveEmailPref(key, val) {
+  if (!_supabase || !currentUser.supabaseId) return;
+  var update = {};
+  update[key] = val;
+  _supabase.from('email_preferences').update(update).eq('user_id', currentUser.supabaseId)
+    .then(function(res) {
+      if (res.error) console.log('[PairdUps] Email pref save error:', res.error);
+    });
+}
+function toggleEmailPrefsDisabled(allOff) {
+  var list = document.getElementById('email-prefs-list');
+  if (!list) return;
+  list.style.opacity = allOff ? '0.4' : '1';
+  list.style.pointerEvents = allOff ? 'none' : 'auto';
 }
 function setUnits(unit) {
   saveSetting('preferredUnits', unit);
@@ -4785,6 +4901,8 @@ function syncProfileForm() {
   document.getElementById('edit-name').value  = currentUser.name  || '';
   document.getElementById('edit-email').value = currentUser.email || '';
   document.getElementById('edit-age').value   = (currentUser.age != null && currentUser.age !== '') ? currentUser.age : '';
+  var bdEl = document.getElementById('edit-birthday');
+  if (bdEl) bdEl.value = currentUser.birthday || '';
   document.getElementById('edit-loc').value   = currentUser.loc   || '';
   document.getElementById('edit-bio').value   = currentUser.bio   || '';
   // Sync interest pills: mark saved interests as active, create custom ones if missing
@@ -4943,6 +5061,7 @@ function saveProfile() {
   const email = document.getElementById('edit-email').value.trim() || currentUser.email;
   const ageInput = document.getElementById('edit-age').value;
   const age   = ageInput !== '' ? ageInput : (currentUser.age || '');
+  const birthday = document.getElementById('edit-birthday') ? document.getElementById('edit-birthday').value : '';
 
   // Age validation: must be 18-99
   if (age !== '' && (parseInt(age) < 18 || parseInt(age) > 99 || isNaN(parseInt(age)))) {
@@ -4959,6 +5078,7 @@ function saveProfile() {
   currentUser.name      = name;
   currentUser.email     = email;
   currentUser.age       = age;
+  currentUser.birthday  = birthday;
   currentUser.loc       = loc;
   currentUser.bio       = bio;
   currentUser.interests = interests;
@@ -4970,10 +5090,12 @@ function saveProfile() {
   if (_supabase && currentUser.supabaseId) {
     (async function() {
       try {
-        await _supabase.from('profiles').update({
+        var updateData = {
           name: name, age: age, location: loc, bio: bio,
           interests: interests, face_pos: currentUser.facePos || 'center 20%'
-        }).eq('id', currentUser.supabaseId);
+        };
+        if (birthday) updateData.birthday = birthday;
+        await _supabase.from('profiles').update(updateData).eq('id', currentUser.supabaseId);
       } catch(e) { console.log('Profile sync error:', e); }
     })();
   }
@@ -6668,6 +6790,7 @@ window.addEventListener('load', async function() {
             bio: profile.bio || '', email: session.user.email,
             interests: profile.interests || [], photo: profile.photo_url || '',
             facePos: profile.face_pos || 'center 20%',
+            birthday: profile.birthday || '',
             memberSince: profile.member_since || '', supabaseId: session.user.id, isNewUser: false
           };
           USER_DB[session.user.email] = Object.assign({}, currentUser); _saveDB(USER_DB);
