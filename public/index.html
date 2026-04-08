@@ -2596,12 +2596,17 @@ async function doCancelAccount() {
   if (av) av.style.display = 'none';
   if (avWrap) avWrap.style.display = 'none';
   closeAvatarMenu();
-  // Note: In production, this would trigger a server-side API call to:
-  // 1. Send a "Sorry to see you go" email with PairdUps branding
-  // 2. Store the email in a "cancelled accounts" table for possible future outreach
-  // 3. Include unsubscribe link in the email
-  // For now, we simulate with a console log
-  if (cancelledEmail) console.log('[PairdUps Backend] Would send cancellation email to: ' + cancelledEmail);
+  // Send farewell email via the unified Edge Function
+  if (cancelledEmail && _supabase) {
+    try {
+      await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await _supabase.auth.getSession()).data?.session?.access_token },
+        body: JSON.stringify({ type: 'account_farewell', to_email: cancelledEmail, to_name: cancelledEmail.split('@')[0] })
+      });
+      console.log('[PairdUps] Farewell email sent to:', cancelledEmail);
+    } catch(e) { console.log('[PairdUps] Farewell email error:', e); }
+  }
   // Show the goodbye modal
   openModal('modal-account-canceled');
 }
@@ -5096,6 +5101,24 @@ function saveProfile() {
         };
         if (birthday) updateData.birthday = birthday;
         await _supabase.from('profiles').update(updateData).eq('id', currentUser.supabaseId);
+
+        // Check if profile is now complete (all key fields filled) — send email once
+        var profileComplete = name && age && loc && bio && currentUser.photo && interests.length > 0;
+        if (profileComplete && !localStorage.getItem('pu_profile_complete_sent')) {
+          localStorage.setItem('pu_profile_complete_sent', 'true');
+          try {
+            var session = await _supabase.auth.getSession();
+            var token = session.data?.session?.access_token;
+            if (token) {
+              await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ type: 'profile_completed', to_email: email, to_name: name })
+              });
+              console.log('[PairdUps] Profile completed email sent');
+            }
+          } catch(e2) { console.log('[PairdUps] Profile completed email error:', e2); }
+        }
       } catch(e) { console.log('Profile sync error:', e); }
     })();
   }
