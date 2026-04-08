@@ -4224,6 +4224,8 @@ async function loadSupabaseListings() {
     setTimeout(function() { filterExpiredFromDiscover(); markExpiredCards(); }, 500);
     // Auto-renew any expired recurring listings
     setTimeout(autoRenewRecurringListings, 600);
+    // Sync bookmark icons so saved PairdUps show checkmarks
+    setTimeout(syncBookmarkIcons, 700);
     console.log('[PairdUps] Loaded ' + rows.length + ' listings from Supabase');
   } catch(e) { console.log('Supabase listings error:', e); }
 }
