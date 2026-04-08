@@ -2943,6 +2943,7 @@ function doUnblockFromChat() {
 
   // Remove blocked flag
   convo._blocked = false;
+  convo._blockedByMe = false;
   var timeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   convo.messages.push({ from: 'system', text: '✅ You have unblocked ' + unblockedName + '. You can now send and receive messages.', time: timeStr });
   _saveConvos(conversations);
@@ -5124,6 +5125,7 @@ function doBlock() {
 
       // Mark conversation as blocked locally
       convo._blocked = true;
+      convo._blockedByMe = true;
       var timeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
       convo.messages.push({ from: 'system', text: '🚫 You have blocked ' + blockedName + '. You will no longer receive messages from them.', time: timeStr });
       _saveConvos(conversations);
