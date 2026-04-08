@@ -5898,6 +5898,7 @@ function openFilter() {
   openModal('modal-filter');
 }
 let currentMapLoc = '';
+let currentMapCity = '';
 let leafletMap = null;
 let leafletMarker = null;
 let mapCurrentLat = 0;
@@ -5935,6 +5936,7 @@ function initLeafletMap() {
 
 function openMap(loc, city) {
   currentMapLoc = loc;
+  currentMapCity = city || '';
   var titleEl = document.getElementById('map-title-text');
   var addrEl  = document.getElementById('map-address-text');
   var notFoundEl = document.getElementById('map-not-found');
@@ -6017,7 +6019,13 @@ function openMap(loc, city) {
 
 function searchVenueOnGoogle() {
   var q = currentMapLoc;
-  if (q) window.open('https://www.google.com/maps/search/' + encodeURIComponent(q), '_blank');
+  if (q) {
+    // Append city context for better search results
+    if (currentMapCity && q.toLowerCase().indexOf(currentMapCity.toLowerCase().split(',')[0].trim()) < 0) {
+      q = q + ', ' + currentMapCity;
+    }
+    window.open('https://www.google.com/maps/search/' + encodeURIComponent(q), '_blank');
+  }
 }
 
 function showMapAt(lat, lon, label) {
