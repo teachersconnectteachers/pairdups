@@ -1131,6 +1131,69 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   </div></div>
 </div>
 
+<!-- UNSUBSCRIBE MODAL -->
+<div class="modal-bg" id="modal-unsubscribe" onclick="if(event.target===this)closeModal('modal-unsubscribe')" style="align-items:center;justify-content:center">
+  <div class="modal-sheet" style="max-height:85%;max-width:380px;padding:24px;border-radius:24px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:8px">📧</div>
+      <div style="font-size:20px;font-weight:900;color:var(--dark)">Email Preferences</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px">Choose which PairdUps emails you'd like to receive</div>
+    </div>
+    <div id="unsub-loading" style="text-align:center;padding:20px;color:var(--gray);font-size:13px">Loading your preferences...</div>
+    <div id="unsub-content" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FEF2F2;border-radius:12px;border:1px solid #FECACA;margin-bottom:8px">
+        <div><div style="font-size:13px;font-weight:700;color:#DC2626">Unsubscribe from All</div><div style="font-size:10px;color:#DC2626;opacity:0.7">Turn off all non-essential emails</div></div>
+        <label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" id="unsub-all" onchange="updateUnsubPref('unsubscribe_all',this.checked);toggleUnsubList(this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span><span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+      </div>
+      <div id="unsub-list" style="display:flex;flex-direction:column;gap:3px;max-height:45vh;overflow-y:auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">🎉 PairdUp Created</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-pairdup-created" checked onchange="updateUnsubPref('pairdup_created',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">🙋 Join Requests</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-join-request" checked onchange="updateUnsubPref('join_request',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">✅ Accepted / Declined</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-request-status" checked onchange="updateUnsubPref('request_accepted',this.checked);updateUnsubPref('request_declined',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">⏰ Expired / Renewed</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-listing-status" checked onchange="updateUnsubPref('listing_expired',this.checked);updateUnsubPref('listing_renewed',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">💬 Unread Messages</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-unread-msgs" checked onchange="updateUnsubPref('unread_messages',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">👋 Inactivity Reminders</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-inactivity" checked onchange="updateUnsubPref('inactivity_reminder',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">📍 New Nearby PairdUps</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-nearby" checked onchange="updateUnsubPref('new_nearby_pairdups',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">🎂 Birthday Greeting</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-birthday" checked onchange="updateUnsubPref('birthday_greeting',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--gray-light);border-radius:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--dark)">🎄 Holiday Greetings</div>
+          <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-holidays" checked onchange="updateUnsubPref('holiday_greetings',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <button onclick="closeModal('modal-unsubscribe');showToast('Preferences saved! ✓')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 32px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.4)">Save & Close</button>
+      </div>
+    </div>
+    <div id="unsub-not-signed-in" style="display:none;text-align:center;padding:20px">
+      <div style="font-size:14px;color:var(--gray);line-height:1.6;margin-bottom:16px">Please sign in to manage your email preferences.</div>
+      <button onclick="closeModal('modal-unsubscribe');goTo('screen-signin')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 32px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">Sign In</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -6784,6 +6847,67 @@ setInterval(updateStatusClock, 10000); // Update every 10 seconds
   }
 })();
 
+// ── Unsubscribe page (from email links) ───────────────────
+function openUnsubscribeModal() {
+  openModal('modal-unsubscribe');
+  var loading = document.getElementById('unsub-loading');
+  var content = document.getElementById('unsub-content');
+  var notSignedIn = document.getElementById('unsub-not-signed-in');
+  if (!isSignedIn || !_supabase || !currentUser.supabaseId) {
+    if (loading) loading.style.display = 'none';
+    if (content) content.style.display = 'none';
+    if (notSignedIn) notSignedIn.style.display = '';
+    return;
+  }
+  if (loading) loading.style.display = '';
+  if (content) content.style.display = 'none';
+  if (notSignedIn) notSignedIn.style.display = 'none';
+  // Load preferences from Supabase
+  _supabase.from('email_preferences').select('*').eq('user_id', currentUser.supabaseId).maybeSingle()
+    .then(function(res) {
+      if (loading) loading.style.display = 'none';
+      if (content) content.style.display = '';
+      if (!res.data) return;
+      var p = res.data;
+      var map = {
+        'unsub-all': 'unsubscribe_all',
+        'unsub-pairdup-created': 'pairdup_created',
+        'unsub-join-request': 'join_request',
+        'unsub-request-status': 'request_accepted',
+        'unsub-listing-status': 'listing_expired',
+        'unsub-unread-msgs': 'unread_messages',
+        'unsub-inactivity': 'inactivity_reminder',
+        'unsub-nearby': 'new_nearby_pairdups',
+        'unsub-birthday': 'birthday_greeting',
+        'unsub-holidays': 'holiday_greetings'
+      };
+      Object.keys(map).forEach(function(elId) {
+        var el = document.getElementById(elId);
+        if (el) {
+          if (elId === 'unsub-all') el.checked = !!p[map[elId]];
+          else el.checked = p[map[elId]] !== false;
+        }
+      });
+      toggleUnsubList(!!p.unsubscribe_all);
+    });
+}
+function updateUnsubPref(key, val) {
+  if (!_supabase || !currentUser.supabaseId) return;
+  var update = {};
+  update[key] = val;
+  _supabase.from('email_preferences').update(update).eq('user_id', currentUser.supabaseId)
+    .then(function(res) {
+      if (res.error) console.log('[PairdUps] Unsub pref error:', res.error);
+    });
+}
+function toggleUnsubList(allOff) {
+  var list = document.getElementById('unsub-list');
+  if (list) {
+    list.style.opacity = allOff ? '0.4' : '1';
+    list.style.pointerEvents = allOff ? 'none' : 'auto';
+  }
+}
+
 window.addEventListener('load', async function() {
   // Check if this is a password reset redirect (URL contains type=recovery)
   var _isPasswordReset = false;
@@ -6893,6 +7017,21 @@ window.addEventListener('load', async function() {
   setTimeout(function() { filterExpiredFromDiscover(); }, 800);
   // Start background polling for new conversations/messages
   if (isSignedIn) setTimeout(startBackgroundPolling, 2000);
+
+  // Handle URL parameters from email links
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('unsubscribe') === 'true') {
+    setTimeout(openUnsubscribeModal, 1500);
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+  if (urlParams.get('birthday') === 'true') {
+    setTimeout(function() {
+      showConfetti();
+      showToast('🎂 Happy Birthday from PairdUps! 🎉');
+    }, 1500);
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 });
 
 </script>
