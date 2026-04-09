@@ -265,11 +265,13 @@ a{color:var(--pink);text-decoration:none}
           <option value="single">Single Email Address</option>
         </select>
         <div id="single-email-wrap" style="display:none">
-          <label>Email Address <span style="font-weight:400;text-transform:none;letter-spacing:0">(type to search or enter a new address)</span></label>
+          <label>Email Recipients <span style="font-weight:400;text-transform:none;letter-spacing:0">(search, click to add, or type a custom address + press Enter)</span></label>
+          <div id="selected-emails" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
           <div style="position:relative">
-            <input type="text" id="single-email-addr" placeholder="Start typing name or email..." autocomplete="off" oninput="filterEmailDropdown()" onfocus="filterEmailDropdown()" onblur="setTimeout(function(){document.getElementById('email-dropdown').style.display='none'},200)">
-            <div id="email-dropdown" style="display:none;position:absolute;top:calc(100% - 10px);left:0;right:0;background:#fff;border:1.5px solid var(--pink);border-radius:12px;max-height:200px;overflow-y:auto;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,0.12)"></div>
+            <input type="text" id="single-email-addr" placeholder="Type name or email to search..." autocomplete="off" oninput="filterEmailDropdown()" onfocus="showEmailList()" onblur="setTimeout(function(){document.getElementById('email-dropdown').style.display='none'},250)" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomEmail()}">
+            <div id="email-dropdown" style="display:none;position:absolute;top:calc(100% - 10px);left:0;right:0;background:#fff;border:1.5px solid var(--pink);border-radius:12px;max-height:250px;overflow-y:auto;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,0.12)"></div>
           </div>
+          <div style="font-size:11px;color:var(--gray);margin-top:4px">💡 Tip: Click multiple users to add them. Type a new email and press Enter to add custom addresses.</div>
         </div>
         <div id="recipient-count" style="font-size:12px;color:var(--pink);font-weight:600;margin-bottom:14px"></div>
         <label>Subject</label>
@@ -694,17 +696,19 @@ async function deleteConvo(id) {
 // ── Send Emails ───────────────────────────────────────────
 // ── Send Emails ───────────────────────────────────────────
 var _emailUserList = [];
+var _selectedEmails = []; // array of {email, name}
 
 function onAudienceChange() {
   var val = document.getElementById('email-audience').value;
   document.getElementById('single-email-wrap').style.display = val === 'single' ? '' : 'none';
-  updateRecipientCount();
+  if (val === 'single') { loadEmailUserList(); }
+  else { updateRecipientCount(); }
 }
 
 async function updateRecipientCount() {
   var audience = document.getElementById('email-audience').value;
   var countEl = document.getElementById('recipient-count');
-  if (audience === 'single') { countEl.textContent = ''; return; }
+  if (audience === 'single') { countEl.textContent = _selectedEmails.length > 0 ? '📬 ' + _selectedEmails.length + ' recipient(s) selected' : ''; return; }
   var { data: profiles } = await sb.from('profiles').select('id, created_at');
   var count = 0;
   if (audience === 'all') count = (profiles || []).length;
@@ -717,8 +721,12 @@ async function updateRecipientCount() {
 
 async function loadEmailUserList() {
   if (_emailUserList.length > 0) return;
-  var { data } = await sb.from('profiles').select('name, email, location');
+  var { data } = await sb.from('profiles').select('name, email, location').order('name', { ascending: true });
   _emailUserList = data || [];
+}
+
+function showEmailList() {
+  filterEmailDropdown();
 }
 
 async function filterEmailDropdown() {
@@ -726,23 +734,64 @@ async function filterEmailDropdown() {
   var input = document.getElementById('single-email-addr');
   var dropdown = document.getElementById('email-dropdown');
   var q = input.value.toLowerCase().trim();
-  if (!q) { dropdown.style.display = 'none'; return; }
-  var matches = _emailUserList.filter(function(u) {
-    return (u.email || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
-  }).slice(0, 8);
-  if (matches.length === 0) { dropdown.style.display = 'none'; return; }
-  dropdown.innerHTML = matches.map(function(u) {
-    return '<div onclick="selectEmailUser(\'' + (u.email || '').replace(/'/g, "\\'") + '\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray-border);font-size:13px;transition:background 0.1s" onmouseover="this.style.background=\'rgba(255,59,127,0.06)\'" onmouseout="this.style.background=\'#fff\'">'
-      + '<div style="font-weight:600;color:var(--dark)">' + (u.name || 'No name') + '</div>'
-      + '<div style="font-size:11px;color:var(--gray)">' + (u.email || '') + (u.location ? ' · ' + u.location : '') + '</div>'
-      + '</div>';
-  }).join('');
+  var list = _emailUserList;
+  if (q) {
+    list = list.filter(function(u) {
+      return (u.email || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
+    });
+  }
+  // Filter out already selected
+  list = list.filter(function(u) {
+    return !_selectedEmails.find(function(s) { return s.email === u.email; });
+  });
+  if (list.length === 0 && !q) { dropdown.style.display = 'none'; return; }
+  var html = '';
+  if (list.length === 0 && q) {
+    html = '<div style="padding:10px 14px;font-size:12px;color:var(--gray);text-align:center">No matches. Press Enter to add "' + q + '" as a custom address.</div>';
+  } else {
+    html = list.slice(0, 15).map(function(u) {
+      return '<div onclick="addEmailRecipient(\'' + (u.email || '').replace(/'/g, "\\'") + '\',\'' + (u.name || '').replace(/'/g, "\\'") + '\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray-border);font-size:13px;transition:background 0.1s" onmouseover="this.style.background=\'rgba(255,59,127,0.06)\'" onmouseout="this.style.background=\'#fff\'">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center"><div><span style="font-weight:600;color:var(--dark)">' + (u.name || 'No name') + '</span></div><span style="font-size:11px;color:var(--gray)">' + (u.location || '') + '</span></div>'
+        + '<div style="font-size:11px;color:var(--gray)">' + (u.email || '') + '</div>'
+        + '</div>';
+    }).join('');
+    if (list.length > 15) html += '<div style="padding:8px 14px;font-size:11px;color:var(--gray);text-align:center">...and ' + (list.length - 15) + ' more. Type to filter.</div>';
+  }
+  dropdown.innerHTML = html;
   dropdown.style.display = '';
 }
 
-function selectEmailUser(email) {
-  document.getElementById('single-email-addr').value = email;
+function addEmailRecipient(email, name) {
+  if (!email) return;
+  if (_selectedEmails.find(function(s) { return s.email === email; })) return;
+  _selectedEmails.push({ email: email, name: name || email.split('@')[0] });
+  renderSelectedEmails();
+  document.getElementById('single-email-addr').value = '';
   document.getElementById('email-dropdown').style.display = 'none';
+  updateRecipientCount();
+}
+
+function addCustomEmail() {
+  var input = document.getElementById('single-email-addr');
+  var email = input.value.trim();
+  if (!email || !email.includes('@')) { toast('Please enter a valid email address'); return; }
+  addEmailRecipient(email, email.split('@')[0]);
+}
+
+function removeEmailRecipient(email) {
+  _selectedEmails = _selectedEmails.filter(function(s) { return s.email !== email; });
+  renderSelectedEmails();
+  updateRecipientCount();
+}
+
+function renderSelectedEmails() {
+  var container = document.getElementById('selected-emails');
+  container.innerHTML = _selectedEmails.map(function(s) {
+    return '<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,59,127,0.1);color:var(--pink);padding:4px 10px 4px 12px;border-radius:50px;font-size:12px;font-weight:600">'
+      + '<span>' + s.name + '</span>'
+      + '<span onclick="removeEmailRecipient(\'' + s.email.replace(/'/g, "\\'") + '\')" style="cursor:pointer;font-size:14px;line-height:1;opacity:0.7;padding:2px" title="Remove">✕</span>'
+      + '</div>';
+  }).join('');
 }
 
 async function sendAdminEmail() {
@@ -756,11 +805,8 @@ async function sendAdminEmail() {
 
   var recipients = [];
   if (audience === 'single') {
-    var addr = document.getElementById('single-email-addr').value.trim();
-    if (!addr) { toast('Please enter an email address'); return; }
-    // Try to find the name from our user list
-    var matchedUser = _emailUserList.find(function(u) { return u.email === addr; });
-    recipients = [{ email: addr, name: matchedUser ? matchedUser.name : addr.split('@')[0] }];
+    if (_selectedEmails.length === 0) { toast('Please select at least one recipient'); return; }
+    recipients = _selectedEmails.slice();
   } else {
     var { data: profiles } = await sb.from('profiles').select('id, name, email, created_at');
     if (audience === 'all') recipients = profiles || [];
