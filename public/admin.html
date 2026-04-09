@@ -256,7 +256,7 @@ a{color:var(--pink);text-decoration:none}
       <div class="page-sub">Send custom emails to users</div>
       <div class="email-composer">
         <label>Recipients</label>
-        <select id="email-audience">
+        <select id="email-audience" onchange="onAudienceChange()">
           <option value="all">All Users</option>
           <option value="new30">New Users (last 30 days)</option>
           <option value="new7">New Users (last 7 days)</option>
@@ -265,9 +265,13 @@ a{color:var(--pink);text-decoration:none}
           <option value="single">Single Email Address</option>
         </select>
         <div id="single-email-wrap" style="display:none">
-          <label>Email Address</label>
-          <input type="email" id="single-email-addr" placeholder="user@example.com">
+          <label>Email Address <span style="font-weight:400;text-transform:none;letter-spacing:0">(type to search or enter a new address)</span></label>
+          <div style="position:relative">
+            <input type="text" id="single-email-addr" placeholder="Start typing name or email..." autocomplete="off" oninput="filterEmailDropdown()" onfocus="filterEmailDropdown()" onblur="setTimeout(function(){document.getElementById('email-dropdown').style.display='none'},200)">
+            <div id="email-dropdown" style="display:none;position:absolute;top:calc(100% - 10px);left:0;right:0;background:#fff;border:1.5px solid var(--pink);border-radius:12px;max-height:200px;overflow-y:auto;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,0.12)"></div>
+          </div>
         </div>
+        <div id="recipient-count" style="font-size:12px;color:var(--pink);font-weight:600;margin-bottom:14px"></div>
         <label>Subject</label>
         <input type="text" id="email-subject" placeholder="e.g. Exciting new features coming to PairdUps!">
         <label>Email Type</label>
@@ -283,9 +287,20 @@ a{color:var(--pink);text-decoration:none}
         <textarea id="email-body" placeholder="Write your message here..."></textarea>
         <div style="display:flex;gap:10px;margin-top:8px">
           <button class="btn btn-pink" onclick="sendAdminEmail()">📧 Send Email</button>
-          <button class="btn btn-gray" onclick="previewAdminEmail()">👁 Preview</button>
+          <button class="btn btn-blue" onclick="previewAdminEmail()">👁 Preview</button>
         </div>
         <div id="email-send-status" style="margin-top:12px;font-size:13px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- EMAIL PREVIEW MODAL -->
+    <div class="admin-modal-bg" id="modal-email-preview" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="admin-modal" style="max-width:560px;padding:0;overflow:hidden">
+        <div style="padding:20px 24px;border-bottom:1px solid var(--gray-border);display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Email Preview</h3>
+          <button class="btn btn-gray" onclick="document.getElementById('modal-email-preview').classList.remove('open')">✕ Close</button>
+        </div>
+        <div id="email-preview-content" style="padding:20px;background:var(--gray-light);max-height:65vh;overflow-y:auto"></div>
       </div>
     </div>
 
@@ -677,9 +692,58 @@ async function deleteConvo(id) {
 }
 
 // ── Send Emails ───────────────────────────────────────────
-document.getElementById('email-audience').addEventListener('change', function() {
-  document.getElementById('single-email-wrap').style.display = this.value === 'single' ? '' : 'none';
-});
+// ── Send Emails ───────────────────────────────────────────
+var _emailUserList = [];
+
+function onAudienceChange() {
+  var val = document.getElementById('email-audience').value;
+  document.getElementById('single-email-wrap').style.display = val === 'single' ? '' : 'none';
+  updateRecipientCount();
+}
+
+async function updateRecipientCount() {
+  var audience = document.getElementById('email-audience').value;
+  var countEl = document.getElementById('recipient-count');
+  if (audience === 'single') { countEl.textContent = ''; return; }
+  var { data: profiles } = await sb.from('profiles').select('id, created_at');
+  var count = 0;
+  if (audience === 'all') count = (profiles || []).length;
+  else if (audience === 'new30') { var d = new Date(); d.setDate(d.getDate() - 30); count = (profiles || []).filter(function(p) { return new Date(p.created_at) >= d; }).length; }
+  else if (audience === 'new7') { var d = new Date(); d.setDate(d.getDate() - 7); count = (profiles || []).filter(function(p) { return new Date(p.created_at) >= d; }).length; }
+  else if (audience === 'inactive') { var d = new Date(); d.setDate(d.getDate() - 7); count = (profiles || []).filter(function(p) { return new Date(p.created_at) < d; }).length; }
+  else if (audience === 'active') { var d = new Date(); d.setDate(d.getDate() - 7); count = (profiles || []).filter(function(p) { return new Date(p.created_at) >= d; }).length; }
+  countEl.textContent = '📬 ' + count + ' recipient(s) will receive this email';
+}
+
+async function loadEmailUserList() {
+  if (_emailUserList.length > 0) return;
+  var { data } = await sb.from('profiles').select('name, email, location');
+  _emailUserList = data || [];
+}
+
+async function filterEmailDropdown() {
+  await loadEmailUserList();
+  var input = document.getElementById('single-email-addr');
+  var dropdown = document.getElementById('email-dropdown');
+  var q = input.value.toLowerCase().trim();
+  if (!q) { dropdown.style.display = 'none'; return; }
+  var matches = _emailUserList.filter(function(u) {
+    return (u.email || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
+  }).slice(0, 8);
+  if (matches.length === 0) { dropdown.style.display = 'none'; return; }
+  dropdown.innerHTML = matches.map(function(u) {
+    return '<div onclick="selectEmailUser(\'' + (u.email || '').replace(/'/g, "\\'") + '\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray-border);font-size:13px;transition:background 0.1s" onmouseover="this.style.background=\'rgba(255,59,127,0.06)\'" onmouseout="this.style.background=\'#fff\'">'
+      + '<div style="font-weight:600;color:var(--dark)">' + (u.name || 'No name') + '</div>'
+      + '<div style="font-size:11px;color:var(--gray)">' + (u.email || '') + (u.location ? ' · ' + u.location : '') + '</div>'
+      + '</div>';
+  }).join('');
+  dropdown.style.display = '';
+}
+
+function selectEmailUser(email) {
+  document.getElementById('single-email-addr').value = email;
+  document.getElementById('email-dropdown').style.display = 'none';
+}
 
 async function sendAdminEmail() {
   var audience = document.getElementById('email-audience').value;
@@ -690,69 +754,104 @@ async function sendAdminEmail() {
 
   if (!subject && emailType === 'custom') { toast('Please enter a subject'); return; }
 
-  // Get recipient list
   var recipients = [];
   if (audience === 'single') {
     var addr = document.getElementById('single-email-addr').value.trim();
     if (!addr) { toast('Please enter an email address'); return; }
-    recipients = [{ email: addr, name: addr.split('@')[0] }];
+    // Try to find the name from our user list
+    var matchedUser = _emailUserList.find(function(u) { return u.email === addr; });
+    recipients = [{ email: addr, name: matchedUser ? matchedUser.name : addr.split('@')[0] }];
   } else {
     var { data: profiles } = await sb.from('profiles').select('id, name, email, created_at');
-    var now = new Date();
-    if (audience === 'all') { recipients = profiles; }
-    else if (audience === 'new30') {
-      var d30 = new Date(); d30.setDate(d30.getDate() - 30);
-      recipients = profiles.filter(function(p) { return new Date(p.created_at) >= d30; });
-    } else if (audience === 'new7') {
-      var d7 = new Date(); d7.setDate(d7.getDate() - 7);
-      recipients = profiles.filter(function(p) { return new Date(p.created_at) >= d7; });
-    } else if (audience === 'inactive') {
-      // Simplified: users who joined more than 7 days ago
-      var d7i = new Date(); d7i.setDate(d7i.getDate() - 7);
-      recipients = profiles.filter(function(p) { return new Date(p.created_at) < d7i; });
-    } else if (audience === 'active') {
-      var d7a = new Date(); d7a.setDate(d7a.getDate() - 7);
-      recipients = profiles.filter(function(p) { return new Date(p.created_at) >= d7a; });
-    }
+    if (audience === 'all') recipients = profiles || [];
+    else if (audience === 'new30') { var d30 = new Date(); d30.setDate(d30.getDate() - 30); recipients = (profiles || []).filter(function(p) { return new Date(p.created_at) >= d30; }); }
+    else if (audience === 'new7') { var d7 = new Date(); d7.setDate(d7.getDate() - 7); recipients = (profiles || []).filter(function(p) { return new Date(p.created_at) >= d7; }); }
+    else if (audience === 'inactive') { var d7i = new Date(); d7i.setDate(d7i.getDate() - 7); recipients = (profiles || []).filter(function(p) { return new Date(p.created_at) < d7i; }); }
+    else if (audience === 'active') { var d7a = new Date(); d7a.setDate(d7a.getDate() - 7); recipients = (profiles || []).filter(function(p) { return new Date(p.created_at) >= d7a; }); }
   }
 
   if (recipients.length === 0) { toast('No recipients found'); return; }
-  if (!confirm('Send to ' + recipients.length + ' recipient(s)?')) return;
+  if (!confirm('Send "' + (subject || emailType) + '" to ' + recipients.length + ' recipient(s)?')) return;
 
   statusEl.style.display = '';
-  statusEl.style.color = '#9CA3AF';
+  statusEl.style.color = 'var(--gray)';
   statusEl.textContent = 'Sending to ' + recipients.length + ' recipients...';
 
-  var sent = 0, failed = 0;
+  var sent = 0, failed = 0, lastError = '';
   var session = await sb.auth.getSession();
   var token = session.data?.session?.access_token;
+  if (!token) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ Not authenticated. Please sign out and sign back in.'; return; }
 
   for (var i = 0; i < recipients.length; i++) {
     var r = recipients[i];
     if (!r.email) continue;
     try {
       var payload = { type: emailType, to_email: r.email, to_name: r.name || 'PairdUps User' };
-      if (emailType === 'custom') {
-        payload.custom_subject = subject;
-        payload.custom_body = body;
-      }
-      await fetch(SUPABASE_URL + '/functions/v1/send-pairdups-email', {
+      if (emailType === 'custom') { payload.custom_subject = subject; payload.custom_body = body; }
+      var resp = await fetch(SUPABASE_URL + '/functions/v1/send-pairdups-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify(payload)
       });
-      sent++;
-    } catch(e) { failed++; }
-    statusEl.textContent = 'Sent ' + sent + '/' + recipients.length + (failed ? ' (' + failed + ' failed)' : '');
+      var result = await resp.json();
+      if (resp.ok && !result.error) { sent++; }
+      else { failed++; lastError = result.error || resp.statusText || 'Unknown error'; console.error('Email send error:', result); }
+    } catch(e) { failed++; lastError = e.message; console.error('Email fetch error:', e); }
+    statusEl.textContent = 'Sent ' + sent + '/' + recipients.length + (failed ? ' (' + failed + ' failed)' : '') + '...';
   }
 
-  statusEl.style.color = '#4ADE80';
-  statusEl.textContent = '✅ Done! Sent ' + sent + ' email(s)' + (failed ? ', ' + failed + ' failed' : '');
-  toast('Emails sent: ' + sent);
+  if (failed > 0 && sent === 0) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '❌ All emails failed. Error: ' + lastError;
+  } else if (failed > 0) {
+    statusEl.style.color = '#92400E';
+    statusEl.textContent = '⚠️ Sent ' + sent + ', failed ' + failed + '. Last error: ' + lastError;
+  } else {
+    statusEl.style.color = 'var(--green)';
+    statusEl.textContent = '✅ Done! Sent ' + sent + ' email(s) successfully.';
+  }
+  toast('Emails sent: ' + sent + (failed ? ', failed: ' + failed : ''));
 }
 
 function previewAdminEmail() {
-  toast('Preview feature coming soon');
+  var subject = document.getElementById('email-subject').value.trim() || 'PairdUps Announcement';
+  var emailType = document.getElementById('email-type-select').value;
+  var body = document.getElementById('email-body').value.trim() || 'Your message content will appear here.';
+  var name = 'User Name';
+
+  // Build a preview of what the email will look like
+  var headerEmoji = '📢', headerTitle = subject, headerColor = '#FF3B7F,#FF6FA3';
+  if (emailType === 'welcome') { headerEmoji = '🎉'; headerTitle = 'Welcome to PairdUps!'; headerColor = '#FF3B7F,#FF6FA3'; }
+  else if (emailType === 'inactivity_reminder') { headerEmoji = '👋'; headerTitle = 'We Miss You!'; headerColor = '#6366F1,#818CF8'; }
+  else if (emailType === 'holiday_christmas') { headerEmoji = '🎄'; headerTitle = 'Merry Christmas!'; headerColor = '#DC2626,#EF4444'; }
+  else if (emailType === 'holiday_newyear') { headerEmoji = '🎆'; headerTitle = 'Happy New Year!'; headerColor = '#7C3AED,#A78BFA'; }
+  else if (emailType === 'holiday_easter') { headerEmoji = '🐣'; headerTitle = 'Happy Easter!'; headerColor = '#F59E0B,#FBBF24'; }
+
+  var previewHtml = '<div style="font-family:\'Segoe UI\',system-ui,sans-serif;max-width:500px;margin:0 auto">'
+    + '<div style="background:linear-gradient(135deg,' + headerColor + ');padding:30px 24px;border-radius:20px 20px 0 0;text-align:center">'
+    + '<div style="font-size:48px;margin-bottom:8px">' + headerEmoji + '</div>'
+    + '<h1 style="color:#fff;font-size:22px;font-weight:900;margin:0">' + headerTitle + '</h1>'
+    + '</div>'
+    + '<div style="background:#fff;padding:28px 24px;border:1px solid #f0f0f0;border-radius:0 0 20px 20px">'
+    + '<p style="font-size:15px;color:#1A1A2E;line-height:1.6;margin:0 0 16px">Hey <strong>' + name + '</strong>! 👋</p>';
+
+  if (emailType === 'custom') {
+    previewHtml += '<div style="font-size:14px;color:#1A1A2E;line-height:1.8;margin:0 0 20px;white-space:pre-wrap">' + body.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+  } else if (emailType === 'welcome') {
+    previewHtml += '<p style="font-size:15px;color:#1A1A2E;line-height:1.6;margin:0 0 16px">Welcome to <strong>PairdUps</strong> — the best way to find activity partners!</p>';
+  } else if (emailType === 'inactivity_reminder') {
+    previewHtml += '<p style="font-size:15px;color:#1A1A2E;line-height:1.6;margin:0 0 16px">It\'s been a while since you\'ve been on PairdUps. There are new PairdUps happening in your area!</p>';
+  } else {
+    previewHtml += '<p style="font-size:15px;color:#1A1A2E;line-height:1.6;margin:0 0 16px">Holiday greetings from the PairdUps team! 🎉</p>';
+  }
+
+  previewHtml += '<div style="text-align:center;margin:24px 0"><a style="background:#FF3B7F;color:#fff;text-decoration:none;padding:14px 32px;border-radius:50px;font-weight:700;font-size:15px;display:inline-block">Open PairdUps</a></div>'
+    + '<p style="font-size:12px;color:#9CA3AF;text-align:center;margin:20px 0 0">— The PairdUps Team</p>'
+    + '<div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #f0f0f0"><span style="font-size:11px;color:#9CA3AF;text-decoration:underline">Manage email preferences / Unsubscribe</span></div>'
+    + '</div></div>';
+
+  document.getElementById('email-preview-content').innerHTML = previewHtml;
+  document.getElementById('modal-email-preview').classList.add('open');
 }
 
 // ── Email Log ─────────────────────────────────────────────
