@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PairdUps Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{--pink:#FF3B7F;--dark:#1A1A2E;--gray:#6B7280;--gray-light:#F3F4F6;--green:#16A34A;--red:#DC2626;--blue:#2563EB}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#F9FAFB;color:#1A1A2E;min-height:100vh}
+a{color:var(--pink);text-decoration:none}
+
+/* Login */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#FFF0F5,#FFF5F7)}
+.login-box{background:#FFFFFF;border-radius:20px;padding:40px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.08);border:1px solid #E5E7EB}
+.login-box h1{font-size:28px;font-weight:900;margin-bottom:6px}
+.login-box h1 span{color:var(--pink)}
+.login-box p{color:var(--gray);font-size:14px;margin-bottom:24px}
+.login-input{width:100%;padding:12px 16px;border:1.5px solid #E5E7EB;background:#F3F4F6;color:#1A1A2E;border-radius:12px;font-size:14px;font-family:inherit;margin-bottom:12px;outline:none}
+.login-input:focus{border-color:var(--pink)}
+.login-btn{width:100%;padding:14px;background:var(--pink);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px}
+.login-btn:hover{opacity:0.9}
+.login-error{color:var(--red);font-size:12px;margin-top:8px;display:none}
+
+/* Layout */
+#admin-app{display:none}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:#F3F4F6;border-right:1px solid #E5E7EB;padding:20px 0;overflow-y:auto;z-index:100}
+.sidebar-logo{padding:0 20px 24px;font-size:20px;font-weight:900;color:#fff}
+.sidebar-logo span{color:var(--pink)}
+.sidebar-logo small{display:block;font-size:11px;font-weight:500;color:var(--gray);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.nav-section{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1.5px;padding:16px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#6B7280;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,59,127,0.04);color:#fff}
+.nav-item.active{background:rgba(255,59,127,0.08);color:var(--pink);border-left-color:var(--pink);font-weight:700}
+.nav-item svg{width:18px;height:18px;flex-shrink:0}
+
+.main{margin-left:240px;padding:28px 32px;min-height:100vh}
+.page-title{font-size:26px;font-weight:900;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--gray);margin-bottom:24px}
+
+/* Cards */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:#FFFFFF;border-radius:16px;padding:20px;border:1px solid #E5E7EB}
+.stat-card .label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.stat-card .value{font-size:32px;font-weight:900;color:#fff}
+.stat-card .sub{font-size:12px;color:var(--gray);margin-top:4px}
+
+/* Tables */
+.data-table{width:100%;border-collapse:collapse;background:#FFFFFF;border-radius:14px;overflow:hidden;border:1px solid #E5E7EB}
+.data-table th{text-align:left;padding:12px 16px;font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;background:#F3F4F6;border-bottom:1px solid #E5E7EB}
+.data-table td{padding:12px 16px;font-size:13px;border-bottom:1px solid #E5E7EB;vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(255,59,127,0.02)}
+
+/* Badges */
+.badge{display:inline-block;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700}
+.badge-active{background:#DCFCE7;color:#16A34A}
+.badge-blocked{background:#FEE2E2;color:#DC2626}
+.badge-hidden{background:#FEF3C7;color:#92400E}
+
+/* Buttons */
+.btn{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:none;transition:opacity 0.15s}
+.btn:hover{opacity:0.85}
+.btn-pink{background:var(--pink);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-gray{background:#F3F4F6;color:#6B7280}
+.btn-blue{background:var(--blue);color:#fff}
+
+/* Search */
+.search-bar{display:flex;gap:10px;margin-bottom:20px}
+.search-input{flex:1;padding:10px 16px;background:#F3F4F6;border:1.5px solid #2A2A34;color:#fff;border-radius:10px;font-size:13px;font-family:inherit;outline:none}
+.search-input:focus{border-color:var(--pink)}
+
+/* Sections */
+.section{display:none}
+.section.active{display:block}
+
+/* Email composer */
+.email-composer{background:#FFFFFF;border-radius:16px;padding:24px;border:1px solid #E5E7EB}
+.email-composer label{display:block;font-size:12px;font-weight:700;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+.email-composer input,.email-composer textarea,.email-composer select{width:100%;padding:10px 14px;background:#F3F4F6;border:1.5px solid #2A2A34;color:#fff;border-radius:10px;font-size:13px;font-family:inherit;outline:none;margin-bottom:14px}
+.email-composer textarea{min-height:120px;resize:vertical}
+.email-composer input:focus,.email-composer textarea:focus,.email-composer select:focus{border-color:var(--pink)}
+
+/* Toast */
+.admin-toast{position:fixed;bottom:30px;right:30px;background:var(--pink);color:#fff;padding:12px 24px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;transform:translateY(80px);opacity:0;transition:all 0.3s}
+.admin-toast.show{transform:translateY(0);opacity:1}
+
+/* Modal */
+.admin-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:500;align-items:center;justify-content:center}
+.admin-modal-bg.open{display:flex}
+.admin-modal{background:#FFFFFF;border-radius:18px;padding:28px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;border:1px solid #E5E7EB}
+.admin-modal h3{font-size:18px;font-weight:800;margin-bottom:16px}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{width:60px;padding:12px 0}
+  .sidebar-logo,.nav-section,.nav-item span{display:none}
+  .nav-item{justify-content:center;padding:12px}
+  .main{margin-left:60px;padding:16px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Paird<span>Ups</span></h1>
+    <p>Admin Dashboard — Authorized access only</p>
+    <input type="email" class="login-input" id="admin-email" placeholder="Admin email">
+    <input type="password" class="login-input" id="admin-password" placeholder="Password">
+    <button class="login-btn" onclick="adminLogin()">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="admin-app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">Paird<span>Ups</span><small>Admin Panel</small></div>
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="showSection('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Dashboard</span>
+    </div>
+    <div class="nav-section">Manage</div>
+    <div class="nav-item" onclick="showSection('users')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Users</span>
+    </div>
+    <div class="nav-item" onclick="showSection('listings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+      <span>PairdUps</span>
+    </div>
+    <div class="nav-item" onclick="showSection('messages')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Messages</span>
+    </div>
+    <div class="nav-item" onclick="showSection('emails')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <span>Send Emails</span>
+    </div>
+    <div class="nav-item" onclick="showSection('reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>Reports</span>
+    </div>
+    <div class="nav-section">System</div>
+    <div class="nav-item" onclick="showSection('email-log')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>Email Log</span>
+    </div>
+    <div class="nav-item" onclick="adminLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>Sign Out</span>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+    <!-- DASHBOARD -->
+    <div class="section active" id="sec-dashboard">
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">PairdUps overview and statistics</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Total Users</div><div class="value" id="stat-users">—</div><div class="sub" id="stat-users-sub"></div></div>
+        <div class="stat-card"><div class="label">Active Listings</div><div class="value" id="stat-listings">—</div><div class="sub" id="stat-listings-sub"></div></div>
+        <div class="stat-card"><div class="label">Conversations</div><div class="value" id="stat-convos">—</div></div>
+        <div class="stat-card"><div class="label">Messages Sent</div><div class="value" id="stat-messages">—</div></div>
+        <div class="stat-card"><div class="label">Emails Sent</div><div class="value" id="stat-emails">—</div></div>
+        <div class="stat-card"><div class="label">New Users (30d)</div><div class="value" id="stat-new-users">—</div></div>
+      </div>
+      <div class="page-title" style="font-size:18px;margin-bottom:16px">Users by City (Top 10)</div>
+      <table class="data-table" id="city-stats-table">
+        <thead><tr><th>City</th><th>Users</th></tr></thead>
+        <tbody id="city-stats-body"></tbody>
+      </table>
+    </div>
+
+    <!-- USERS -->
+    <div class="section" id="sec-users">
+      <div class="page-title">Users</div>
+      <div class="page-sub">Manage all registered users</div>
+      <div class="search-bar">
+        <input class="search-input" id="user-search" placeholder="Search by name, email, or city..." oninput="filterUsers()">
+        <button class="btn btn-pink" onclick="loadUsers()">Refresh</button>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>User</th><th>Email</th><th>Location</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </div>
+
+    <!-- LISTINGS -->
+    <div class="section" id="sec-listings">
+      <div class="page-title">PairdUps Listings</div>
+      <div class="page-sub">Manage all active and hidden listings</div>
+      <div class="search-bar">
+        <input class="search-input" id="listing-search" placeholder="Search by title, city, or poster..." oninput="filterListings()">
+        <button class="btn btn-pink" onclick="loadListings()">Refresh</button>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Listing</th><th>Poster</th><th>City</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="listings-body"></tbody>
+      </table>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="section" id="sec-messages">
+      <div class="page-title">Messages</div>
+      <div class="page-sub">View and moderate all conversations</div>
+      <div class="search-bar">
+        <input class="search-input" id="convo-search" placeholder="Search conversations..." oninput="filterConvos()">
+        <button class="btn btn-pink" onclick="loadConversations()">Refresh</button>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Conversation</th><th>Users</th><th>Status</th><th>Messages</th><th>Last Activity</th><th>Actions</th></tr></thead>
+        <tbody id="convos-body"></tbody>
+      </table>
+    </div>
+
+    <!-- SEND EMAILS -->
+    <div class="section" id="sec-emails">
+      <div class="page-title">Send Emails</div>
+      <div class="page-sub">Send custom emails to users</div>
+      <div class="email-composer">
+        <label>Recipients</label>
+        <select id="email-audience">
+          <option value="all">All Users</option>
+          <option value="new30">New Users (last 30 days)</option>
+          <option value="new7">New Users (last 7 days)</option>
+          <option value="inactive">Inactive Users (7+ days)</option>
+          <option value="active">Active Users (last 7 days)</option>
+          <option value="single">Single Email Address</option>
+        </select>
+        <div id="single-email-wrap" style="display:none">
+          <label>Email Address</label>
+          <input type="email" id="single-email-addr" placeholder="user@example.com">
+        </div>
+        <label>Subject</label>
+        <input type="text" id="email-subject" placeholder="e.g. Exciting new features coming to PairdUps!">
+        <label>Email Type</label>
+        <select id="email-type-select">
+          <option value="custom">Custom Announcement</option>
+          <option value="welcome">Welcome Template</option>
+          <option value="inactivity_reminder">Inactivity Reminder</option>
+          <option value="holiday_christmas">Christmas Greeting</option>
+          <option value="holiday_newyear">New Year Greeting</option>
+          <option value="holiday_easter">Easter Greeting</option>
+        </select>
+        <label>Message Body <span style="font-weight:400;text-transform:none;letter-spacing:0">(for custom announcements)</span></label>
+        <textarea id="email-body" placeholder="Write your message here..."></textarea>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn btn-pink" onclick="sendAdminEmail()">📧 Send Email</button>
+          <button class="btn btn-gray" onclick="previewAdminEmail()">👁 Preview</button>
+        </div>
+        <div id="email-send-status" style="margin-top:12px;font-size:13px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="section" id="sec-reports">
+      <div class="page-title">Reports</div>
+      <div class="page-sub">User-submitted reports (coming soon)</div>
+      <div style="text-align:center;padding:60px 20px;color:var(--gray)">
+        <div style="font-size:48px;margin-bottom:12px">🛡️</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px">Report system coming soon</div>
+        <div style="font-size:13px">User reports will appear here for review and action.</div>
+      </div>
+    </div>
+
+    <!-- EMAIL LOG -->
+    <div class="section" id="sec-email-log">
+      <div class="page-title">Email Log</div>
+      <div class="page-sub">History of all sent emails</div>
+      <div class="search-bar">
+        <input class="search-input" id="emaillog-search" placeholder="Search by type or user..." oninput="filterEmailLog()">
+        <button class="btn btn-pink" onclick="loadEmailLog()">Refresh</button>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Type</th><th>User</th><th>Sent At</th><th>Details</th></tr></thead>
+        <tbody id="emaillog-body"></tbody>
+      </table>
+    </div>
+
+    <!-- CONVERSATION DETAIL MODAL -->
+    <div class="admin-modal-bg" id="modal-convo-detail" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="admin-modal">
+        <h3 id="convo-detail-title">Conversation</h3>
+        <div id="convo-detail-messages" style="max-height:50vh;overflow-y:auto;margin-bottom:16px"></div>
+        <button class="btn btn-gray" onclick="document.getElementById('modal-convo-detail').classList.remove('open')">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-toast" id="admin-toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────
+const SUPABASE_URL = 'https://phajurcdiotfvtcwvydk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoYWp1cmNkaW90ZnZ0Y3d2eWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDM3MDQsImV4cCI6MjA5MDIxOTcwNH0.-saSHBRbEXYhDbab9rFlDWnhv7B-Kw2-0Ygh7ucstg4';
+const ADMIN_EMAILS = ['fredhockey23@gmail.com']; // Add your admin email(s) here
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+var _allUsers = [];
+var _allListings = [];
+var _allConvos = [];
+var _allEmailLogs = [];
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg) {
+  var t = document.getElementById('admin-toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+// ── Login ─────────────────────────────────────────────────
+async function adminLogin() {
+  var email = document.getElementById('admin-email').value.trim();
+  var pw = document.getElementById('admin-password').value;
+  var errEl = document.getElementById('login-error');
+  if (!email || !pw) { errEl.textContent = 'Please enter email and password.'; errEl.style.display = ''; return; }
+  if (ADMIN_EMAILS.indexOf(email.toLowerCase()) < 0) { errEl.textContent = 'Not authorized as admin.'; errEl.style.display = ''; return; }
+  var { data, error } = await sb.auth.signInWithPassword({ email: email, password: pw });
+  if (error) { errEl.textContent = error.message; errEl.style.display = ''; return; }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-app').style.display = '';
+  loadDashboard();
+}
+
+async function checkSession() {
+  var { data: { session } } = await sb.auth.getSession();
+  if (session && ADMIN_EMAILS.indexOf(session.user.email.toLowerCase()) >= 0) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-app').style.display = '';
+    loadDashboard();
+  }
+}
+
+function adminLogout() {
+  sb.auth.signOut();
+  document.getElementById('admin-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = '';
+}
+
+// ── Navigation ────────────────────────────────────────────
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById('sec-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  event.currentTarget.classList.add('active');
+  if (id === 'dashboard') loadDashboard();
+  if (id === 'users') loadUsers();
+  if (id === 'listings') loadListings();
+  if (id === 'messages') loadConversations();
+  if (id === 'email-log') loadEmailLog();
+}
+
+// ── Dashboard ─────────────────────────────────────────────
+async function loadDashboard() {
+  // Total users
+  var { count: userCount } = await sb.from('profiles').select('*', { count: 'exact', head: true });
+  document.getElementById('stat-users').textContent = userCount || 0;
+
+  // New users (30 days)
+  var d30 = new Date(); d30.setDate(d30.getDate() - 30);
+  var { count: newCount } = await sb.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', d30.toISOString());
+  document.getElementById('stat-new-users').textContent = newCount || 0;
+  document.getElementById('stat-users-sub').textContent = (newCount || 0) + ' new in last 30 days';
+
+  // Active listings
+  var { count: listingCount } = await sb.from('listings').select('*', { count: 'exact', head: true }).eq('is_active', true);
+  document.getElementById('stat-listings').textContent = listingCount || 0;
+  var { count: totalListings } = await sb.from('listings').select('*', { count: 'exact', head: true });
+  document.getElementById('stat-listings-sub').textContent = (totalListings || 0) + ' total (inc. inactive)';
+
+  // Conversations
+  var { count: convoCount } = await sb.from('conversations').select('*', { count: 'exact', head: true });
+  document.getElementById('stat-convos').textContent = convoCount || 0;
+
+  // Messages
+  var { count: msgCount } = await sb.from('messages').select('*', { count: 'exact', head: true });
+  document.getElementById('stat-messages').textContent = msgCount || 0;
+
+  // Emails sent
+  var { count: emailCount } = await sb.from('email_log').select('*', { count: 'exact', head: true });
+  document.getElementById('stat-emails').textContent = emailCount || 0;
+
+  // Users by city
+  var { data: profiles } = await sb.from('profiles').select('location');
+  var cityMap = {};
+  (profiles || []).forEach(function(p) {
+    var city = p.location || 'Unknown';
+    cityMap[city] = (cityMap[city] || 0) + 1;
+  });
+  var sorted = Object.entries(cityMap).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 10);
+  var tbody = document.getElementById('city-stats-body');
+  tbody.innerHTML = sorted.map(function(c) {
+    return '<tr><td>' + c[0] + '</td><td style="font-weight:700">' + c[1] + '</td></tr>';
+  }).join('');
+}
+
+// ── Users ─────────────────────────────────────────────────
+async function loadUsers() {
+  var { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
+  _allUsers = data || [];
+  renderUsers(_allUsers);
+}
+
+function renderUsers(users) {
+  var tbody = document.getElementById('users-body');
+  tbody.innerHTML = users.map(function(u) {
+    var status = u.is_blocked ? '<span class="badge badge-blocked">Blocked</span>' : '<span class="badge badge-active">Active</span>';
+    var joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
+    var actions = u.is_blocked
+      ? '<button class="btn btn-green btn-sm" onclick="toggleUserBlock(\'' + u.id + '\',false)">Unblock</button>'
+      : '<button class="btn btn-red btn-sm" onclick="toggleUserBlock(\'' + u.id + '\',true)">Block</button>';
+    return '<tr>'
+      + '<td><div style="display:flex;align-items:center;gap:8px">'
+      + (u.photo_url ? '<img src="' + u.photo_url + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover">' : '<div style="width:32px;height:32px;border-radius:50%;background:#F3F4F6"></div>')
+      + '<div><div style="font-weight:700;color:#1A1A2E">' + (u.name || 'No name') + '</div><div style="font-size:11px;color:var(--gray)">' + (u.age ? u.age + ' yrs' : '') + '</div></div></div></td>'
+      + '<td style="font-size:12px">' + (u.email || '—') + '</td>'
+      + '<td>' + (u.location || '—') + '</td>'
+      + '<td>' + joined + '</td>'
+      + '<td>' + status + '</td>'
+      + '<td>' + actions + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function filterUsers() {
+  var q = document.getElementById('user-search').value.toLowerCase();
+  if (!q) { renderUsers(_allUsers); return; }
+  renderUsers(_allUsers.filter(function(u) {
+    return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.location || '').toLowerCase().includes(q);
+  }));
+}
+
+async function toggleUserBlock(userId, block) {
+  await sb.from('profiles').update({ is_blocked: block }).eq('id', userId);
+  if (block) {
+    // Also hide all their listings
+    await sb.from('listings').update({ is_active: false }).eq('owner_id', userId);
+  }
+  toast(block ? 'User blocked & listings hidden' : 'User unblocked');
+  loadUsers();
+  loadDashboard();
+}
+
+// ── Listings ──────────────────────────────────────────────
+async function loadListings() {
+  var { data } = await sb.from('listings').select('*, profiles!listings_owner_id_fkey(name, email)').order('created_at', { ascending: false });
+  _allListings = data || [];
+  renderListings(_allListings);
+}
+
+function renderListings(listings) {
+  var tbody = document.getElementById('listings-body');
+  tbody.innerHTML = listings.map(function(l) {
+    var p = l.profiles || {};
+    var status = l.is_active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-hidden">Hidden</span>';
+    var actions = l.is_active
+      ? '<button class="btn btn-red btn-sm" onclick="toggleListingActive(\'' + l.id + '\',false)">Hide</button>'
+      : '<button class="btn btn-green btn-sm" onclick="toggleListingActive(\'' + l.id + '\',true)">Show</button>';
+    actions += ' <button class="btn btn-gray btn-sm" onclick="deleteListing(\'' + l.id + '\')">Delete</button>';
+    return '<tr>'
+      + '<td><div style="font-weight:700;color:#1A1A2E">' + (l.title || '—') + '</div><div style="font-size:11px;color:var(--gray)">' + (l.category || '') + ' · ' + (l.pair_type || '') + '</div></td>'
+      + '<td>' + (p.name || '—') + '<div style="font-size:11px;color:var(--gray)">' + (p.email || '') + '</div></td>'
+      + '<td>' + (l.city || '—') + '</td>'
+      + '<td style="font-size:12px">' + (l.date_str || '—') + '</td>'
+      + '<td>' + status + '</td>'
+      + '<td>' + actions + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function filterListings() {
+  var q = document.getElementById('listing-search').value.toLowerCase();
+  if (!q) { renderListings(_allListings); return; }
+  renderListings(_allListings.filter(function(l) {
+    var p = l.profiles || {};
+    return (l.title || '').toLowerCase().includes(q) || (l.city || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q);
+  }));
+}
+
+async function toggleListingActive(id, active) {
+  await sb.from('listings').update({ is_active: active }).eq('id', id);
+  toast(active ? 'Listing restored' : 'Listing hidden');
+  loadListings();
+}
+
+async function deleteListing(id) {
+  if (!confirm('Permanently delete this listing? This cannot be undone.')) return;
+  await sb.from('listings').delete().eq('id', id);
+  toast('Listing deleted');
+  loadListings();
+}
+
+// ── Conversations / Messages ──────────────────────────────
+async function loadConversations() {
+  var { data } = await sb.from('conversations')
+    .select('*, requester:profiles!conversations_requester_id_fkey(name, email), poster:profiles!conversations_poster_id_fkey(name, email)')
+    .order('last_message_at', { ascending: false });
+  _allConvos = data || [];
+  renderConvos(_allConvos);
+}
+
+function renderConvos(convos) {
+  var tbody = document.getElementById('convos-body');
+  tbody.innerHTML = convos.map(function(c) {
+    var req = c.requester || {};
+    var post = c.poster || {};
+    var ago = c.last_message_at ? timeSince(c.last_message_at) : '—';
+    return '<tr>'
+      + '<td style="font-weight:700;color:#1A1A2E;font-size:12px">' + (c.listing_title || '—') + '</td>'
+      + '<td style="font-size:12px">' + (req.name || '?') + ' → ' + (post.name || '?') + '</td>'
+      + '<td><span class="badge ' + (c.status === 'accepted' ? 'badge-active' : c.status === 'declined' ? 'badge-blocked' : 'badge-hidden') + '">' + (c.status || 'pending') + '</span></td>'
+      + '<td><button class="btn btn-blue btn-sm" onclick="viewConvoMessages(\'' + c.id + '\')">View</button></td>'
+      + '<td style="font-size:12px">' + ago + '</td>'
+      + '<td><button class="btn btn-red btn-sm" onclick="deleteConvo(\'' + c.id + '\')">Delete</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function filterConvos() {
+  var q = document.getElementById('convo-search').value.toLowerCase();
+  if (!q) { renderConvos(_allConvos); return; }
+  renderConvos(_allConvos.filter(function(c) {
+    var req = c.requester || {};
+    var post = c.poster || {};
+    return (c.listing_title || '').toLowerCase().includes(q) || (req.name || '').toLowerCase().includes(q) || (post.name || '').toLowerCase().includes(q);
+  }));
+}
+
+async function viewConvoMessages(convoId) {
+  var { data: msgs } = await sb.from('messages').select('*, profiles:sender_id(name)').eq('conversation_id', convoId).order('created_at', { ascending: true });
+  var container = document.getElementById('convo-detail-messages');
+  container.innerHTML = (msgs || []).map(function(m) {
+    var name = m.profiles?.name || 'System';
+    var time = new Date(m.created_at).toLocaleString();
+    var isSystem = m.text.startsWith('📋') || m.text.startsWith('✅') || m.text.startsWith('💛') || m.text.startsWith('🚫');
+    return '<div style="padding:8px 12px;margin-bottom:6px;background:' + (isSystem ? '#2A2A34' : '#16161C') + ';border-radius:10px">'
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:700;color:var(--pink)">' + name + '</span><span style="font-size:10px;color:var(--gray)">' + time + '</span></div>'
+      + '<div style="font-size:13px;color:#1A1A2E;line-height:1.5">' + m.text + '</div>'
+      + '<button class="btn btn-red" style="margin-top:6px;padding:3px 10px;font-size:10px" onclick="deleteMessage(\'' + m.id + '\',\'' + convoId + '\')">Delete</button>'
+      + '</div>';
+  }).join('');
+  document.getElementById('modal-convo-detail').classList.add('open');
+}
+
+async function deleteMessage(msgId, convoId) {
+  await sb.from('messages').delete().eq('id', msgId);
+  toast('Message deleted');
+  viewConvoMessages(convoId);
+}
+
+async function deleteConvo(id) {
+  if (!confirm('Delete this conversation and all its messages?')) return;
+  await sb.from('messages').delete().eq('conversation_id', id);
+  await sb.from('conversations').delete().eq('id', id);
+  toast('Conversation deleted');
+  loadConversations();
+}
+
+// ── Send Emails ───────────────────────────────────────────
+document.getElementById('email-audience').addEventListener('change', function() {
+  document.getElementById('single-email-wrap').style.display = this.value === 'single' ? '' : 'none';
+});
+
+async function sendAdminEmail() {
+  var audience = document.getElementById('email-audience').value;
+  var subject = document.getElementById('email-subject').value.trim();
+  var emailType = document.getElementById('email-type-select').value;
+  var body = document.getElementById('email-body').value.trim();
+  var statusEl = document.getElementById('email-send-status');
+
+  if (!subject && emailType === 'custom') { toast('Please enter a subject'); return; }
+
+  // Get recipient list
+  var recipients = [];
+  if (audience === 'single') {
+    var addr = document.getElementById('single-email-addr').value.trim();
+    if (!addr) { toast('Please enter an email address'); return; }
+    recipients = [{ email: addr, name: addr.split('@')[0] }];
+  } else {
+    var { data: profiles } = await sb.from('profiles').select('id, name, email, created_at');
+    var now = new Date();
+    if (audience === 'all') { recipients = profiles; }
+    else if (audience === 'new30') {
+      var d30 = new Date(); d30.setDate(d30.getDate() - 30);
+      recipients = profiles.filter(function(p) { return new Date(p.created_at) >= d30; });
+    } else if (audience === 'new7') {
+      var d7 = new Date(); d7.setDate(d7.getDate() - 7);
+      recipients = profiles.filter(function(p) { return new Date(p.created_at) >= d7; });
+    } else if (audience === 'inactive') {
+      // Simplified: users who joined more than 7 days ago
+      var d7i = new Date(); d7i.setDate(d7i.getDate() - 7);
+      recipients = profiles.filter(function(p) { return new Date(p.created_at) < d7i; });
+    } else if (audience === 'active') {
+      var d7a = new Date(); d7a.setDate(d7a.getDate() - 7);
+      recipients = profiles.filter(function(p) { return new Date(p.created_at) >= d7a; });
+    }
+  }
+
+  if (recipients.length === 0) { toast('No recipients found'); return; }
+  if (!confirm('Send to ' + recipients.length + ' recipient(s)?')) return;
+
+  statusEl.style.display = '';
+  statusEl.style.color = '#9CA3AF';
+  statusEl.textContent = 'Sending to ' + recipients.length + ' recipients...';
+
+  var sent = 0, failed = 0;
+  var session = await sb.auth.getSession();
+  var token = session.data?.session?.access_token;
+
+  for (var i = 0; i < recipients.length; i++) {
+    var r = recipients[i];
+    if (!r.email) continue;
+    try {
+      var payload = { type: emailType, to_email: r.email, to_name: r.name || 'PairdUps User' };
+      if (emailType === 'custom') {
+        payload.custom_subject = subject;
+        payload.custom_body = body;
+      }
+      await fetch(SUPABASE_URL + '/functions/v1/send-pairdups-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(payload)
+      });
+      sent++;
+    } catch(e) { failed++; }
+    statusEl.textContent = 'Sent ' + sent + '/' + recipients.length + (failed ? ' (' + failed + ' failed)' : '');
+  }
+
+  statusEl.style.color = '#4ADE80';
+  statusEl.textContent = '✅ Done! Sent ' + sent + ' email(s)' + (failed ? ', ' + failed + ' failed' : '');
+  toast('Emails sent: ' + sent);
+}
+
+function previewAdminEmail() {
+  toast('Preview feature coming soon');
+}
+
+// ── Email Log ─────────────────────────────────────────────
+async function loadEmailLog() {
+  var { data } = await sb.from('email_log').select('*, profiles:user_id(name, email)').order('sent_at', { ascending: false }).limit(100);
+  _allEmailLogs = data || [];
+  renderEmailLog(_allEmailLogs);
+}
+
+function renderEmailLog(logs) {
+  var tbody = document.getElementById('emaillog-body');
+  tbody.innerHTML = logs.map(function(l) {
+    var p = l.profiles || {};
+    return '<tr>'
+      + '<td><span class="badge badge-active">' + (l.email_type || '—') + '</span></td>'
+      + '<td>' + (p.name || '—') + '<div style="font-size:11px;color:var(--gray)">' + (p.email || '') + '</div></td>'
+      + '<td style="font-size:12px">' + new Date(l.sent_at).toLocaleString() + '</td>'
+      + '<td style="font-size:11px;color:var(--gray)">' + JSON.stringify(l.metadata || {}).substring(0, 60) + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function filterEmailLog() {
+  var q = document.getElementById('emaillog-search').value.toLowerCase();
+  if (!q) { renderEmailLog(_allEmailLogs); return; }
+  renderEmailLog(_allEmailLogs.filter(function(l) {
+    var p = l.profiles || {};
+    return (l.email_type || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q);
+  }));
+}
+
+// ── Utility ───────────────────────────────────────────────
+function timeSince(dateStr) {
+  var d = new Date(dateStr);
+  var diff = Date.now() - d.getTime();
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+  return Math.floor(diff / 86400000) + 'd ago';
+}
+
+// ── Init ──────────────────────────────────────────────────
+checkSession();
+</script>
+</body>
+</html>
