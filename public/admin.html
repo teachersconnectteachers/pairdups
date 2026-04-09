@@ -112,8 +112,8 @@ a{color:var(--pink);text-decoration:none}
   <div class="login-box">
     <h1>Paird<span>Ups</span></h1>
     <p>Admin Dashboard — Authorized access only</p>
-    <input type="email" class="login-input" id="admin-email" placeholder="Admin email">
-    <input type="password" class="login-input" id="admin-password" placeholder="Admin PIN or account password">
+    <input type="email" class="login-input" id="admin-email" placeholder="Admin email" autocomplete="off">
+    <input type="password" class="login-input" id="admin-password" placeholder="Admin PIN or account password" autocomplete="new-password">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray);cursor:pointer">
         <input type="checkbox" id="admin-remember" style="accent-color:var(--pink)"> Remember me
@@ -403,6 +403,17 @@ function adminLogout() {
   sb.auth.signOut();
   document.getElementById('admin-app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  // Clear password field but preserve email if Remember Me was checked
+  document.getElementById('admin-password').value = '';
+  var savedEmail = localStorage.getItem('pu_admin_email');
+  var remember = localStorage.getItem('pu_admin_remember');
+  if (remember && savedEmail) {
+    document.getElementById('admin-email').value = savedEmail;
+    document.getElementById('admin-remember').checked = true;
+  } else {
+    document.getElementById('admin-email').value = '';
+    document.getElementById('admin-remember').checked = false;
+  }
 }
 
 function showSetPinModal() {
