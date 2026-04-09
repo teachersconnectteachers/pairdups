@@ -311,7 +311,12 @@ a{color:var(--pink);text-decoration:none}
         <!-- User profile hover tooltip -->
         <div id="email-user-tooltip" style="display:none;position:fixed;z-index:600;background:#fff;border:1.5px solid var(--pink);border-radius:14px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,0.15);width:300px;pointer-events:none"></div>
 
-        <div id="recipient-count" style="font-size:12px;color:var(--pink);font-weight:600;margin-bottom:14px"></div>
+        <!-- Group recipients display (for non-single audiences) -->
+        <div id="group-recipients-wrap" style="display:none;margin-bottom:14px">
+          <div id="recipient-count" style="font-size:12px;color:var(--pink);font-weight:600;margin-bottom:8px"></div>
+          <div id="group-recipients" style="display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;padding:4px 0"></div>
+        </div>
+        <div id="recipient-count-single" style="display:none;font-size:12px;color:var(--pink);font-weight:600;margin-bottom:14px"></div>
         <label>Subject</label>
         <input type="text" id="email-subject" placeholder="e.g. Exciting new features coming to PairdUps!">
         <label>Email Type</label>
@@ -771,12 +776,56 @@ async function loadStateFilter() {
   sel.innerHTML = '<option value="">— Select State/Province —</option>' + sorted.map(function(s) { return '<option value="' + s[0] + '">' + s[0] + ' (' + s[1] + ' users)</option>'; }).join('');
 }
 
+var _groupRecipients = []; // populated by filter selections
+var _groupRemoved = []; // emails removed by admin from group
+
 async function updateRecipientCount() {
   var audience = document.getElementById('email-audience').value;
   var countEl = document.getElementById('recipient-count');
-  if (audience === 'single') { countEl.textContent = _selectedEmails.length > 0 ? '📬 ' + _selectedEmails.length + ' recipient(s) selected' : ''; return; }
+  var countSingleEl = document.getElementById('recipient-count-single');
+  var groupWrap = document.getElementById('group-recipients-wrap');
+
+  if (audience === 'single') {
+    groupWrap.style.display = 'none';
+    countSingleEl.style.display = '';
+    countSingleEl.textContent = _selectedEmails.length > 0 ? '📬 ' + _selectedEmails.length + ' recipient(s) selected' : '';
+    return;
+  }
+
+  countSingleEl.style.display = 'none';
+  _groupRemoved = [];
+  await loadEmailUserList();
   var recipients = await getFilteredRecipients();
-  countEl.textContent = '📬 ' + recipients.length + ' recipient(s) will receive this email';
+  _groupRecipients = recipients.map(function(p) {
+    return { email: p.email, name: p.name || p.email.split('@')[0], id: p.id };
+  });
+  renderGroupRecipients();
+}
+
+function renderGroupRecipients() {
+  var groupWrap = document.getElementById('group-recipients-wrap');
+  var countEl = document.getElementById('recipient-count');
+  var container = document.getElementById('group-recipients');
+  var visible = _groupRecipients.filter(function(r) { return _groupRemoved.indexOf(r.email) < 0; });
+
+  if (visible.length === 0) {
+    groupWrap.style.display = 'none';
+    return;
+  }
+  groupWrap.style.display = '';
+  countEl.textContent = '📬 ' + visible.length + ' recipient(s) will receive this email' + (_groupRemoved.length ? ' (' + _groupRemoved.length + ' removed)' : '');
+
+  container.innerHTML = visible.map(function(s) {
+    return '<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,59,127,0.1);color:var(--pink);padding:4px 10px 4px 12px;border-radius:50px;font-size:12px;font-weight:600;cursor:default" onmouseenter="showUserTooltip(event,\'' + s.email.replace(/'/g, "\\'") + '\')" onmouseleave="hideUserTooltip()">'
+      + '<span>' + s.name + '</span>'
+      + '<span onclick="removeGroupRecipient(\'' + s.email.replace(/'/g, "\\'") + '\')" style="cursor:pointer;font-size:14px;line-height:1;opacity:0.7;padding:2px" title="Remove from this send">✕</span>'
+      + '</div>';
+  }).join('');
+}
+
+function removeGroupRecipient(email) {
+  _groupRemoved.push(email);
+  renderGroupRecipients();
 }
 
 async function getFilteredRecipients() {
@@ -951,7 +1000,7 @@ async function sendAdminEmail() {
     if (_selectedEmails.length === 0) { toast('Please select at least one recipient'); return; }
     recipients = _selectedEmails.slice();
   } else {
-    recipients = await getFilteredRecipients();
+    recipients = _groupRecipients.filter(function(r) { return _groupRemoved.indexOf(r.email) < 0; });
   }
   if (recipients.length === 0) { toast('No recipients found for this filter'); return; }
   if (!confirm('Send "' + (subject || emailType) + '" to ' + recipients.length + ' recipient(s)?')) return;
