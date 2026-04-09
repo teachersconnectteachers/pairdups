@@ -269,32 +269,36 @@ a{color:var(--pink);text-decoration:none}
           <option value="single">Pick Individual Users</option>
         </select>
 
-        <!-- City/State/Country/Generation filters -->
+        <!-- City/State/Country/Generation filters — additive multi-select -->
         <div id="filter-city-wrap" style="display:none">
-          <label>City</label>
-          <select id="filter-city" onchange="updateRecipientCount()"><option value="">Loading...</option></select>
+          <label>City <span style="font-weight:400;text-transform:none;letter-spacing:0">(select multiple — each adds users to the list)</span></label>
+          <select id="filter-city" onchange="addFilterGroup('city')"><option value="">— Add a City —</option></select>
+          <div id="filter-city-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
         </div>
         <div id="filter-state-wrap" style="display:none">
-          <label>State / Province</label>
-          <select id="filter-state" onchange="updateRecipientCount()"><option value="">Loading...</option></select>
+          <label>State / Province <span style="font-weight:400;text-transform:none;letter-spacing:0">(select multiple)</span></label>
+          <select id="filter-state" onchange="addFilterGroup('state')"><option value="">— Add a State/Province —</option></select>
+          <div id="filter-state-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
         </div>
         <div id="filter-country-wrap" style="display:none">
-          <label>Country</label>
-          <select id="filter-country" onchange="updateRecipientCount()">
-            <option value="">— Select —</option>
+          <label>Country <span style="font-weight:400;text-transform:none;letter-spacing:0">(select multiple)</span></label>
+          <select id="filter-country" onchange="addFilterGroup('country')">
+            <option value="">— Add a Country —</option>
             <option value="USA">🇺🇸 USA</option>
             <option value="Canada">🇨🇦 Canada</option>
           </select>
+          <div id="filter-country-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
         </div>
         <div id="filter-gen-wrap" style="display:none">
-          <label>Generation</label>
-          <select id="filter-generation" onchange="updateRecipientCount()">
-            <option value="">— Select —</option>
+          <label>Generation <span style="font-weight:400;text-transform:none;letter-spacing:0">(select multiple)</span></label>
+          <select id="filter-generation" onchange="addFilterGroup('generation')">
+            <option value="">— Add a Generation —</option>
             <option value="genz">Gen Z (born 1997–2012)</option>
             <option value="millennial">Millennials (born 1981–1996)</option>
             <option value="genx">Gen X (born 1965–1980)</option>
             <option value="boomer">Baby Boomers (born 1946–1964)</option>
           </select>
+          <div id="filter-gen-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
         </div>
 
         <!-- Individual user picker -->
@@ -741,22 +745,97 @@ var _emailUserList = [];
 var _emailUserStats = {}; // {email: {posted:N, applied:N}}
 var _selectedEmails = [];
 
+var _activeFilters = []; // [{type:'state', value:'MA', label:'MA'}, ...]
+
 function onAudienceChange() {
   var val = document.getElementById('email-audience').value;
   var wraps = ['single-email-wrap','filter-city-wrap','filter-state-wrap','filter-country-wrap','filter-gen-wrap'];
   wraps.forEach(function(id) { document.getElementById(id).style.display = 'none'; });
-  // Hide both group and single displays initially
   document.getElementById('group-recipients-wrap').style.display = 'none';
   document.getElementById('recipient-count-single').style.display = 'none';
   _groupRecipients = [];
   _groupRemoved = [];
+  _activeFilters = [];
+  // Clear filter tags
+  ['filter-city-tags','filter-state-tags','filter-country-tags','filter-gen-tags'].forEach(function(id) { var el = document.getElementById(id); if (el) el.innerHTML = ''; });
 
   if (val === 'single') { document.getElementById('single-email-wrap').style.display = ''; loadEmailUserList(); updateRecipientCount(); }
   else if (val === 'city') { document.getElementById('filter-city-wrap').style.display = ''; loadCityFilter(); }
   else if (val === 'state') { document.getElementById('filter-state-wrap').style.display = ''; loadStateFilter(); }
   else if (val === 'country') { document.getElementById('filter-country-wrap').style.display = ''; }
   else if (val === 'generation') { document.getElementById('filter-gen-wrap').style.display = ''; }
-  else { updateRecipientCount(); } // all, new30, new7, inactive, active — load immediately
+  else { updateRecipientCount(); }
+}
+
+function addFilterGroup(type) {
+  var selId = { city: 'filter-city', state: 'filter-state', country: 'filter-country', generation: 'filter-generation' }[type];
+  var sel = document.getElementById(selId);
+  var val = sel.value;
+  if (!val) return;
+  var label = sel.options[sel.selectedIndex].text;
+  // Don't add duplicates
+  if (_activeFilters.find(function(f) { return f.type === type && f.value === val; })) { sel.selectedIndex = 0; return; }
+  _activeFilters.push({ type: type, value: val, label: label });
+  sel.selectedIndex = 0;
+  renderFilterTags(type);
+  rebuildGroupRecipients();
+}
+
+function removeFilterGroup(type, value) {
+  _activeFilters = _activeFilters.filter(function(f) { return !(f.type === type && f.value === value); });
+  renderFilterTags(type);
+  rebuildGroupRecipients();
+}
+
+function renderFilterTags(type) {
+  var tagContainerId = { city: 'filter-city-tags', state: 'filter-state-tags', country: 'filter-country-tags', generation: 'filter-gen-tags' }[type];
+  var container = document.getElementById(tagContainerId);
+  if (!container) return;
+  var filters = _activeFilters.filter(function(f) { return f.type === type; });
+  container.innerHTML = filters.map(function(f) {
+    return '<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(37,99,235,0.1);color:var(--blue);padding:4px 10px 4px 12px;border-radius:50px;font-size:12px;font-weight:600">'
+      + '<span>' + f.label + '</span>'
+      + '<span onclick="removeFilterGroup(\'' + f.type + '\',\'' + f.value.replace(/'/g, "\\'") + '\')" style="cursor:pointer;font-size:14px;line-height:1;opacity:0.7;padding:2px" title="Remove">✕</span>'
+      + '</div>';
+  }).join('');
+}
+
+async function rebuildGroupRecipients() {
+  await loadEmailUserList();
+  var allProfiles = _emailUserList;
+  var matched = {};
+
+  var usStates = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
+  var caProvs = ['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT'];
+  var genRanges = { genz: [1997, 2012], millennial: [1981, 1996], genx: [1965, 1980], boomer: [1946, 1964] };
+
+  _activeFilters.forEach(function(f) {
+    allProfiles.forEach(function(p) {
+      if (matched[p.email]) return;
+      var match = false;
+      if (f.type === 'city') match = (p.location === f.value);
+      else if (f.type === 'state') match = (p.location && p.location.includes(f.value));
+      else if (f.type === 'country') {
+        if (p.location) {
+          var parts = p.location.split(',');
+          var last = parts.length > 1 ? parts[parts.length - 1].trim().toUpperCase() : '';
+          if (f.value === 'USA') match = usStates.indexOf(last) >= 0;
+          if (f.value === 'Canada') match = caProvs.indexOf(last) >= 0;
+        }
+      } else if (f.type === 'generation') {
+        var range = genRanges[f.value];
+        if (range && p.birthday) {
+          var year = new Date(p.birthday).getFullYear();
+          match = year >= range[0] && year <= range[1];
+        }
+      }
+      if (match) matched[p.email] = { email: p.email, name: p.name || p.email.split('@')[0], id: p.id };
+    });
+  });
+
+  _groupRecipients = Object.values(matched);
+  _groupRemoved = [];
+  renderGroupRecipients();
 }
 
 async function loadCityFilter() {
@@ -787,7 +866,6 @@ var _groupRemoved = []; // emails removed by admin from group
 
 async function updateRecipientCount() {
   var audience = document.getElementById('email-audience').value;
-  var countEl = document.getElementById('recipient-count');
   var countSingleEl = document.getElementById('recipient-count-single');
   var groupWrap = document.getElementById('group-recipients-wrap');
 
@@ -798,12 +876,19 @@ async function updateRecipientCount() {
     return;
   }
 
+  // For filter-based audiences (city/state/country/generation), rebuildGroupRecipients handles it
+  if (['city','state','country','generation'].indexOf(audience) >= 0) {
+    countSingleEl.style.display = 'none';
+    return;
+  }
+
+  // For simple group audiences (all, new30, new7, inactive, active)
   countSingleEl.style.display = 'none';
   _groupRemoved = [];
   await loadEmailUserList();
   var recipients = await getFilteredRecipients();
   _groupRecipients = recipients.map(function(p) {
-    return { email: p.email, name: p.name || p.email.split('@')[0], id: p.id };
+    return { email: p.email, name: p.name || (p.email || '').split('@')[0], id: p.id };
   });
   renderGroupRecipients();
 }
