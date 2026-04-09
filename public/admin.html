@@ -549,9 +549,9 @@ function filterUsers() {
 }
 
 async function toggleUserBlock(userId, block) {
-  await sb.from('profiles').update({ is_blocked: block }).eq('id', userId);
+  var { error } = await sb.from('profiles').update({ is_blocked: block }).eq('id', userId);
+  if (error) { toast('Error: ' + error.message); console.error('Block error:', error); return; }
   if (block) {
-    // Also hide all their listings
     await sb.from('listings').update({ is_active: false }).eq('owner_id', userId);
   }
   toast(block ? 'User blocked & listings hidden' : 'User unblocked');
@@ -596,7 +596,9 @@ function filterListings() {
 }
 
 async function toggleListingActive(id, active) {
-  await sb.from('listings').update({ is_active: active }).eq('id', id);
+  var { data, error } = await sb.from('listings').update({ is_active: active }).eq('id', id).select();
+  if (error) { toast('Error: ' + error.message); console.error('Toggle error:', error); return; }
+  if (!data || data.length === 0) { toast('Update failed — check RLS policies. Run admin_rls_fix.sql'); console.error('No rows updated — RLS blocking'); return; }
   toast(active ? 'Listing restored' : 'Listing hidden');
   loadListings();
 }
