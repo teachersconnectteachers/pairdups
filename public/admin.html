@@ -335,11 +335,15 @@ async function adminLogin() {
 }
 
 async function checkSession() {
-  var { data: { session } } = await sb.auth.getSession();
-  if (session && ADMIN_EMAILS.indexOf(session.user.email.toLowerCase()) >= 0) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('admin-app').style.display = '';
-    loadDashboard();
+  try {
+    var { data: { session } } = await sb.auth.getSession();
+    if (session && ADMIN_EMAILS.indexOf(session.user.email.toLowerCase()) >= 0) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-app').style.display = 'block';
+      try { await loadDashboard(); } catch(e) { console.error('Dashboard load error:', e); }
+    }
+  } catch(e) {
+    console.error('Session check error:', e);
   }
 }
 
@@ -364,6 +368,7 @@ function showSection(id) {
 
 // ── Dashboard ─────────────────────────────────────────────
 async function loadDashboard() {
+  try {
   // Total users
   var { count: userCount } = await sb.from('profiles').select('*', { count: 'exact', head: true });
   document.getElementById('stat-users').textContent = userCount || 0;
@@ -404,6 +409,7 @@ async function loadDashboard() {
   tbody.innerHTML = sorted.map(function(c) {
     return '<tr><td>' + c[0] + '</td><td style="font-weight:700">' + c[1] + '</td></tr>';
   }).join('');
+  } catch(e) { console.error('loadDashboard error:', e); }
 }
 
 // ── Users ─────────────────────────────────────────────────
@@ -687,6 +693,17 @@ function timeSince(dateStr) {
 }
 
 // ── Init ──────────────────────────────────────────────────
+// Prevent any uncaught errors from crashing the page
+window.onerror = function(msg, url, line) { console.error('Global error:', msg, url, line); return true; };
+window.addEventListener('unhandledrejection', function(e) { console.error('Unhandled promise:', e.reason); e.preventDefault(); });
+
+// Unregister service workers that might redirect this page
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(r) { r.unregister(); });
+  });
+}
+
 checkSession();
 </script>
 </body>
