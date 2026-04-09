@@ -113,9 +113,35 @@ a{color:var(--pink);text-decoration:none}
     <h1>Paird<span>Ups</span></h1>
     <p>Admin Dashboard — Authorized access only</p>
     <input type="email" class="login-input" id="admin-email" placeholder="Admin email">
-    <input type="password" class="login-input" id="admin-password" placeholder="Password">
+    <input type="password" class="login-input" id="admin-password" placeholder="Admin PIN or account password">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray);cursor:pointer">
+        <input type="checkbox" id="admin-remember" style="accent-color:var(--pink)"> Remember me
+      </label>
+      <a onclick="forgotAdminPassword()" style="font-size:12px;cursor:pointer;color:var(--pink)">Forgot PIN?</a>
+    </div>
     <button class="login-btn" onclick="adminLogin()">Sign In</button>
     <div class="login-error" id="login-error"></div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-border);text-align:center">
+      <a onclick="showSetPinModal()" style="font-size:12px;cursor:pointer;color:var(--gray)">⚙️ Set / Change Admin PIN</a>
+    </div>
+  </div>
+</div>
+
+<!-- SET PIN MODAL -->
+<div class="admin-modal-bg" id="modal-set-pin" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="admin-modal" style="max-width:380px">
+    <h3>Set Admin PIN</h3>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6">Set a separate PIN for admin access. You'll need to verify your PairdUps account first.</p>
+    <input type="email" class="login-input" id="pin-email" placeholder="Your PairdUps email">
+    <input type="password" class="login-input" id="pin-current-pw" placeholder="Your PairdUps account password">
+    <input type="password" class="login-input" id="pin-new" placeholder="New admin PIN (4+ characters)">
+    <input type="password" class="login-input" id="pin-confirm" placeholder="Confirm admin PIN">
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-gray" onclick="document.getElementById('modal-set-pin').classList.remove('open')" style="flex:1;padding:12px">Cancel</button>
+      <button class="btn btn-pink" onclick="saveAdminPin()" style="flex:1;padding:12px">Save PIN</button>
+    </div>
+    <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></div>
   </div>
 </div>
 
@@ -324,14 +350,40 @@ function toast(msg) {
 async function adminLogin() {
   var email = document.getElementById('admin-email').value.trim();
   var pw = document.getElementById('admin-password').value;
+  var remember = document.getElementById('admin-remember').checked;
   var errEl = document.getElementById('login-error');
-  if (!email || !pw) { errEl.textContent = 'Please enter email and password.'; errEl.style.display = ''; return; }
-  if (ADMIN_EMAILS.indexOf(email.toLowerCase()) < 0) { errEl.textContent = 'Not authorized as admin.'; errEl.style.display = ''; return; }
-  var { data, error } = await sb.auth.signInWithPassword({ email: email, password: pw });
-  if (error) { errEl.textContent = error.message; errEl.style.display = ''; return; }
+  if (!email || !pw) { errEl.textContent = 'Please enter email and password.'; errEl.style.display = 'block'; return; }
+  if (ADMIN_EMAILS.indexOf(email.toLowerCase()) < 0) { errEl.textContent = 'Not authorized as admin.'; errEl.style.display = 'block'; return; }
+
+  // Check if admin PIN is set — try PIN first
+  var storedPin = localStorage.getItem('pu_admin_pin');
+  if (storedPin && pw === storedPin) {
+    // PIN matches — sign in with Supabase using stored credentials
+    var storedPw = localStorage.getItem('pu_admin_spw');
+    if (storedPw) {
+      var { data, error } = await sb.auth.signInWithPassword({ email: email, password: storedPw });
+      if (error) { errEl.textContent = 'Session expired. Please use your account password.'; errEl.style.display = 'block'; return; }
+    } else {
+      errEl.textContent = 'PIN set but no stored session. Please use your account password once.'; errEl.style.display = 'block'; return;
+    }
+  } else {
+    // Try as Supabase account password
+    var { data, error } = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
+  }
+
+  // Save remember me
+  if (remember) {
+    localStorage.setItem('pu_admin_email', email);
+    localStorage.setItem('pu_admin_remember', 'true');
+  } else {
+    localStorage.removeItem('pu_admin_email');
+    localStorage.removeItem('pu_admin_remember');
+  }
+
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('admin-app').style.display = '';
-  loadDashboard();
+  document.getElementById('admin-app').style.display = 'block';
+  try { await loadDashboard(); } catch(e) { console.error('Dashboard error:', e); }
 }
 
 async function checkSession() {
@@ -350,7 +402,44 @@ async function checkSession() {
 function adminLogout() {
   sb.auth.signOut();
   document.getElementById('admin-app').style.display = 'none';
-  document.getElementById('login-screen').style.display = '';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showSetPinModal() {
+  document.getElementById('modal-set-pin').classList.add('open');
+  document.getElementById('pin-error').style.display = 'none';
+}
+
+async function saveAdminPin() {
+  var email = document.getElementById('pin-email').value.trim();
+  var currentPw = document.getElementById('pin-current-pw').value;
+  var newPin = document.getElementById('pin-new').value;
+  var confirmPin = document.getElementById('pin-confirm').value;
+  var errEl = document.getElementById('pin-error');
+
+  if (!email || !currentPw || !newPin || !confirmPin) { errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return; }
+  if (ADMIN_EMAILS.indexOf(email.toLowerCase()) < 0) { errEl.textContent = 'Not an admin email.'; errEl.style.display = 'block'; return; }
+  if (newPin.length < 4) { errEl.textContent = 'PIN must be at least 4 characters.'; errEl.style.display = 'block'; return; }
+  if (newPin !== confirmPin) { errEl.textContent = 'PINs do not match.'; errEl.style.display = 'block'; return; }
+
+  // Verify account password
+  var { data, error } = await sb.auth.signInWithPassword({ email: email, password: currentPw });
+  if (error) { errEl.textContent = 'Incorrect account password.'; errEl.style.display = 'block'; return; }
+
+  // Save PIN and encrypted password locally
+  localStorage.setItem('pu_admin_pin', newPin);
+  localStorage.setItem('pu_admin_spw', currentPw);
+  localStorage.setItem('pu_admin_email', email);
+
+  document.getElementById('modal-set-pin').classList.remove('open');
+  toast('Admin PIN saved! You can now use it to log in.');
+}
+
+function forgotAdminPassword() {
+  // Clear the stored PIN
+  localStorage.removeItem('pu_admin_pin');
+  localStorage.removeItem('pu_admin_spw');
+  toast('PIN cleared. Use your PairdUps account password to sign in.');
 }
 
 // ── Navigation ────────────────────────────────────────────
@@ -703,6 +792,14 @@ if ('serviceWorker' in navigator) {
     regs.forEach(function(r) { r.unregister(); });
   });
 }
+
+// Pre-fill remember me
+(function() {
+  var savedEmail = localStorage.getItem('pu_admin_email');
+  var remember = localStorage.getItem('pu_admin_remember');
+  if (savedEmail) document.getElementById('admin-email').value = savedEmail;
+  if (remember) document.getElementById('admin-remember').checked = true;
+})();
 
 checkSession();
 </script>
