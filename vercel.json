@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/((?!icons|manifest|sw|favicon).*)", "destination": "/index.html" }
+    { "source": "/((?!icons|manifest|sw|favicon|admin).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
