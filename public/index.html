@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#FF3B7F">
 <title>PairdUps</title>
 <style>
 .map-svg-wrap{width:100%;height:220px;border-radius:14px;overflow:hidden;position:relative;cursor:grab;user-select:none;background:#e8f0dc;touch-action:none}
@@ -62,6 +66,29 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:'Segoe UI',system-ui,sans-serif}
 body{background:#d0d0d8;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
 .phone{width:390px;height:844px;background:#fff;border-radius:50px;box-shadow:0 30px 80px rgba(0,0,0,0.3),inset 0 0 0 2px #1A1A2E;overflow:hidden;position:relative;display:flex;flex-direction:column}
+/* Mobile responsive — remove phone frame on actual mobile devices */
+@media screen and (max-width:500px){
+  body{background:#fff;padding:0;margin:0;min-height:100vh;min-height:100dvh;align-items:stretch}
+  body>div:first-child{width:100%!important;height:100vh!important;height:100dvh!important;border-radius:0!important;box-shadow:none!important;overflow:hidden}
+  .phone{width:100%!important;height:100%!important;border-radius:0!important;box-shadow:none!important}
+  .status-bar{display:none!important}
+  .bottom-nav{border-radius:0;padding-bottom:env(safe-area-inset-bottom,8px)}
+}
+@media screen and (max-width:500px) and (max-height:950px){
+  body>div:first-child{height:100vh!important;height:100dvh!important}
+}
+/* Tablet — slightly wider phone frame */
+@media screen and (min-width:501px) and (max-width:850px){
+  body{padding:10px}
+  body>div:first-child{width:100%!important;max-width:500px;height:90vh!important;border-radius:30px!important}
+  .phone{width:100%!important;height:100%!important;border-radius:0!important;box-shadow:none!important}
+}
+/* Mobile modals and toasts — use fixed positioning */
+@media screen and (max-width:500px){
+  .modal-bg,.action-modal-bg{position:fixed!important}
+  .toast{position:fixed!important;bottom:80px!important}
+  #modal-map .modal-sheet{max-height:100vh!important;height:100vh!important;border-radius:0!important}
+}
 .status-bar{background:#fff;padding:14px 28px 8px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--dark);flex-shrink:0;position:relative;z-index:10}
 .notch{width:120px;height:28px;background:var(--dark);border-radius:20px;position:absolute;top:10px;left:50%;transform:translateX(-50%)}
 .status-icons{display:flex;gap:6px;align-items:center}
