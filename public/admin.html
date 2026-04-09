@@ -721,7 +721,7 @@ async function updateRecipientCount() {
 
 async function loadEmailUserList() {
   if (_emailUserList.length > 0) return;
-  var { data } = await sb.from('profiles').select('name, email, location').order('name', { ascending: true });
+  var { data } = await sb.from('profiles').select('name, email, location, age, bio, interests, photo_url, member_since, created_at').order('name', { ascending: true });
   _emailUserList = data || [];
 }
 
@@ -750,9 +750,27 @@ async function filterEmailDropdown() {
     html = '<div style="padding:10px 14px;font-size:12px;color:var(--gray);text-align:center">No matches. Press Enter to add "' + q + '" as a custom address.</div>';
   } else {
     html = list.slice(0, 15).map(function(u) {
-      return '<div onclick="addEmailRecipient(\'' + (u.email || '').replace(/'/g, "\\'") + '\',\'' + (u.name || '').replace(/'/g, "\\'") + '\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray-border);font-size:13px;transition:background 0.1s" onmouseover="this.style.background=\'rgba(255,59,127,0.06)\'" onmouseout="this.style.background=\'#fff\'">'
-        + '<div style="display:flex;justify-content:space-between;align-items:center"><div><span style="font-weight:600;color:var(--dark)">' + (u.name || 'No name') + '</span></div><span style="font-size:11px;color:var(--gray)">' + (u.location || '') + '</span></div>'
-        + '<div style="font-size:11px;color:var(--gray)">' + (u.email || '') + '</div>'
+      var photoHtml = u.photo_url
+        ? '<img src="' + u.photo_url + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--gray-border)">'
+        : '<div style="width:44px;height:44px;border-radius:50%;background:var(--gray-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:2px solid var(--gray-border)">👤</div>';
+      var memberDate = u.member_since || u.created_at || '';
+      var memberStr = memberDate ? new Date(memberDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+      var interestsArr = Array.isArray(u.interests) ? u.interests.slice(0, 4) : [];
+      var interestsStr = interestsArr.length > 0 ? interestsArr.join(' · ') : '';
+      var bioSnippet = u.bio ? (u.bio.length > 60 ? u.bio.substring(0, 60) + '...' : u.bio) : '';
+
+      return '<div onclick="addEmailRecipient(\'' + (u.email || '').replace(/'/g, "\\'") + '\',\'' + (u.name || '').replace(/'/g, "\\'") + '\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray-border);transition:background 0.1s;display:flex;gap:12px;align-items:flex-start" onmouseover="this.style.background=\'rgba(255,59,127,0.04)\'" onmouseout="this.style.background=\'#fff\'">'
+        + photoHtml
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'
+        + '<div style="font-weight:700;font-size:13px;color:var(--dark)">' + (u.name || 'No name') + (u.age ? ', ' + u.age : '') + '</div>'
+        + '<div style="font-size:10px;color:var(--gray);flex-shrink:0">📍 ' + (u.location || 'Unknown') + '</div>'
+        + '</div>'
+        + '<div style="font-size:11px;color:var(--pink);margin-top:1px">' + (u.email || '') + '</div>'
+        + (bioSnippet ? '<div style="font-size:11px;color:var(--gray);margin-top:3px;line-height:1.4">' + bioSnippet + '</div>' : '')
+        + (interestsStr ? '<div style="font-size:10px;color:var(--blue);margin-top:3px">' + interestsStr + '</div>' : '')
+        + (memberStr ? '<div style="font-size:10px;color:var(--gray);margin-top:2px">Member since ' + memberStr + '</div>' : '')
+        + '</div>'
         + '</div>';
     }).join('');
     if (list.length > 15) html += '<div style="padding:8px 14px;font-size:11px;color:var(--gray);text-align:center">...and ' + (list.length - 15) + ' more. Type to filter.</div>';
