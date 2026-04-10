@@ -1214,6 +1214,22 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
           <label style="position:relative;width:38px;height:20px;flex-shrink:0"><input type="checkbox" id="unsub-holidays" checked onchange="updateUnsubPref('holiday_greetings',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:20px;transition:.3s"></span><span style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
         </div>
       </div>
+      <!-- Push Notifications Section -->
+      <div style="margin-top:16px;padding-top:16px;border-top:2px solid var(--gray-border)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="font-size:18px">🔔</div>
+          <div>
+            <div style="font-size:14px;font-weight:800;color:var(--dark)">Push Notifications</div>
+            <div style="font-size:11px;color:var(--gray)">Get instant alerts on your device</div>
+          </div>
+        </div>
+        <div id="push-status-area" style="padding:12px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:8px">
+          <div id="push-status-text" style="font-size:12px;color:var(--gray);margin-bottom:8px">Checking push notification status...</div>
+          <button id="push-enable-btn" onclick="enablePushNotifications()" style="display:none;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:10px 24px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(255,59,127,0.3)">🔔 Enable Push Notifications</button>
+          <div id="push-enabled-badge" style="display:none;font-size:12px;font-weight:700;color:#16A34A">✅ Push notifications are enabled!</div>
+          <div id="push-blocked-msg" style="display:none;font-size:11px;color:var(--red);line-height:1.5">⚠️ Notifications are blocked by your browser. To fix: click the lock icon in the address bar → set Notifications to "Allow" → then refresh this page.</div>
+        </div>
+      </div>
       <div style="text-align:center;margin-top:16px">
         <button onclick="closeModal('modal-unsubscribe');showToast('Preferences saved! ✓')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 32px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.4)">Save & Close</button>
       </div>
@@ -2260,6 +2276,91 @@ function sendPush(toUserId, type, extraData) {
       body: JSON.stringify(payload)
     }).catch(function(e) { console.log('[PairdUps] Push send error:', e); });
   } catch(e) { console.log('[PairdUps] Push error:', e); }
+}
+
+// ── Push Notification UI Helpers ─────────────────────────
+function checkPushStatus() {
+  var statusText = document.getElementById('push-status-text');
+  var enableBtn = document.getElementById('push-enable-btn');
+  var enabledBadge = document.getElementById('push-enabled-badge');
+  var blockedMsg = document.getElementById('push-blocked-msg');
+  if (!statusText) return;
+
+  // Hide all first
+  if (enableBtn) enableBtn.style.display = 'none';
+  if (enabledBadge) enabledBadge.style.display = 'none';
+  if (blockedMsg) blockedMsg.style.display = 'none';
+
+  if (typeof OneSignal === 'undefined' || typeof Notification === 'undefined') {
+    statusText.textContent = 'Push notifications are not available in this browser.';
+    return;
+  }
+
+  var permission = Notification.permission;
+  if (permission === 'granted') {
+    statusText.textContent = 'Your browser allows notifications from PairdUps.';
+    // Check if actually subscribed via OneSignal
+    try {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        try {
+          var subscribed = await OneSignal.User.PushSubscription.optedIn;
+          if (subscribed) {
+            if (enabledBadge) enabledBadge.style.display = '';
+            statusText.textContent = 'You are subscribed to push notifications.';
+          } else {
+            statusText.textContent = 'Notifications allowed but not subscribed yet.';
+            if (enableBtn) enableBtn.style.display = '';
+          }
+        } catch(e) {
+          statusText.textContent = 'Notifications allowed. Click below to ensure you are subscribed.';
+          if (enableBtn) enableBtn.style.display = '';
+        }
+      });
+    } catch(e) {
+      if (enabledBadge) enabledBadge.style.display = '';
+    }
+  } else if (permission === 'denied') {
+    statusText.textContent = 'Push notifications are blocked by your browser.';
+    if (blockedMsg) blockedMsg.style.display = '';
+  } else {
+    statusText.textContent = 'Push notifications are not yet enabled.';
+    if (enableBtn) enableBtn.style.display = '';
+  }
+}
+
+function enablePushNotifications() {
+  if (typeof OneSignal === 'undefined') {
+    showToast('Push notifications not available in this browser.');
+    return;
+  }
+  try {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        await OneSignal.Slidedown.promptPush();
+        // Wait a moment then recheck
+        setTimeout(function() { checkPushStatus(); }, 2000);
+      } catch(e) {
+        console.log('[PairdUps] Push prompt error:', e);
+        // Fallback: try native permission request
+        if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+          Notification.requestPermission().then(function(result) {
+            if (result === 'granted') {
+              showToast('Push notifications enabled! 🔔');
+              setTimeout(checkPushStatus, 1000);
+            } else {
+              showToast('Notifications were not enabled.');
+            }
+          });
+        } else {
+          showToast('Please check your browser notification settings.');
+        }
+      }
+    });
+  } catch(e) {
+    showToast('Could not enable push notifications.');
+  }
 }
 
 // ── Persistent user database (localStorage fallback when Supabase unavailable) ──
@@ -7286,6 +7387,7 @@ setInterval(updateStatusClock, 10000); // Update every 10 seconds
 // ── Unsubscribe page (from email links) ───────────────────
 function openUnsubscribeModal() {
   openModal('modal-unsubscribe');
+  checkPushStatus();
   var loading = document.getElementById('unsub-loading');
   var content = document.getElementById('unsub-content');
   var notSignedIn = document.getElementById('unsub-not-signed-in');
