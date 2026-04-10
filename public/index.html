@@ -2834,6 +2834,15 @@ async function openProfileVisitors() {
     return;
   }
 
+  // Free users always see the upsell — don't even query
+  if (!isPremium()) {
+    if (loading) loading.style.display = 'none';
+    var countEl = document.getElementById('visitors-upsell-count');
+    if (countEl) countEl.textContent = 'See who has been viewing your profile! Upgrade to Premium to unlock.';
+    if (upsell) upsell.style.display = '';
+    return;
+  }
+
   try {
     var { data: visitors, error } = await _supabase.from('profile_visitors')
       .select('visitor_id, visited_at')
@@ -2844,14 +2853,6 @@ async function openProfileVisitors() {
     if (loading) loading.style.display = 'none';
     if (error || !visitors || visitors.length === 0) {
       if (empty) empty.style.display = '';
-      return;
-    }
-
-    // Free users see blurred upsell
-    if (!isPremium()) {
-      var countEl = document.getElementById('visitors-upsell-count');
-      if (countEl) countEl.textContent = visitors.length + ' people have viewed your profile. Upgrade to see who they are!';
-      if (upsell) upsell.style.display = '';
       return;
     }
 
