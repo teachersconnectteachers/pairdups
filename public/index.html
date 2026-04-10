@@ -3116,14 +3116,17 @@ function submitReport() {
           var { data: rProfile } = await _supabase.from('profiles').select('id').eq('email', reportedEmail).maybeSingle();
           if (rProfile) reportedId = rProfile.id;
         }
-        await _supabase.from('reports').insert({
+        var insertData = {
           reporter_id: currentUser.supabaseId,
-          reported_user_id: reportedId,
-          reported_listing_id: reportedListingId,
           category: reason,
           reason: fullReason
-        });
-      } catch(e) { console.log('Report sync error:', e); }
+        };
+        if (reportedId) insertData.reported_user_id = reportedId;
+        if (reportedListingId) insertData.reported_listing_id = reportedListingId;
+        var { error: insertErr } = await _supabase.from('reports').insert(insertData);
+        if (insertErr) console.error('[PairdUps] Report insert error:', insertErr);
+        else console.log('[PairdUps] Report saved successfully');
+      } catch(e) { console.error('Report sync error:', e); }
     })();
   }
   console.log('[PairdUps Report] Listing: ' + listingTitle + ', Reason: ' + reason + ', Details: ' + details + ', Reporter: ' + email);
