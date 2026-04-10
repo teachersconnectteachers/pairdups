@@ -1230,11 +1230,18 @@ async function sendAdminEmail() {
       if (resp.ok && !result.error) {
         sent++;
         // Log to email_log table
-        await sb.from('email_log').insert({
-          user_id: r.id || null,
-          email_type: emailType === 'custom' ? 'custom' : emailType,
-          metadata: { listing_title: subject || '', custom: emailType === 'custom' ? true : false }
-        });
+        var logUserId = r.id || null;
+        if (!logUserId && r.email) {
+          var { data: lookupUser } = await sb.from('profiles').select('id').eq('email', r.email).maybeSingle();
+          if (lookupUser) logUserId = lookupUser.id;
+        }
+        if (logUserId) {
+          await sb.from('email_log').insert({
+            user_id: logUserId,
+            email_type: emailType === 'custom' ? 'custom' : emailType,
+            metadata: { listing_title: subject || '' }
+          });
+        }
       } else { failed++; lastError = result.error || 'Unknown'; }
     } catch(e) { failed++; lastError = e.message; }
     statusEl.textContent = 'Sent ' + sent + '/' + recipients.length + (failed ? ' (' + failed + ' failed)' : '') + '...';
