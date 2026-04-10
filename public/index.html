@@ -1912,12 +1912,18 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 
       <!-- PUSH NOTIFICATIONS SECTION -->
       <div style="font-size:11px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;padding:16px 0 6px">🔔 Push Notifications</div>
-      <div style="padding:12px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:4px">
-        <div id="settings-push-status" style="font-size:12px;color:var(--gray);margin-bottom:8px">Checking push notification status...</div>
-        <button id="settings-push-enable-btn" onclick="enablePushNotifications()" style="display:none;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:10px 20px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(255,59,127,0.3)">🔔 Enable Push Notifications</button>
-        <div id="settings-push-enabled" style="display:none;font-size:12px;font-weight:700;color:#16A34A">✅ Push notifications are enabled!</div>
-        <div id="settings-push-blocked" style="display:none;font-size:11px;color:var(--red);line-height:1.5">⚠️ Blocked by your browser. Click the lock icon in the address bar → set Notifications to "Allow" → refresh.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:4px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--dark)" id="settings-push-label">Push Notifications</div>
+          <div style="font-size:10px;color:var(--gray)" id="settings-push-status">Checking status...</div>
+        </div>
+        <label style="position:relative;width:44px;height:24px;flex-shrink:0">
+          <input type="checkbox" id="settings-push-toggle" onchange="togglePushNotifications(this.checked)" style="opacity:0;width:0;height:0">
+          <span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span>
+          <span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span>
+        </label>
       </div>
+      <div id="settings-push-blocked" style="display:none;font-size:11px;color:var(--red);line-height:1.5;padding:6px 14px">⚠️ Blocked by your browser. Click the lock icon in the address bar → set Notifications to "Allow" → refresh this page.</div>
 
       <!-- DANGER ZONE -->
       <div style="font-size:11px;font-weight:800;color:#DC2626;text-transform:uppercase;letter-spacing:1px;padding:12px 0 2px">⚠️ Danger Zone</div>
@@ -2298,64 +2304,93 @@ function sendPush(toUserId, type, extraData) {
 
 // ── Push Notification UI Helpers ─────────────────────────
 function checkPushStatus() {
-  // Update both the unsubscribe modal and settings modal push sections
-  var elements = [
-    { status: document.getElementById('push-status-text'), btn: document.getElementById('push-enable-btn'), ok: document.getElementById('push-enabled-badge'), blocked: document.getElementById('push-blocked-msg') },
-    { status: document.getElementById('settings-push-status'), btn: document.getElementById('settings-push-enable-btn'), ok: document.getElementById('settings-push-enabled'), blocked: document.getElementById('settings-push-blocked') }
-  ];
+  // Update the unsubscribe modal elements
+  var els1 = { status: document.getElementById('push-status-text'), btn: document.getElementById('push-enable-btn'), ok: document.getElementById('push-enabled-badge'), blocked: document.getElementById('push-blocked-msg') };
+  // Update the settings modal elements
+  var toggle = document.getElementById('settings-push-toggle');
+  var statusLabel = document.getElementById('settings-push-status');
+  var blockedMsg = document.getElementById('settings-push-blocked');
 
-  elements.forEach(function(el) {
-    if (!el.status) return;
-    if (el.btn) el.btn.style.display = 'none';
-    if (el.ok) el.ok.style.display = 'none';
-    if (el.blocked) el.blocked.style.display = 'none';
-  });
+  // Hide unsub modal elements
+  if (els1.btn) els1.btn.style.display = 'none';
+  if (els1.ok) els1.ok.style.display = 'none';
+  if (els1.blocked) els1.blocked.style.display = 'none';
+  if (blockedMsg) blockedMsg.style.display = 'none';
 
-  if (typeof OneSignal === 'undefined' || typeof Notification === 'undefined') {
-    elements.forEach(function(el) { if (el.status) el.status.textContent = 'Push notifications are not available in this browser.'; });
+  if (typeof Notification === 'undefined') {
+    if (els1.status) els1.status.textContent = 'Push not available in this browser.';
+    if (statusLabel) statusLabel.textContent = 'Not available in this browser';
+    if (toggle) toggle.checked = false;
     return;
   }
 
   var permission = Notification.permission;
-  if (permission === 'granted') {
+  if (permission === 'denied') {
+    if (els1.status) els1.status.textContent = 'Push blocked by your browser.';
+    if (els1.blocked) els1.blocked.style.display = '';
+    if (statusLabel) statusLabel.textContent = 'Blocked by browser';
+    if (blockedMsg) blockedMsg.style.display = '';
+    if (toggle) toggle.checked = false;
+    return;
+  }
+
+  if (typeof OneSignal === 'undefined') {
+    if (permission === 'default') {
+      if (els1.status) els1.status.textContent = 'Not yet enabled.';
+      if (els1.btn) els1.btn.style.display = '';
+      if (statusLabel) statusLabel.textContent = 'Not enabled — toggle to enable';
+      if (toggle) toggle.checked = false;
+    }
+    return;
+  }
+
+  try {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        var optedIn = await OneSignal.User.PushSubscription.optedIn;
+        console.log('[PairdUps] Push status check — optedIn:', optedIn, 'permission:', permission);
+        if (optedIn) {
+          if (els1.status) els1.status.textContent = 'Subscribed to push notifications.';
+          if (els1.ok) els1.ok.style.display = '';
+          if (statusLabel) statusLabel.textContent = 'Enabled — you will receive alerts';
+          if (toggle) toggle.checked = true;
+        } else if (permission === 'granted') {
+          if (els1.status) els1.status.textContent = 'Allowed but not subscribed.';
+          if (els1.btn) els1.btn.style.display = '';
+          if (statusLabel) statusLabel.textContent = 'Toggle to subscribe';
+          if (toggle) toggle.checked = false;
+        } else {
+          if (els1.status) els1.status.textContent = 'Not yet enabled.';
+          if (els1.btn) els1.btn.style.display = '';
+          if (statusLabel) statusLabel.textContent = 'Toggle to enable';
+          if (toggle) toggle.checked = false;
+        }
+      } catch(e) {
+        if (statusLabel) statusLabel.textContent = permission === 'granted' ? 'Toggle to subscribe' : 'Toggle to enable';
+        if (toggle) toggle.checked = false;
+        if (els1.btn) els1.btn.style.display = '';
+      }
+    });
+  } catch(e) {}
+}
+
+function togglePushNotifications(enabled) {
+  if (enabled) {
+    enablePushNotifications();
+  } else {
+    // Opt out of push
     try {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         try {
-          var subscribed = await OneSignal.User.PushSubscription.optedIn;
-          elements.forEach(function(el) {
-            if (!el.status) return;
-            if (subscribed) {
-              el.status.textContent = 'You are subscribed to push notifications.';
-              if (el.ok) el.ok.style.display = '';
-            } else {
-              el.status.textContent = 'Notifications allowed but not subscribed yet.';
-              if (el.btn) el.btn.style.display = '';
-            }
-          });
-        } catch(e) {
-          elements.forEach(function(el) {
-            if (!el.status) return;
-            el.status.textContent = 'Notifications allowed. Click below to subscribe.';
-            if (el.btn) el.btn.style.display = '';
-          });
-        }
+          await OneSignal.User.PushSubscription.optOut();
+          console.log('[PairdUps] Push opted out');
+          showToast('Push notifications disabled');
+          setTimeout(checkPushStatus, 1000);
+        } catch(e) { console.log('[PairdUps] OptOut error:', e); }
       });
-    } catch(e) {
-      elements.forEach(function(el) { if (el.ok) el.ok.style.display = ''; });
-    }
-  } else if (permission === 'denied') {
-    elements.forEach(function(el) {
-      if (!el.status) return;
-      el.status.textContent = 'Push notifications are blocked by your browser.';
-      if (el.blocked) el.blocked.style.display = '';
-    });
-  } else {
-    elements.forEach(function(el) {
-      if (!el.status) return;
-      el.status.textContent = 'Push notifications are not yet enabled.';
-      if (el.btn) el.btn.style.display = '';
-    });
+    } catch(e) {}
   }
 }
 
