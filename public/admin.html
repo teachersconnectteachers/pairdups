@@ -1227,7 +1227,15 @@ async function sendAdminEmail() {
         body: JSON.stringify(payload)
       });
       var result = await resp.json();
-      if (resp.ok && !result.error) { sent++; } else { failed++; lastError = result.error || 'Unknown'; }
+      if (resp.ok && !result.error) {
+        sent++;
+        // Log to email_log table
+        await sb.from('email_log').insert({
+          user_id: r.id || null,
+          email_type: emailType === 'custom' ? 'custom' : emailType,
+          metadata: { listing_title: subject || '', custom: emailType === 'custom' ? true : false }
+        });
+      } else { failed++; lastError = result.error || 'Unknown'; }
     } catch(e) { failed++; lastError = e.message; }
     statusEl.textContent = 'Sent ' + sent + '/' + recipients.length + (failed ? ' (' + failed + ' failed)' : '') + '...';
   }
