@@ -110,6 +110,7 @@ a{color:var(--pink);text-decoration:none}
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
   <div class="login-box">
+    <div style="text-align:center;margin-bottom:16px"><svg width="48" height="48" viewBox="0 0 48 48"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF3B7F"/><stop offset="100%" stop-color="#FF6FA3"/></linearGradient></defs><circle cx="24" cy="24" r="24" fill="url(#lg)"/><path d="M24 36s-10-6.5-10-13.5c0-3.5 2.5-6 5.5-6 2 0 3.5 1 4.5 2.5 1-1.5 2.5-2.5 4.5-2.5 3 0 5.5 2.5 5.5 6C34 29.5 24 36 24 36z" fill="#fff"/></svg></div>
     <h1>Paird<span>Ups</span></h1>
     <p>Admin Dashboard — Authorized access only</p>
     <input type="email" class="login-input" id="admin-email" placeholder="Admin email" autocomplete="off">
@@ -149,7 +150,7 @@ a{color:var(--pink);text-decoration:none}
 <div id="admin-app">
   <!-- Sidebar -->
   <div class="sidebar">
-    <div class="sidebar-logo">Paird<span>Ups</span><small>Admin Panel</small></div>
+    <div class="sidebar-logo"><svg width="28" height="28" viewBox="0 0 48 48" style="vertical-align:middle;margin-right:8px"><defs><linearGradient id="slg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF3B7F"/><stop offset="100%" stop-color="#FF6FA3"/></linearGradient></defs><circle cx="24" cy="24" r="24" fill="url(#slg)"/><path d="M24 36s-10-6.5-10-13.5c0-3.5 2.5-6 5.5-6 2 0 3.5 1 4.5 2.5 1-1.5 2.5-2.5 4.5-2.5 3 0 5.5 2.5 5.5 6C34 29.5 24 36 24 36z" fill="#fff"/></svg>Paird<span>Ups</span><small>Admin Panel</small></div>
     <div class="nav-section">Overview</div>
     <div class="nav-item active" onclick="showSection('dashboard')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -498,6 +499,19 @@ a{color:var(--pink);text-decoration:none}
 
 <div class="admin-toast" id="admin-toast"></div>
 
+<!-- GENERIC CONFIRM MODAL -->
+<div class="admin-modal-bg" id="modal-generic-confirm" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="admin-modal" style="max-width:400px;text-align:center">
+    <div style="margin-bottom:12px"><svg width="48" height="48" viewBox="0 0 48 48"><defs><linearGradient id="clg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF3B7F"/><stop offset="100%" stop-color="#FF6FA3"/></linearGradient></defs><circle cx="24" cy="24" r="24" fill="url(#clg)"/><path d="M24 36s-10-6.5-10-13.5c0-3.5 2.5-6 5.5-6 2 0 3.5 1 4.5 2.5 1-1.5 2.5-2.5 4.5-2.5 3 0 5.5 2.5 5.5 6C34 29.5 24 36 24 36z" fill="#fff"/></svg></div>
+    <h3 id="generic-confirm-title" style="margin-bottom:8px">Confirm</h3>
+    <p id="generic-confirm-msg" style="font-size:13px;color:var(--gray);margin-bottom:20px;line-height:1.6"></p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn btn-gray" onclick="document.getElementById('modal-generic-confirm').classList.remove('open')" style="padding:10px 24px">Cancel</button>
+      <button class="btn btn-pink" id="generic-confirm-btn" onclick="" style="padding:10px 24px">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Config ────────────────────────────────────────────────
 const SUPABASE_URL = 'https://phajurcdiotfvtcwvydk.supabase.co';
@@ -776,10 +790,11 @@ async function toggleListingActive(id, active) {
 }
 
 async function deleteListing(id) {
-  if (!confirm('Permanently delete this listing? This cannot be undone.')) return;
-  await sb.from('listings').delete().eq('id', id);
-  toast('Listing deleted');
-  loadListings();
+  showConfirm('Delete Listing', 'Permanently delete this listing? This cannot be undone.', 'Yes, Delete', 'btn-red', async function() {
+    await sb.from('listings').delete().eq('id', id);
+    toast('Listing deleted');
+    loadListings();
+  });
 }
 
 // ── Conversations / Messages ──────────────────────────────
@@ -841,11 +856,12 @@ async function deleteMessage(msgId, convoId) {
 }
 
 async function deleteConvo(id) {
-  if (!confirm('Delete this conversation and all its messages?')) return;
-  await sb.from('messages').delete().eq('conversation_id', id);
-  await sb.from('conversations').delete().eq('id', id);
-  toast('Conversation deleted');
-  loadConversations();
+  showConfirm('Delete Conversation', 'Delete this conversation and all its messages? This cannot be undone.', 'Yes, Delete', 'btn-red', async function() {
+    await sb.from('messages').delete().eq('conversation_id', id);
+    await sb.from('conversations').delete().eq('id', id);
+    toast('Conversation deleted');
+    loadConversations();
+  });
 }
 
 // ── Send Emails ───────────────────────────────────────────
@@ -1205,8 +1221,14 @@ async function sendAdminEmail() {
     recipients = _groupRecipients.filter(function(r) { return _groupRemoved.indexOf(r.email) < 0; });
   }
   if (recipients.length === 0) { toast('No recipients found for this filter'); return; }
-  if (!confirm('Send "' + (subject || emailType) + '" to ' + recipients.length + ' recipient(s)?')) return;
 
+  showConfirm('Send Email', 'Send "' + (subject || emailType) + '" to ' + recipients.length + ' recipient(s)?', '📧 Send Now', 'btn-pink', function() {
+    doSendEmails(recipients, emailType, subject, body);
+  });
+}
+
+async function doSendEmails(recipients, emailType, subject, body) {
+  var statusEl = document.getElementById('email-send-status');
   statusEl.style.display = '';
   statusEl.style.color = 'var(--gray)';
   statusEl.textContent = 'Sending to ' + recipients.length + ' recipients...';
@@ -1425,10 +1447,13 @@ async function blockReportedUser() {
   if (!_currentReportId) return;
   var r = _allReports.find(function(x) { return x.id === _currentReportId; });
   if (!r || !r.reported_user_id) return;
-  if (!confirm('Block this user and hide all their listings?')) return;
-  await sb.from('profiles').update({ is_blocked: true }).eq('id', r.reported_user_id);
-  await sb.from('listings').update({ is_active: false }).eq('owner_id', r.reported_user_id);
-  await updateReportStatus('resolved');
+  showConfirm('Block User', 'Block this user and hide all their listings?', 'Block User', 'btn-red', async function() {
+    await sb.from('profiles').update({ is_blocked: true }).eq('id', r.reported_user_id);
+    await sb.from('listings').update({ is_active: false }).eq('owner_id', r.reported_user_id);
+    document.getElementById('modal-report-detail').classList.remove('open');
+    await updateReportStatus('resolved');
+    toast('User blocked and report resolved');
+  });
 }
 
 // ── Email Log ─────────────────────────────────────────────
@@ -1625,6 +1650,23 @@ function timeSince(dateStr) {
   if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
   if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
   return Math.floor(diff / 86400000) + 'd ago';
+}
+
+// ── Themed confirm dialog ─────────────────────────────────
+var _confirmCallback = null;
+function showConfirm(title, msg, btnText, btnClass, callback) {
+  document.getElementById('generic-confirm-title').textContent = title;
+  document.getElementById('generic-confirm-msg').textContent = msg;
+  var btn = document.getElementById('generic-confirm-btn');
+  btn.textContent = btnText || 'Confirm';
+  btn.className = 'btn ' + (btnClass || 'btn-pink');
+  btn.style.padding = '10px 24px';
+  _confirmCallback = callback;
+  btn.onclick = function() {
+    document.getElementById('modal-generic-confirm').classList.remove('open');
+    if (_confirmCallback) _confirmCallback();
+  };
+  document.getElementById('modal-generic-confirm').classList.add('open');
 }
 
 // ── Init ──────────────────────────────────────────────────
