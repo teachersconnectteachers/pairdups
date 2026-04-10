@@ -3096,13 +3096,32 @@ function submitReport() {
   if (!email) { showToast('Please enter your email address.'); return; }
   var listingTitle = document.getElementById('d-title')?.textContent || 'Unknown';
 
-  // Save report to Supabase
+  // Get the reported user/listing info from the current detail view
+  var reportedUserId = _currentDetailPoster?.supabaseId || null;
+  var reportedListingId = _currentDetailPoster?.listingId || null;
+  // Try to get reported user's Supabase ID from their email
+  var reportedEmail = _currentDetailPoster?.ownerEmail || '';
+
+  // Build full reason text from dropdown label + details
+  var reasonSelect = document.getElementById('report-reason');
+  var categoryLabel = reasonSelect.options[reasonSelect.selectedIndex]?.text || reason;
+  var fullReason = categoryLabel + (details ? ': ' + details : '');
+
   if (_supabase && currentUser.supabaseId) {
     (async function() {
       try {
+        // Look up reported user's ID if we have their email
+        var reportedId = null;
+        if (reportedEmail) {
+          var { data: rProfile } = await _supabase.from('profiles').select('id').eq('email', reportedEmail).maybeSingle();
+          if (rProfile) reportedId = rProfile.id;
+        }
         await _supabase.from('reports').insert({
           reporter_id: currentUser.supabaseId,
-          reason: reason, details: details, reporter_email: email
+          reported_user_id: reportedId,
+          reported_listing_id: reportedListingId,
+          category: reason,
+          reason: fullReason
         });
       } catch(e) { console.log('Report sync error:', e); }
     })();
