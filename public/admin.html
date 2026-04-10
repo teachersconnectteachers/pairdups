@@ -354,28 +354,86 @@ a{color:var(--pink);text-decoration:none}
     </div>
 
     <!-- REPORTS -->
+    <!-- REPORTS -->
     <div class="section" id="sec-reports">
       <div class="page-title">Reports</div>
-      <div class="page-sub">User-submitted reports (coming soon)</div>
-      <div style="text-align:center;padding:60px 20px;color:var(--gray)">
-        <div style="font-size:48px;margin-bottom:12px">🛡️</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:8px">Report system coming soon</div>
-        <div style="font-size:13px">User reports will appear here for review and action.</div>
+      <div class="page-sub">Review and manage user-submitted reports</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+        <button class="btn btn-pink" onclick="loadReports('all')" id="report-filter-all">All</button>
+        <button class="btn btn-gray" onclick="loadReports('pending')" id="report-filter-pending">Pending</button>
+        <button class="btn btn-gray" onclick="loadReports('reviewed')" id="report-filter-reviewed">Reviewed</button>
+        <button class="btn btn-gray" onclick="loadReports('resolved')" id="report-filter-resolved">Resolved</button>
+        <button class="btn btn-gray" onclick="loadReports('dismissed')" id="report-filter-dismissed">Dismissed</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-pink" onclick="loadReports(_currentReportFilter)">Refresh</button>
+      </div>
+      <div id="reports-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
+      <table class="data-table" id="reports-table">
+        <thead><tr><th>Date</th><th>Reporter</th><th>Reported</th><th>Category</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="reports-body"></tbody>
+      </table>
+      <div id="reports-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--gray)">
+        <div style="font-size:40px;margin-bottom:10px">✨</div>
+        <div style="font-size:15px;font-weight:700;color:var(--dark)">No reports</div>
+        <div style="font-size:13px;margin-top:4px">No reports match this filter.</div>
+      </div>
+    </div>
+
+    <!-- REPORT DETAIL MODAL -->
+    <div class="admin-modal-bg" id="modal-report-detail" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="admin-modal" style="max-width:480px">
+        <h3>Report Details</h3>
+        <div id="report-detail-content"></div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--gray);margin:16px 0 6px;text-transform:uppercase">Admin Notes</label>
+        <textarea id="report-admin-notes" style="width:100%;padding:10px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;font-family:inherit;min-height:80px;outline:none;resize:vertical;color:var(--dark)" placeholder="Add internal notes about this report..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn btn-blue" onclick="updateReportStatus('reviewed')">Mark Reviewed</button>
+          <button class="btn btn-green" onclick="updateReportStatus('resolved')">Resolve</button>
+          <button class="btn btn-gray" onclick="updateReportStatus('dismissed')">Dismiss</button>
+          <button class="btn btn-red" onclick="blockReportedUser()">Block User</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-gray" onclick="document.getElementById('modal-report-detail').classList.remove('open')">Close</button>
+        </div>
       </div>
     </div>
 
     <!-- EMAIL LOG -->
     <div class="section" id="sec-email-log">
       <div class="page-title">Email Log</div>
-      <div class="page-sub">History of all sent emails</div>
+      <div class="page-sub">Complete history of all emails sent by PairdUps</div>
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="stat-card" style="padding:14px;flex:1;min-width:120px"><div class="label">Total Emails</div><div class="value" id="emaillog-total" style="font-size:24px">--</div></div>
+        <div class="stat-card" style="padding:14px;flex:1;min-width:120px"><div class="label">Today</div><div class="value" id="emaillog-today" style="font-size:24px">--</div></div>
+        <div class="stat-card" style="padding:14px;flex:1;min-width:120px"><div class="label">This Week</div><div class="value" id="emaillog-week" style="font-size:24px">--</div></div>
+        <div class="stat-card" style="padding:14px;flex:1;min-width:120px"><div class="label">This Month</div><div class="value" id="emaillog-month" style="font-size:24px">--</div></div>
+      </div>
       <div class="search-bar">
-        <input class="search-input" id="emaillog-search" placeholder="Search by type or user..." oninput="filterEmailLog()">
+        <input class="search-input" id="emaillog-search" placeholder="Search by type, name, or email..." oninput="filterEmailLog()">
+        <select id="emaillog-type-filter" onchange="filterEmailLog()" style="padding:10px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;font-family:inherit;background:#fff;color:var(--dark);min-width:150px">
+          <option value="">All Types</option>
+          <option value="welcome">Welcome</option>
+          <option value="join_request">Join Request</option>
+          <option value="accepted">Accepted</option>
+          <option value="declined">Declined</option>
+          <option value="pairdup_created">PairdUp Created</option>
+          <option value="listing_expired">Expired</option>
+          <option value="profile_completed">Profile Done</option>
+          <option value="account_farewell">Farewell</option>
+          <option value="birthday">Birthday</option>
+          <option value="inactivity">Inactivity</option>
+          <option value="unread">Unread Msgs</option>
+          <option value="blocked">Block/Unblock</option>
+          <option value="custom">Custom/Admin</option>
+        </select>
         <button class="btn btn-pink" onclick="loadEmailLog()">Refresh</button>
       </div>
       <table class="data-table">
-        <thead><tr><th>Type</th><th>User</th><th>Sent At</th><th>Details</th></tr></thead>
+        <thead><tr><th>Type</th><th>Recipient</th><th>Date & Time</th><th>Details</th></tr></thead>
         <tbody id="emaillog-body"></tbody>
       </table>
+      <div id="emaillog-load-more" style="text-align:center;margin-top:16px;display:none">
+        <button class="btn btn-gray" onclick="loadMoreEmailLogs()">Load More</button>
+      </div>
     </div>
 
     <!-- CONVERSATION DETAIL MODAL -->
@@ -527,6 +585,7 @@ function showSection(id) {
   if (id === 'users') loadUsers();
   if (id === 'listings') loadListings();
   if (id === 'messages') loadConversations();
+  if (id === 'reports') loadReports(_currentReportFilter || 'all');
   if (id === 'email-log') loadEmailLog();
 }
 
@@ -1171,33 +1230,137 @@ function previewAdminEmail() {
 }
 
 // ── Email Log ─────────────────────────────────────────────
+// ── Reports ───────────────────────────────────────────────
+var _allReports = [];
+var _currentReportFilter = 'all';
+var _currentReportId = null;
+
+async function loadReports(filter) {
+  _currentReportFilter = filter || 'all';
+  ['all','pending','reviewed','resolved','dismissed'].forEach(function(f) {
+    var btn = document.getElementById('report-filter-' + f);
+    if (btn) btn.className = (f === _currentReportFilter) ? 'btn btn-pink' : 'btn btn-gray';
+  });
+  var query = sb.from('reports').select('*, reporter:reporter_id(name, email, photo_url), reported:reported_user_id(name, email, photo_url)').order('created_at', { ascending: false });
+  if (filter && filter !== 'all') query = query.eq('status', filter);
+  var { data, error } = await query;
+  if (error) { console.error('Reports error:', error); }
+  _allReports = data || [];
+  renderReports(_allReports);
+  var { data: allR } = await sb.from('reports').select('status');
+  var stats = { pending: 0, reviewed: 0, resolved: 0, dismissed: 0 };
+  (allR || []).forEach(function(r) { if (stats[r.status] !== undefined) stats[r.status]++; });
+  document.getElementById('reports-stats').innerHTML = '<div class="stat-card" style="padding:10px 16px;flex:1;min-width:100px"><div class="label">Pending</div><div class="value" style="font-size:20px;color:var(--red)">' + stats.pending + '</div></div><div class="stat-card" style="padding:10px 16px;flex:1;min-width:100px"><div class="label">Reviewed</div><div class="value" style="font-size:20px;color:var(--blue)">' + stats.reviewed + '</div></div><div class="stat-card" style="padding:10px 16px;flex:1;min-width:100px"><div class="label">Resolved</div><div class="value" style="font-size:20px;color:var(--green)">' + stats.resolved + '</div></div><div class="stat-card" style="padding:10px 16px;flex:1;min-width:100px"><div class="label">Dismissed</div><div class="value" style="font-size:20px;color:var(--gray)">' + stats.dismissed + '</div></div>';
+}
+
+function renderReports(reports) {
+  var tbody = document.getElementById('reports-body');
+  var emptyEl = document.getElementById('reports-empty');
+  var tableEl = document.getElementById('reports-table');
+  if (reports.length === 0) { emptyEl.style.display = 'block'; tableEl.style.display = 'none'; return; }
+  emptyEl.style.display = 'none'; tableEl.style.display = '';
+  var catLabels = { fake_profile: 'Fake Profile', inappropriate_content: 'Inappropriate', spam: 'Spam', harassment: 'Harassment', underage: 'Underage', other: 'Other' };
+  var statusBadge = { pending: 'badge-blocked', reviewed: 'badge-pending', resolved: 'badge-active', dismissed: 'badge-hidden' };
+  tbody.innerHTML = reports.map(function(r) {
+    var reporter = r.reporter || {};
+    var reported = r.reported || {};
+    return '<tr><td style="font-size:12px">' + new Date(r.created_at).toLocaleDateString() + '</td><td><div style="font-weight:600;font-size:12px">' + (reporter.name || '?') + '</div><div style="font-size:10px;color:var(--gray)">' + (reporter.email || '') + '</div></td><td><div style="font-weight:600;font-size:12px;color:var(--red)">' + (reported.name || '?') + '</div><div style="font-size:10px;color:var(--gray)">' + (reported.email || '') + '</div></td><td><span class="badge badge-hidden">' + (catLabels[r.category] || r.category) + '</span></td><td style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.reason || '-') + '</td><td><span class="badge ' + (statusBadge[r.status] || 'badge-hidden') + '">' + (r.status || 'pending') + '</span></td><td><button class="btn btn-blue" onclick="openReportDetail(\'' + r.id + '\')">View</button></td></tr>';
+  }).join('');
+}
+
+function openReportDetail(id) {
+  var r = _allReports.find(function(x) { return x.id === id; });
+  if (!r) return;
+  _currentReportId = id;
+  var reporter = r.reporter || {};
+  var reported = r.reported || {};
+  var catLabels = { fake_profile: 'Fake Profile', inappropriate_content: 'Inappropriate Content', spam: 'Spam', harassment: 'Harassment', underage: 'Underage User', other: 'Other' };
+  document.getElementById('report-detail-content').innerHTML = '<div style="display:flex;gap:16px;margin-bottom:16px"><div style="flex:1;padding:12px;background:var(--gray-light);border-radius:10px"><div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;margin-bottom:6px">Reporter</div>' + (reporter.photo_url ? '<img src="' + reporter.photo_url + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-bottom:4px">' : '') + '<div style="font-weight:700;font-size:13px">' + (reporter.name || '?') + '</div><div style="font-size:11px;color:var(--gray)">' + (reporter.email || '') + '</div></div><div style="flex:1;padding:12px;background:#FEF2F2;border-radius:10px;border:1px solid #FECACA"><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:6px">Reported User</div>' + (reported.photo_url ? '<img src="' + reported.photo_url + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-bottom:4px">' : '') + '<div style="font-weight:700;font-size:13px;color:var(--red)">' + (reported.name || '?') + '</div><div style="font-size:11px;color:var(--gray)">' + (reported.email || '') + '</div></div></div><div style="padding:12px;background:var(--gray-light);border-radius:10px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;margin-bottom:4px">Category</div><span class="badge badge-hidden">' + (catLabels[r.category] || r.category) + '</span></div><div style="padding:12px;background:var(--gray-light);border-radius:10px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;margin-bottom:4px">Reason</div><div style="font-size:13px;line-height:1.6;color:var(--dark)">' + (r.reason || 'No reason provided') + '</div></div><div style="font-size:11px;color:var(--gray)">Reported: ' + new Date(r.created_at).toLocaleString() + (r.resolved_at ? ' | Resolved: ' + new Date(r.resolved_at).toLocaleString() : '') + '</div>';
+  document.getElementById('report-admin-notes').value = r.admin_notes || '';
+  document.getElementById('modal-report-detail').classList.add('open');
+}
+
+async function updateReportStatus(status) {
+  if (!_currentReportId) return;
+  var notes = document.getElementById('report-admin-notes').value.trim();
+  var update = { status: status, admin_notes: notes };
+  if (status === 'resolved' || status === 'dismissed') update.resolved_at = new Date().toISOString();
+  await sb.from('reports').update(update).eq('id', _currentReportId);
+  toast('Report marked as ' + status);
+  document.getElementById('modal-report-detail').classList.remove('open');
+  loadReports(_currentReportFilter);
+}
+
+async function blockReportedUser() {
+  if (!_currentReportId) return;
+  var r = _allReports.find(function(x) { return x.id === _currentReportId; });
+  if (!r || !r.reported_user_id) return;
+  if (!confirm('Block this user and hide all their listings?')) return;
+  await sb.from('profiles').update({ is_blocked: true }).eq('id', r.reported_user_id);
+  await sb.from('listings').update({ is_active: false }).eq('owner_id', r.reported_user_id);
+  await updateReportStatus('resolved');
+}
+
+// ── Email Log ─────────────────────────────────────────────
+var _emailLogOffset = 0;
+var _emailLogPageSize = 50;
+
 async function loadEmailLog() {
-  var { data } = await sb.from('email_log').select('*, profiles:user_id(name, email)').order('sent_at', { ascending: false }).limit(100);
+  _emailLogOffset = 0;
+  var { data, error } = await sb.from('email_log').select('*, profiles:user_id(name, email)').order('sent_at', { ascending: false }).range(0, _emailLogPageSize - 1);
+  if (error) { console.error('Email log error:', error); }
   _allEmailLogs = data || [];
   renderEmailLog(_allEmailLogs);
+  var { count: total } = await sb.from('email_log').select('*', { count: 'exact', head: true });
+  document.getElementById('emaillog-total').textContent = total || 0;
+  var today = new Date(); today.setHours(0,0,0,0);
+  var { count: todayC } = await sb.from('email_log').select('*', { count: 'exact', head: true }).gte('sent_at', today.toISOString());
+  document.getElementById('emaillog-today').textContent = todayC || 0;
+  var weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  var { count: weekC } = await sb.from('email_log').select('*', { count: 'exact', head: true }).gte('sent_at', weekAgo.toISOString());
+  document.getElementById('emaillog-week').textContent = weekC || 0;
+  var monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30);
+  var { count: monthC } = await sb.from('email_log').select('*', { count: 'exact', head: true }).gte('sent_at', monthAgo.toISOString());
+  document.getElementById('emaillog-month').textContent = monthC || 0;
+  document.getElementById('emaillog-load-more').style.display = (_allEmailLogs.length >= _emailLogPageSize) ? 'block' : 'none';
+}
+
+async function loadMoreEmailLogs() {
+  _emailLogOffset += _emailLogPageSize;
+  var { data } = await sb.from('email_log').select('*, profiles:user_id(name, email)').order('sent_at', { ascending: false }).range(_emailLogOffset, _emailLogOffset + _emailLogPageSize - 1);
+  if (data && data.length > 0) { _allEmailLogs = _allEmailLogs.concat(data); renderEmailLog(_allEmailLogs); }
+  document.getElementById('emaillog-load-more').style.display = (data && data.length >= _emailLogPageSize) ? 'block' : 'none';
 }
 
 function renderEmailLog(logs) {
   var tbody = document.getElementById('emaillog-body');
+  var typeColors = { welcome:'#16A34A', join_request:'#2563EB', accepted:'#16A34A', declined:'#DC2626', pairdup_created:'#7C3AED', listing_expired:'#92400E', listing_renewed:'#0D9488', profile_completed:'#0891B2', account_farewell:'#6B7280', birthday:'#EC4899', holiday_christmas:'#DC2626', holiday_newyear:'#7C3AED', holiday_easter:'#F59E0B', inactivity_reminder:'#6366F1', unread_messages:'#F59E0B', new_nearby_pairdups:'#0D9488', user_blocked_confirmation:'#6B7280', user_blocked_notice:'#DC2626', user_unblocked_confirmation:'#16A34A', user_unblocked_notice:'#16A34A', custom:'#FF3B7F' };
   tbody.innerHTML = logs.map(function(l) {
     var p = l.profiles || {};
-    return '<tr>'
-      + '<td><span class="badge badge-active">' + (l.email_type || '—') + '</span></td>'
-      + '<td>' + (p.name || '—') + '<div style="font-size:11px;color:var(--gray)">' + (p.email || '') + '</div></td>'
-      + '<td style="font-size:12px">' + new Date(l.sent_at).toLocaleString() + '</td>'
-      + '<td style="font-size:11px;color:var(--gray)">' + JSON.stringify(l.metadata || {}).substring(0, 60) + '</td>'
-      + '</tr>';
+    var tc = typeColors[l.email_type] || '#6B7280';
+    var meta = l.metadata || {};
+    var detail = '';
+    if (meta.listing_title) detail = meta.listing_title;
+    else if (meta.requester_name) detail = 'From: ' + meta.requester_name;
+    else if (meta.unread_count) detail = meta.unread_count + ' unread';
+    else if (meta.count) detail = meta.count + ' nearby';
+    else { var keys = Object.keys(meta); if (keys.length) detail = JSON.stringify(meta).substring(0, 50); }
+    return '<tr><td><span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:10px;font-weight:700;background:' + tc + '18;color:' + tc + '">' + (l.email_type || '?') + '</span></td><td><div style="font-weight:600;font-size:12px">' + (p.name || 'External') + '</div><div style="font-size:10px;color:var(--gray)">' + (p.email || '') + '</div></td><td style="font-size:12px">' + new Date(l.sent_at).toLocaleString() + '</td><td style="font-size:11px;color:var(--gray)">' + detail + '</td></tr>';
   }).join('');
 }
 
 function filterEmailLog() {
   var q = document.getElementById('emaillog-search').value.toLowerCase();
-  if (!q) { renderEmailLog(_allEmailLogs); return; }
-  renderEmailLog(_allEmailLogs.filter(function(l) {
+  var typeFilter = document.getElementById('emaillog-type-filter').value.toLowerCase();
+  var filtered = _allEmailLogs.filter(function(l) {
     var p = l.profiles || {};
-    return (l.email_type || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q);
-  }));
+    var matchSearch = !q || (l.email_type||'').toLowerCase().includes(q) || (p.name||'').toLowerCase().includes(q) || (p.email||'').toLowerCase().includes(q);
+    var matchType = !typeFilter || (l.email_type||'').toLowerCase().includes(typeFilter);
+    return matchSearch && matchType;
+  });
+  renderEmailLog(filtered);
 }
+
 
 // ── Utility ───────────────────────────────────────────────
 function timeSince(dateStr) {
