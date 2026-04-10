@@ -533,7 +533,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   <h1 class="welcome-title">Paird<span>Ups</span></h1>
   <p class="welcome-tagline">Find your next adventure companion or someone special — no pressure, just fun.</p>
   <div class="feature-list">
-    <div class="feature-item"><div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="feature-text"><h4>Completely Free</h4><p>No hidden fees or subscriptions.</p></div></div>
+    <div class="feature-item"><div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="feature-text"><h4>Free to Use</h4><p>No cost to post, connect, and chat.</p></div></div>
     <div class="feature-item"><div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="feature-text"><h4>Group or One-on-One</h4><p>You choose who you meet and how.</p></div></div>
     <div class="feature-item"><div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><div class="feature-text"><h4>Activity Partner or Date</h4><p>Share hobbies or connect deeper.</p></div></div>
     <div class="feature-item"><div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><div class="feature-text"><h4>Filter by Location</h4><p>Find PairdUps near you in the US or Canada.</p></div></div>
@@ -1090,6 +1090,8 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <div class="profile-action" onclick="goToCreate()" style="border:2px solid var(--pink);background:var(--pink-pale)"><div class="action-icon" style="background:var(--pink);color:#fff"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><div class="action-label" style="color:var(--pink)">Create a NEW PairdUp</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="showSavedPairdupsScreen('profile')"><div class="action-icon" style="background:#EDE9FE;color:#7C3AED"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div><div class="action-label">Saved for Later PairdUps</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="openEditProfile()"><div class="action-icon" style="background:var(--pink-pale);color:var(--pink)"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="action-label">Edit Profile</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+        <div class="profile-action" onclick="openProfileVisitors()"><div class="action-icon" style="background:#FEF3C7;color:#D97706"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="action-label">Who Viewed My Profile</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+        <div class="profile-action" onclick="openPairdUpAnalytics()"><div class="action-icon" style="background:#DBEAFE;color:#2563EB"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 16V10M12 16V8M16 16V12"/></svg></div><div class="action-label">PairdUp Analytics</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="loadSettings();openModal('modal-settings')"><div class="action-icon" style="background:#E0F2FE;color:#0284C7"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div class="action-label">Settings</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="openModal('modal-policies')"><div class="action-icon" style="background:#FEF3C7;color:#92400E"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="action-label">Policies</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="showHelpPage(1);openModal('modal-help')"><div class="action-icon" style="background:#F0FDF4;color:#16A34A"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="action-label">Help &amp; Support</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
@@ -1240,6 +1242,131 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div id="unsub-not-signed-in" style="display:none;text-align:center;padding:20px">
       <div style="font-size:14px;color:var(--gray);line-height:1.6;margin-bottom:16px">Please sign in to manage your email preferences.</div>
       <button onclick="closeModal('modal-unsubscribe');goTo('screen-signin')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 32px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE VISITORS MODAL -->
+<div class="modal-bg" id="modal-visitors" onclick="if(event.target===this)closeModal('modal-visitors')" style="align-items:flex-end">
+  <div class="modal-sheet" style="max-height:80vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="font-size:24px">👀</div>
+      <div><div style="font-size:18px;font-weight:900;color:var(--dark)">Who Viewed Your Profile</div><div style="font-size:11px;color:var(--gray)">See who's been checking you out</div></div>
+    </div>
+    <div id="visitors-content">
+      <div id="visitors-loading" style="text-align:center;padding:20px;color:var(--gray);font-size:13px">Loading visitors...</div>
+      <div id="visitors-list" style="display:none"></div>
+      <div id="visitors-empty" style="display:none;text-align:center;padding:24px;color:var(--gray);font-size:13px">No profile visitors yet. Share your PairdUps to get noticed!</div>
+      <div id="visitors-upsell" style="display:none;text-align:center;padding:20px">
+        <div style="font-size:40px;margin-bottom:10px">🔒</div>
+        <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:6px">See who's interested in you!</div>
+        <div style="font-size:12px;color:var(--gray);margin-bottom:14px;line-height:1.5" id="visitors-upsell-count"></div>
+        <button onclick="closeModal('modal-visitors');showPhotoUpsell();showPremiumModal('👀 Upgrade to see who has been viewing your profile!')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.3)">✨ Upgrade to See Visitors</button>
+      </div>
+    </div>
+    <button onclick="closeModal('modal-visitors')" style="margin-top:14px;width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:14px;cursor:pointer">Close</button>
+  </div>
+</div>
+
+<!-- PAIRDUP ANALYTICS MODAL -->
+<div class="modal-bg" id="modal-analytics" onclick="if(event.target===this)closeModal('modal-analytics')" style="align-items:flex-end">
+  <div class="modal-sheet" style="max-height:80vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="font-size:24px">📊</div>
+      <div><div style="font-size:18px;font-weight:900;color:var(--dark)">PairdUp Analytics</div><div style="font-size:11px;color:var(--gray)">See how your PairdUps are performing</div></div>
+    </div>
+    <div id="analytics-content">
+      <div id="analytics-loading" style="text-align:center;padding:20px;color:var(--gray);font-size:13px">Loading analytics...</div>
+      <div id="analytics-list" style="display:none"></div>
+      <div id="analytics-upsell" style="display:none;text-align:center;padding:20px">
+        <div style="font-size:40px;margin-bottom:10px">📊</div>
+        <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:6px">Track Your PairdUp Performance</div>
+        <div style="font-size:12px;color:var(--gray);margin-bottom:14px;line-height:1.5">See how many people viewed, bookmarked, and responded to your PairdUps.</div>
+        <button onclick="closeModal('modal-analytics');showPremiumModal('📊 See how many people are viewing and bookmarking your PairdUps!')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.3)">✨ Upgrade for Analytics</button>
+      </div>
+    </div>
+    <button onclick="closeModal('modal-analytics')" style="margin-top:14px;width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:14px;cursor:pointer">Close</button>
+  </div>
+</div>
+
+<!-- PREMIUM UPGRADE MODAL -->
+<div class="modal-bg" id="modal-premium" onclick="if(event.target===this)closeModal('modal-premium')" style="align-items:center;justify-content:center">
+  <div class="modal-sheet" style="max-height:88vh;overflow-y:auto;padding:0;border-radius:24px">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#FF3B7F,#FF6FA3,#FFB347);padding:28px 20px 20px;text-align:center;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.1)"></div>
+      <div style="position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.08)"></div>
+      <div style="font-size:36px;margin-bottom:6px">✨</div>
+      <div style="font-size:22px;font-weight:900;color:#fff">Upgrade Your PairdUps</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:4px">Unlock premium features and get noticed</div>
+    </div>
+    <!-- Upsell message (dynamic) -->
+    <div id="premium-upsell-msg" style="display:none;padding:12px 20px;background:#FEF3C7;font-size:12px;color:#92400E;font-weight:600;text-align:center"></div>
+    <!-- Tier cards -->
+    <div style="padding:16px 16px 8px;display:flex;flex-direction:column;gap:12px">
+      <!-- Free tier -->
+      <div style="border:1.5px solid var(--gray-border);border-radius:16px;padding:14px 16px;position:relative" id="tier-card-free">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--gray-light);display:flex;align-items:center;justify-content:center;font-size:18px">🆓</div>
+          <div><div style="font-size:15px;font-weight:800;color:var(--dark)">Free</div><div style="font-size:11px;color:var(--gray)">Always free</div></div>
+        </div>
+        <div style="font-size:11px;color:var(--gray);line-height:1.8">
+          ✓ Unlimited PairdUps posting & responding<br>
+          ✓ Unlimited group size<br>
+          ✓ Basic messaging & notifications<br>
+          ✓ 1 profile photo<br>
+          ✓ Basic search filters
+        </div>
+      </div>
+      <!-- Premium tier -->
+      <div style="border:2px solid var(--pink);border-radius:16px;padding:14px 16px;position:relative;background:linear-gradient(135deg,#FFF5F7,#fff)" id="tier-card-premium">
+        <div style="position:absolute;top:-10px;right:16px;background:var(--pink);color:#fff;font-size:10px;font-weight:800;padding:3px 12px;border-radius:50px;text-transform:uppercase;letter-spacing:0.5px">Popular</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FF3B7F,#FF6FA3);display:flex;align-items:center;justify-content:center;font-size:18px">⭐</div>
+          <div><div style="font-size:15px;font-weight:800;color:var(--dark)">Premium</div><div style="font-size:11px;color:var(--pink);font-weight:700">$4.99/month</div></div>
+        </div>
+        <div style="font-size:11px;color:var(--dark);line-height:1.8">
+          ✅ Everything in Free, plus:<br>
+          📸 Up to <strong>5 profile photos</strong><br>
+          👀 See <strong>who viewed your profile</strong><br>
+          ✅ <strong>Verified blue badge</strong> on your profile<br>
+          📊 PairdUp <strong>analytics</strong> (views & bookmarks)<br>
+          ⭐ <strong>Priority placement</strong> in Discover<br>
+          🔍 <strong>Advanced filters</strong> (age, distance, interests)<br>
+          ↩️ <strong>Undo decline</strong> within 24 hours<br>
+          🎨 3 <strong>profile theme</strong> colors
+        </div>
+        <button onclick="subscribeToPlan('premium')" style="margin-top:12px;width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35)">Upgrade to Premium — $4.99/mo</button>
+      </div>
+      <!-- Gold tier -->
+      <div style="border:2px solid #F59E0B;border-radius:16px;padding:14px 16px;position:relative;background:linear-gradient(135deg,#FFFBEB,#fff)" id="tier-card-gold">
+        <div style="position:absolute;top:-10px;right:16px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:3px 12px;border-radius:50px;text-transform:uppercase;letter-spacing:0.5px">Best Value</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#F59E0B,#FBBF24);display:flex;align-items:center;justify-content:center;font-size:18px">👑</div>
+          <div><div style="font-size:15px;font-weight:800;color:var(--dark)">Gold</div><div style="font-size:11px;color:#D97706;font-weight:700">$9.99/month</div></div>
+        </div>
+        <div style="font-size:11px;color:var(--dark);line-height:1.8">
+          👑 Everything in Premium, plus:<br>
+          📸 Up to <strong>12 profile photos</strong><br>
+          👑 <strong>Gold crown badge</strong> on your profile<br>
+          🥇 <strong>Featured PairdUp</strong> (1/week with banner)<br>
+          📌 <strong>Pin PairdUp</strong> to top of city feed<br>
+          💬 <strong>Read receipts</strong> — see when msgs are read<br>
+          🔔 <strong>Instant alerts</strong> for matching PairdUps<br>
+          📊 <strong>Full analytics</strong> dashboard<br>
+          🔍 <strong>Saved search filters</strong><br>
+          ↩️ <strong>Undo decline anytime</strong><br>
+          🎨 <strong>Unlimited</strong> profile themes
+        </div>
+        <button onclick="subscribeToPlan('gold')" style="margin-top:12px;width:100%;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;border:none;border-radius:50px;padding:12px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(245,158,11,0.35)">Upgrade to Gold — $9.99/mo</button>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div style="padding:12px 20px 20px;text-align:center">
+      <div style="font-size:10px;color:var(--gray);line-height:1.6;margin-bottom:12px">Cancel anytime. Subscriptions are billed monthly through Stripe.<br>Your subscription helps us keep PairdUps running and improving!</div>
+      <button onclick="closeModal('modal-premium')" style="background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:10px 28px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Maybe Later</button>
     </div>
   </div>
 </div>
@@ -1852,6 +1979,11 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <div><div style="font-size:13px;font-weight:700;color:var(--dark)">Auto-Delete Expired PairdUps</div><div style="font-size:10px;color:var(--gray)">Automatically remove your expired listings after 30 days</div></div>
         <label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" id="set-auto-delete" onchange="saveSetting('autoDeleteExpired',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span><span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
       </div>
+      <div onclick="closeModal('modal-settings');showPremiumModal()" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:linear-gradient(135deg,#FFF5F7,#FFFBEB);border-radius:12px;cursor:pointer;border:1.5px solid var(--pink)">
+        <div style="font-size:20px">✨</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--pink)" id="settings-tier-label">Upgrade to Premium</div><div style="font-size:10px;color:var(--gray)" id="settings-tier-sub">Unlock photos, badges, analytics & more</div></div>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--pink)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
       <div onclick="closeModal('modal-settings');openBlockedUsersModal();openModal('modal-blocked-users')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--gray-light);border-radius:12px;cursor:pointer">
         <div style="font-size:20px">🚫</div>
         <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">Blocked Users</div><div style="font-size:10px;color:var(--gray)">Manage your blocked users list</div></div>
@@ -2196,7 +2328,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="modal-handle"></div>
     <div class="mini-profile-header">
       <div class="mini-avatar-lg"><img id="mini-photo" src="" alt=""></div>
-      <div><div class="mini-name" id="mini-name"></div><div class="mini-loc" id="mini-loc"></div><div id="mini-active" style="font-size:10px;font-weight:600;margin-top:2px;display:none"></div></div>
+      <div><div class="mini-name" id="mini-name"><span id="mini-badge"></span></div><div class="mini-loc" id="mini-loc"></div><div id="mini-active" style="font-size:10px;font-weight:600;margin-top:2px;display:none"></div></div>
     </div>
     <p class="mini-bio" id="mini-bio"></p>
     <div class="mini-interests" id="mini-interests"></div>
@@ -2446,6 +2578,307 @@ function enablePushNotifications() {
     });
   } catch(e) {
     showToast('Could not enable push notifications.');
+  }
+}
+
+// ── Premium Subscription System ──────────────────────────
+function getUserTier() {
+  if (!currentUser.subscriptionTier) return 'free';
+  if (currentUser.subscriptionExpires && new Date(currentUser.subscriptionExpires) < new Date()) return 'free';
+  return currentUser.subscriptionTier;
+}
+
+function isPremium() { var t = getUserTier(); return t === 'premium' || t === 'gold'; }
+function isGold() { return getUserTier() === 'gold'; }
+
+function getPhotoLimit() {
+  var tier = getUserTier();
+  if (tier === 'gold') return 12;
+  if (tier === 'premium') return 5;
+  return 1;
+}
+
+function showPremiumModal(upsellMsg) {
+  var msgEl = document.getElementById('premium-upsell-msg');
+  if (msgEl) {
+    if (upsellMsg) { msgEl.textContent = upsellMsg; msgEl.style.display = ''; }
+    else { msgEl.style.display = 'none'; }
+  }
+  // Highlight current tier
+  var tier = getUserTier();
+  var freeCard = document.getElementById('tier-card-free');
+  var premCard = document.getElementById('tier-card-premium');
+  var goldCard = document.getElementById('tier-card-gold');
+  if (freeCard) freeCard.style.opacity = tier === 'free' ? '1' : '0.6';
+  if (premCard) premCard.querySelector('button').textContent = tier === 'premium' ? '✅ Current Plan' : 'Upgrade to Premium — $4.99/mo';
+  if (premCard) premCard.querySelector('button').disabled = tier === 'premium' || tier === 'gold';
+  if (goldCard) goldCard.querySelector('button').textContent = tier === 'gold' ? '✅ Current Plan' : 'Upgrade to Gold — $9.99/mo';
+  if (goldCard) goldCard.querySelector('button').disabled = tier === 'gold';
+  openModal('modal-premium');
+}
+
+function showPhotoUpsell() {
+  showPremiumModal('📸 Want to add more photos? People with more photos get 3x more responses to their PairdUps!');
+}
+
+function showVisitorUpsell() {
+  showPremiumModal('👀 Upgrade to see who has been viewing your profile!');
+}
+
+function showFilterUpsell() {
+  showPremiumModal('🔍 Unlock advanced filters to find exactly the PairdUps you\'re looking for!');
+}
+
+function showUndoUpsell() {
+  showPremiumModal('↩️ Accidentally declined? Upgrade to undo your decision!');
+}
+
+function showAnalyticsUpsell() {
+  showPremiumModal('📊 See how many people are viewing and bookmarking your PairdUps!');
+}
+
+async function subscribeToPlan(plan) {
+  if (!isSignedIn || !currentUser.email) {
+    showToast('Please sign in to subscribe.');
+    return;
+  }
+  closeModal('modal-premium');
+  showToast('Setting up checkout...');
+  
+  try {
+    var session = await _supabase.auth.getSession();
+    var token = session.data?.session?.access_token;
+    var resp = await fetch(SUPABASE_URL + '/functions/v1/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ plan: plan, email: currentUser.email, userId: currentUser.supabaseId })
+    });
+    var data = await resp.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      showToast('Checkout setup failed. Please try again.');
+      console.log('[PairdUps] Checkout error:', data);
+    }
+  } catch(e) {
+    showToast('Error connecting to payment system.');
+    console.log('[PairdUps] Subscribe error:', e);
+  }
+}
+
+async function loadSubscriptionStatus() {
+  if (!_supabase || !currentUser.supabaseId) return;
+  try {
+    var { data: profile } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at').eq('id', currentUser.supabaseId).maybeSingle();
+    if (profile) {
+      currentUser.subscriptionTier = profile.subscription_tier || 'free';
+      currentUser.subscriptionExpires = profile.subscription_expires_at || null;
+      console.log('[PairdUps] Subscription:', currentUser.subscriptionTier, 'expires:', currentUser.subscriptionExpires);
+      // Update settings tier label
+      var tierLabel = document.getElementById('settings-tier-label');
+      var tierSub = document.getElementById('settings-tier-sub');
+      if (tierLabel && isPremium()) {
+        tierLabel.textContent = isGold() ? '👑 Gold Member' : '✅ Premium Member';
+        tierLabel.style.color = isGold() ? '#D97706' : 'var(--pink)';
+        if (tierSub) tierSub.textContent = 'Manage your subscription';
+      }
+    }
+  } catch(e) { console.log('[PairdUps] Subscription check error:', e); }
+}
+
+// Load badges for visible Discover cards
+function loadCardBadges() {
+  if (!_supabase) return;
+  var badges = document.querySelectorAll('.poster-badge[data-email]');
+  var emails = [];
+  badges.forEach(function(b) {
+    var email = b.dataset.email;
+    if (email && !b.dataset.loaded) emails.push(email);
+  });
+  if (emails.length === 0) return;
+  var uniqueEmails = [...new Set(emails)];
+  _supabase.from('profiles').select('email, subscription_tier').in('email', uniqueEmails)
+    .then(function(res) {
+      if (!res.data) return;
+      var tierMap = {};
+      res.data.forEach(function(p) { tierMap[p.email] = p.subscription_tier; });
+      badges.forEach(function(b) {
+        var email = b.dataset.email;
+        if (email && tierMap[email] && !b.dataset.loaded) {
+          b.innerHTML = getBadgeHTML(tierMap[email]);
+          b.dataset.loaded = '1';
+        }
+      });
+    });
+}
+
+// Check for subscription success/cancel URL params
+function checkSubscriptionReturn() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('subscription') === 'success') {
+    var plan = params.get('plan') || 'premium';
+    setTimeout(function() {
+      showToast('🎉 Welcome to PairdUps ' + (plan === 'gold' ? 'Gold' : 'Premium') + '! Your upgrade is active.');
+      loadSubscriptionStatus();
+    }, 1000);
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+  } else if (params.get('subscription') === 'cancelled') {
+    setTimeout(function() { showToast('Subscription not completed. You can upgrade anytime from Settings.'); }, 1000);
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+}
+
+// Log profile view for "who viewed your profile" feature
+async function logProfileVisit(profileUserId) {
+  if (!_supabase || !currentUser.supabaseId || profileUserId === currentUser.supabaseId) return;
+  try {
+    await _supabase.from('profile_visitors').upsert({
+      profile_id: profileUserId,
+      visitor_id: currentUser.supabaseId,
+      visited_at: new Date().toISOString()
+    }, { onConflict: 'profile_id,visitor_id' });
+  } catch(e) {}
+}
+
+// Log listing analytics
+async function logListingView(listingId) {
+  if (!_supabase || !listingId) return;
+  try {
+    await _supabase.from('listing_analytics').insert({
+      listing_id: listingId,
+      viewer_id: currentUser.supabaseId || null,
+      event_type: 'view'
+    });
+  } catch(e) {}
+}
+
+// ── Profile Visitors Feature ─────────────────────────────
+async function openProfileVisitors() {
+  openModal('modal-visitors');
+  var loading = document.getElementById('visitors-loading');
+  var list = document.getElementById('visitors-list');
+  var empty = document.getElementById('visitors-empty');
+  var upsell = document.getElementById('visitors-upsell');
+  if (loading) loading.style.display = '';
+  if (list) { list.style.display = 'none'; list.innerHTML = ''; }
+  if (empty) empty.style.display = 'none';
+  if (upsell) upsell.style.display = 'none';
+
+  if (!_supabase || !currentUser.supabaseId) {
+    if (loading) loading.textContent = 'Please sign in to see visitors.';
+    return;
+  }
+
+  try {
+    var { data: visitors, error } = await _supabase.from('profile_visitors')
+      .select('visitor_id, visited_at')
+      .eq('profile_id', currentUser.supabaseId)
+      .order('visited_at', { ascending: false })
+      .limit(50);
+
+    if (loading) loading.style.display = 'none';
+    if (error || !visitors || visitors.length === 0) {
+      if (empty) empty.style.display = '';
+      return;
+    }
+
+    // Free users see blurred upsell
+    if (!isPremium()) {
+      var countEl = document.getElementById('visitors-upsell-count');
+      if (countEl) countEl.textContent = visitors.length + ' people have viewed your profile. Upgrade to see who they are!';
+      if (upsell) upsell.style.display = '';
+      return;
+    }
+
+    // Premium/Gold users see the full list
+    if (list) list.style.display = '';
+    for (var i = 0; i < visitors.length; i++) {
+      var v = visitors[i];
+      var { data: vProfile } = await _supabase.from('profiles').select('name, age, location, photo_url, subscription_tier').eq('id', v.visitor_id).maybeSingle();
+      if (!vProfile) continue;
+      var timeAgo = getTimeAgo(new Date(v.visited_at));
+      var badge = getBadgeHTML(vProfile.subscription_tier);
+      var html = '<div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:var(--gray-light);margin-bottom:6px">'
+        + '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="' + (vProfile.photo_url || '') + '" style="width:100%;height:100%;object-fit:cover"></div>'
+        + '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">' + escHtml(vProfile.name || 'PairdUps User') + (vProfile.age ? ', ' + vProfile.age : '') + ' ' + badge + '</div>'
+        + '<div style="font-size:11px;color:var(--gray)">' + escHtml(vProfile.location || '') + ' · ' + timeAgo + '</div></div></div>';
+      list.insertAdjacentHTML('beforeend', html);
+    }
+  } catch(e) {
+    if (loading) { loading.style.display = ''; loading.textContent = 'Could not load visitors.'; }
+    console.log('[PairdUps] Visitors error:', e);
+  }
+}
+
+function getTimeAgo(date) {
+  var now = new Date();
+  var diff = Math.floor((now - date) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return date.toLocaleDateString();
+}
+
+function getBadgeHTML(tier) {
+  if (tier === 'gold') return '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px">👑 Gold</span>';
+  if (tier === 'premium') return '<span style="font-size:10px;background:var(--pink);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px">✅ Verified</span>';
+  return '';
+}
+
+// ── PairdUp Analytics Feature ────────────────────────────
+async function openPairdUpAnalytics() {
+  openModal('modal-analytics');
+  var loading = document.getElementById('analytics-loading');
+  var list = document.getElementById('analytics-list');
+  var upsell = document.getElementById('analytics-upsell');
+  if (loading) loading.style.display = '';
+  if (list) { list.style.display = 'none'; list.innerHTML = ''; }
+  if (upsell) upsell.style.display = 'none';
+
+  if (!isPremium()) {
+    if (loading) loading.style.display = 'none';
+    if (upsell) upsell.style.display = '';
+    return;
+  }
+
+  if (!_supabase || !currentUser.supabaseId) {
+    if (loading) loading.textContent = 'Please sign in.';
+    return;
+  }
+
+  try {
+    // Get user's listings
+    var { data: myListings } = await _supabase.from('listings').select('id, title').eq('owner_id', currentUser.supabaseId);
+    if (loading) loading.style.display = 'none';
+    if (!myListings || myListings.length === 0) {
+      if (list) { list.style.display = ''; list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--gray);font-size:13px">No PairdUps posted yet.</div>'; }
+      return;
+    }
+
+    if (list) list.style.display = '';
+    for (var i = 0; i < myListings.length; i++) {
+      var listing = myListings[i];
+      // Count views
+      var { count: viewCount } = await _supabase.from('listing_analytics').select('id', { count: 'exact', head: true }).eq('listing_id', listing.id).eq('event_type', 'view');
+      // Count bookmarks
+      var { count: bookmarkCount } = await _supabase.from('listing_analytics').select('id', { count: 'exact', head: true }).eq('listing_id', listing.id).eq('event_type', 'bookmark');
+      // Count join requests
+      var { count: requestCount } = await _supabase.from('conversations').select('id', { count: 'exact', head: true }).eq('listing_id', listing.id);
+
+      var html = '<div style="padding:12px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:8px">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:8px">' + escHtml(listing.title) + '</div>'
+        + '<div style="display:flex;gap:12px">'
+        + '<div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:10px"><div style="font-size:20px;font-weight:900;color:var(--pink)">' + (viewCount || 0) + '</div><div style="font-size:10px;color:var(--gray)">Views</div></div>'
+        + '<div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:10px"><div style="font-size:20px;font-weight:900;color:#F59E0B">' + (bookmarkCount || 0) + '</div><div style="font-size:10px;color:var(--gray)">Bookmarks</div></div>'
+        + '<div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:10px"><div style="font-size:20px;font-weight:900;color:#16A34A">' + (requestCount || 0) + '</div><div style="font-size:10px;color:var(--gray)">Requests</div></div>'
+        + '</div></div>';
+      list.insertAdjacentHTML('beforeend', html);
+    }
+  } catch(e) {
+    if (loading) { loading.style.display = ''; loading.textContent = 'Could not load analytics.'; }
+    console.log('[PairdUps] Analytics error:', e);
   }
 }
 
@@ -4594,7 +5027,7 @@ function renderUserListing(d) {
     +'<div class="card-footer">'
     +'<div class="card-poster" onclick="event.stopPropagation();showMiniProfile(\''+esc(d.userName)+'\',\''+d.userAge+'\',\''+esc(d.userLoc)+'\',\''+esc(d.userBio)+'\','+ JSON.stringify(d.userInterests||[]) +',\''+esc(d.userPhoto)+'\',\''+esc(d.ownerEmail||'')+'\')">'
     +'<div class="poster-avatar"><img src="'+d.userPhoto+'" alt="'+esc(d.userName)+'" style="object-position:'+d.userFacePos+'"></div>'
-    +'<div><div class="poster-name">'+d.userName+(d.userAge?', '+d.userAge:'')+'</div>'
+    +'<div><div class="poster-name">'+d.userName+(d.userAge?', '+d.userAge:'')+'<span class="poster-badge" data-email="'+esc(d.ownerEmail||'')+'"></span></div>'
     +'<div class="poster-loc">'+d.userLoc+'</div></div></div>'
     +'<button class="btn-sm" onclick="event.stopPropagation();joinListing(this)">Send Request</button>'
     +'<button onclick="event.stopPropagation();toggleSavePairdUp(this,\''+esc(d.title)+'\',\''+esc(d.dateStr)+'\',\''+esc(d.venue)+'\',\''+esc(d.userName)+'\',\''+esc(d.userPhoto)+'\',\''+d.emoji+'\')" style="background:none;border:none;font-size:24px;cursor:pointer;padding:6px;line-height:1" title="Save for later">🔖</button>'
@@ -5216,6 +5649,17 @@ function doDeleteListing() {
 
 // ── Detail ─────────────────────────────────────────────────
 function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,posterKey) {
+  // Track listing view for analytics
+  if (_supabase && isSignedIn) {
+    var card = document.querySelector('.listing-card');
+    document.querySelectorAll('.listing-card').forEach(function(c) {
+      var ct = c.querySelector('.card-title');
+      if (ct && ct.textContent.trim() === title) {
+        var lid = c.dataset.supabaseId;
+        if (lid) logListingView(lid);
+      }
+    });
+  }
   document.getElementById('d-title').textContent = title;
   document.getElementById('d-desc').textContent = desc;
   document.getElementById('d-date').textContent = date;
@@ -5789,6 +6233,8 @@ function saveProfile() {
 function triggerPhotoUpload() { document.getElementById('photo-input').click(); }
 function previewPhoto(e) {
   const file = e.target.files[0]; if (!file) return;
+  // Premium photo limit check — currently only 1 photo for free users
+  // (Future: multi-photo gallery. For now, this shows the upsell when relevant)
   // Size check — warn if over 25MB
   if (file.size > 25 * 1024 * 1024) {
     showToast('Image too large. Please choose a smaller photo (under 25MB).');
@@ -6151,6 +6597,21 @@ function showMiniProfile(name, age, loc, bio, interests, photo, ownerEmail) {
     var t = document.createElement('span'); t.className = 'interest-tag'; t.textContent = i; wrap.appendChild(t);
   });
   openModal('modal-mini');
+
+  // Log profile visit and show badge
+  if (_supabase && ownerEmail && isSignedIn && ownerEmail !== currentUser.email) {
+    _supabase.from('profiles').select('id, subscription_tier').eq('email', ownerEmail).maybeSingle()
+      .then(function(res) {
+        if (res.data) {
+          logProfileVisit(res.data.id);
+          var badgeEl = document.getElementById('mini-badge');
+          if (badgeEl) badgeEl.innerHTML = getBadgeHTML(res.data.subscription_tier);
+        }
+      });
+  } else {
+    var badgeEl = document.getElementById('mini-badge');
+    if (badgeEl) badgeEl.innerHTML = '';
+  }
 
   // Then fetch latest from Supabase and update in-place (for other users' profiles)
   if (_supabase && ownerEmail && (!isSignedIn || ownerEmail !== currentUser.email)) {
@@ -7589,7 +8050,7 @@ window.addEventListener('load', async function() {
           document.getElementById('screen-discover').classList.add('active');
           syncProfileForm();
           showTopbarAvatar();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus(); }, 500);
         }
       }
     } catch(e) { console.log('Supabase session check:', e); }
@@ -7659,6 +8120,8 @@ window.addEventListener('load', async function() {
   setTimeout(function() { filterExpiredFromDiscover(); }, 800);
   // Start background polling for new conversations/messages
   if (isSignedIn) setTimeout(startBackgroundPolling, 2000);
+  setTimeout(loadCardBadges, 3000);
+  checkSubscriptionReturn();
 
   // Handle URL parameters from email links
   var urlParams = new URLSearchParams(window.location.search);
