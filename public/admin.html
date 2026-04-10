@@ -1307,9 +1307,18 @@ var _emailLogPageSize = 50;
 
 async function loadEmailLog() {
   _emailLogOffset = 0;
-  var { data, error } = await sb.from('email_log').select('*, profiles:user_id(name, email)').order('sent_at', { ascending: false }).range(0, _emailLogPageSize - 1);
-  if (error) { console.error('Email log error:', error); }
+  // Use left join so rows with null user_id still show
+  var { data, error } = await sb.from('email_log').select('id, email_type, sent_at, metadata, user_id').order('sent_at', { ascending: false }).range(0, _emailLogPageSize - 1);
+  if (error) { console.error('Email log error:', error); toast('Email log error: ' + error.message); }
   _allEmailLogs = data || [];
+  // Fetch profile names for user_ids that exist
+  var userIds = _allEmailLogs.map(function(l) { return l.user_id; }).filter(Boolean);
+  var profileMap = {};
+  if (userIds.length > 0) {
+    var { data: profiles } = await sb.from('profiles').select('id, name, email').in('id', userIds);
+    (profiles || []).forEach(function(p) { profileMap[p.id] = p; });
+  }
+  _allEmailLogs.forEach(function(l) { l._profile = profileMap[l.user_id] || null; });
   renderEmailLog(_allEmailLogs);
   var { count: total } = await sb.from('email_log').select('*', { count: 'exact', head: true });
   document.getElementById('emaillog-total').textContent = total || 0;
@@ -1327,8 +1336,18 @@ async function loadEmailLog() {
 
 async function loadMoreEmailLogs() {
   _emailLogOffset += _emailLogPageSize;
-  var { data } = await sb.from('email_log').select('*, profiles:user_id(name, email)').order('sent_at', { ascending: false }).range(_emailLogOffset, _emailLogOffset + _emailLogPageSize - 1);
-  if (data && data.length > 0) { _allEmailLogs = _allEmailLogs.concat(data); renderEmailLog(_allEmailLogs); }
+  var { data } = await sb.from('email_log').select('id, email_type, sent_at, metadata, user_id').order('sent_at', { ascending: false }).range(_emailLogOffset, _emailLogOffset + _emailLogPageSize - 1);
+  if (data && data.length > 0) {
+    var userIds = data.map(function(l) { return l.user_id; }).filter(Boolean);
+    var profileMap = {};
+    if (userIds.length > 0) {
+      var { data: profiles } = await sb.from('profiles').select('id, name, email').in('id', userIds);
+      (profiles || []).forEach(function(p) { profileMap[p.id] = p; });
+    }
+    data.forEach(function(l) { l._profile = profileMap[l.user_id] || null; });
+    _allEmailLogs = _allEmailLogs.concat(data);
+    renderEmailLog(_allEmailLogs);
+  }
   document.getElementById('emaillog-load-more').style.display = (data && data.length >= _emailLogPageSize) ? 'block' : 'none';
 }
 
@@ -1336,7 +1355,7 @@ function renderEmailLog(logs) {
   var tbody = document.getElementById('emaillog-body');
   var typeColors = { welcome:'#16A34A', join_request:'#2563EB', accepted:'#16A34A', declined:'#DC2626', pairdup_created:'#7C3AED', listing_expired:'#92400E', listing_renewed:'#0D9488', profile_completed:'#0891B2', account_farewell:'#6B7280', birthday:'#EC4899', holiday_christmas:'#DC2626', holiday_newyear:'#7C3AED', holiday_easter:'#F59E0B', inactivity_reminder:'#6366F1', unread_messages:'#F59E0B', new_nearby_pairdups:'#0D9488', user_blocked_confirmation:'#6B7280', user_blocked_notice:'#DC2626', user_unblocked_confirmation:'#16A34A', user_unblocked_notice:'#16A34A', custom:'#FF3B7F' };
   tbody.innerHTML = logs.map(function(l) {
-    var p = l.profiles || {};
+    var p = l._profile || {};
     var tc = typeColors[l.email_type] || '#6B7280';
     var meta = l.metadata || {};
     var detail = '';
@@ -1353,7 +1372,7 @@ function filterEmailLog() {
   var q = document.getElementById('emaillog-search').value.toLowerCase();
   var typeFilter = document.getElementById('emaillog-type-filter').value.toLowerCase();
   var filtered = _allEmailLogs.filter(function(l) {
-    var p = l.profiles || {};
+    var p = l._profile || {};
     var matchSearch = !q || (l.email_type||'').toLowerCase().includes(q) || (p.name||'').toLowerCase().includes(q) || (p.email||'').toLowerCase().includes(q);
     var matchType = !typeFilter || (l.email_type||'').toLowerCase().includes(typeFilter);
     return matchSearch && matchType;
