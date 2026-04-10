@@ -2205,7 +2205,24 @@ function initOneSignal() {
       try {
         await OneSignal.init({
           appId: ONESIGNAL_APP_ID,
-          allowLocalhostAsSecureOrigin: false
+          allowLocalhostAsSecureOrigin: false,
+          welcomeNotification: {
+            title: 'PairdUps',
+            message: 'Thanks for subscribing to PairdUps notifications!'
+          },
+          promptOptions: {
+            slidedown: {
+              prompts: [{
+                type: 'push',
+                autoPrompt: true,
+                text: {
+                  actionMessage: 'Subscribe to PairdUps notifications for new PairdUps near you, messages, and more!',
+                  acceptButton: 'Subscribe',
+                  cancelButton: 'Later'
+                }
+              }]
+            }
+          }
         });
         console.log('[PairdUps] OneSignal initialized');
       } catch(e) { console.log('[PairdUps] OneSignal init error:', e); }

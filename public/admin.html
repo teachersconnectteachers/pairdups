@@ -422,9 +422,9 @@ a{color:var(--pink);text-decoration:none}
         <div class="stat-card" style="padding:14px;flex:1;min-width:120px"><div class="label">This Week</div><div class="value" id="emaillog-week" style="font-size:24px">--</div></div>
         <div class="stat-card" style="padding:14px;flex:1;min-width:120px"><div class="label">This Month</div><div class="value" id="emaillog-month" style="font-size:24px">--</div></div>
       </div>
-      <div class="search-bar">
-        <input class="search-input" id="emaillog-search" placeholder="Search by type, name, or email..." oninput="filterEmailLog()">
-        <select id="emaillog-type-filter" onchange="filterEmailLog()" style="padding:10px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;font-family:inherit;background:#fff;color:var(--dark);min-width:150px">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+        <input class="search-input" id="emaillog-search" placeholder="Search by type, name, or email..." oninput="filterEmailLog()" style="flex:1;min-width:200px">
+        <select id="emaillog-type-filter" onchange="filterEmailLog()" style="padding:10px 14px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;font-family:inherit;background:#fff;color:var(--dark);min-width:150px">
           <option value="">All Types</option>
           <option value="welcome">Welcome</option>
           <option value="join_request">Join Request</option>
@@ -440,14 +440,35 @@ a{color:var(--pink);text-decoration:none}
           <option value="blocked">Block/Unblock</option>
           <option value="custom">Custom/Admin</option>
         </select>
+        <button class="btn btn-red" id="emaillog-mass-delete-btn" onclick="massDeleteEmailLogs()" style="display:none">🗑 Delete Selected</button>
         <button class="btn btn-pink" onclick="loadEmailLog()">Refresh</button>
       </div>
       <table class="data-table">
-        <thead><tr><th>Type</th><th>Recipient</th><th>Date & Time</th><th>Details</th></tr></thead>
+        <thead><tr>
+          <th style="cursor:pointer" onclick="sortEmailLog('email_type')">Type ⇅</th>
+          <th style="cursor:pointer" onclick="sortEmailLog('recipient')">Recipient ⇅</th>
+          <th style="cursor:pointer" onclick="sortEmailLog('sent_at')">Date & Time ⇅</th>
+          <th>Details</th>
+          <th style="width:40px;text-align:center"><button onclick="promptDeleteSingleLog(null)" style="background:none;border:none;cursor:pointer;font-size:18px;opacity:0.4" title="Delete column">🗑</button></th>
+          <th style="text-align:center;width:40px"><label style="cursor:pointer" title="Select All"><input type="checkbox" id="emaillog-check-all" onchange="toggleAllEmailLogChecks(this.checked)" style="accent-color:var(--pink);width:16px;height:16px;cursor:pointer"></label></th>
+        </tr></thead>
         <tbody id="emaillog-body"></tbody>
       </table>
       <div id="emaillog-load-more" style="text-align:center;margin-top:16px;display:none">
         <button class="btn btn-gray" onclick="loadMoreEmailLogs()">Load More</button>
+      </div>
+    </div>
+
+    <!-- DELETE EMAIL LOG CONFIRMATION MODAL -->
+    <div class="admin-modal-bg" id="modal-delete-emaillog" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="admin-modal" style="max-width:380px;text-align:center">
+        <div style="font-size:48px;margin-bottom:10px">🤔</div>
+        <h3 style="margin-bottom:8px">Are you sure?</h3>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:20px;line-height:1.6" id="delete-emaillog-msg">This will permanently delete the selected email log(s).</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button class="btn btn-gray" onclick="document.getElementById('modal-delete-emaillog').classList.remove('open')" style="padding:10px 24px">Cancel</button>
+          <button class="btn btn-red" onclick="confirmDeleteEmailLogs()" style="padding:10px 24px">Yes, Delete</button>
+        </div>
       </div>
     </div>
 
@@ -1432,9 +1453,14 @@ async function loadMoreEmailLogs() {
   document.getElementById('emaillog-load-more').style.display = (data && data.length >= _emailLogPageSize) ? 'block' : 'none';
 }
 
+var _emailLogSortField = 'sent_at';
+var _emailLogSortAsc = false;
+
 function renderEmailLog(logs) {
   var tbody = document.getElementById('emaillog-body');
   var typeColors = { welcome:'#16A34A', join_request:'#2563EB', accepted:'#16A34A', declined:'#DC2626', pairdup_created:'#7C3AED', listing_expired:'#92400E', listing_renewed:'#0D9488', profile_completed:'#0891B2', account_farewell:'#6B7280', birthday:'#EC4899', holiday_christmas:'#DC2626', holiday_newyear:'#7C3AED', holiday_easter:'#F59E0B', inactivity_reminder:'#6366F1', unread_messages:'#F59E0B', new_nearby_pairdups:'#0D9488', user_blocked_confirmation:'#6B7280', user_blocked_notice:'#DC2626', user_unblocked_confirmation:'#16A34A', user_unblocked_notice:'#16A34A', custom:'#FF3B7F' };
+  document.getElementById('emaillog-check-all').checked = false;
+  document.getElementById('emaillog-mass-delete-btn').style.display = 'none';
   tbody.innerHTML = logs.map(function(l) {
     var p = l._profile || {};
     var tc = typeColors[l.email_type] || '#6B7280';
@@ -1445,7 +1471,9 @@ function renderEmailLog(logs) {
     else if (meta.unread_count) detail = meta.unread_count + ' unread';
     else if (meta.count) detail = meta.count + ' nearby';
     else { var keys = Object.keys(meta); if (keys.length) detail = JSON.stringify(meta).substring(0, 50); }
-    return '<tr><td><span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:10px;font-weight:700;background:' + tc + '18;color:' + tc + '">' + (l.email_type || '?') + '</span></td><td><div style="font-weight:600;font-size:12px">' + (p.name || 'External') + '</div><div style="font-size:10px;color:var(--gray)">' + (p.email || '') + '</div></td><td style="font-size:12px">' + new Date(l.sent_at).toLocaleString() + '</td><td style="font-size:11px;color:var(--gray)">' + detail + '</td></tr>';
+    return '<tr><td><span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:10px;font-weight:700;background:' + tc + '18;color:' + tc + '">' + (l.email_type || '?') + '</span></td><td><div style="font-weight:600;font-size:12px">' + (p.name || 'External') + '</div><div style="font-size:10px;color:var(--gray)">' + (p.email || '') + '</div></td><td style="font-size:12px">' + new Date(l.sent_at).toLocaleString() + '</td><td style="font-size:11px;color:var(--gray)">' + detail + '</td>'
+      + '<td style="text-align:center"><button onclick="promptDeleteSingleLog(\'' + l.id + '\')" style="background:none;border:none;cursor:pointer;font-size:20px;opacity:0.5;line-height:1" title="Delete" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">🗑</button></td>'
+      + '<td style="text-align:center"><input type="checkbox" class="emaillog-check" data-id="' + l.id + '" onchange="updateEmailLogDeleteBtn()" style="accent-color:var(--pink);width:16px;height:16px;cursor:pointer"></td></tr>';
   }).join('');
 }
 
@@ -1459,6 +1487,65 @@ function filterEmailLog() {
     return matchSearch && matchType;
   });
   renderEmailLog(filtered);
+}
+
+function sortEmailLog(field) {
+  if (_emailLogSortField === field) _emailLogSortAsc = !_emailLogSortAsc;
+  else { _emailLogSortField = field; _emailLogSortAsc = true; }
+  _allEmailLogs.sort(function(a, b) {
+    var va, vb;
+    if (field === 'email_type') { va = (a.email_type || '').toLowerCase(); vb = (b.email_type || '').toLowerCase(); }
+    else if (field === 'recipient') { va = ((a._profile || {}).name || '').toLowerCase(); vb = ((b._profile || {}).name || '').toLowerCase(); }
+    else { va = a.sent_at || ''; vb = b.sent_at || ''; }
+    if (va < vb) return _emailLogSortAsc ? -1 : 1;
+    if (va > vb) return _emailLogSortAsc ? 1 : -1;
+    return 0;
+  });
+  renderEmailLog(_allEmailLogs);
+  toast('Sorted by ' + field + (_emailLogSortAsc ? ' (A→Z / Oldest)' : ' (Z→A / Newest)'));
+}
+
+function toggleAllEmailLogChecks(checked) {
+  document.querySelectorAll('.emaillog-check').forEach(function(cb) { cb.checked = checked; });
+  updateEmailLogDeleteBtn();
+}
+
+function updateEmailLogDeleteBtn() {
+  var checked = document.querySelectorAll('.emaillog-check:checked');
+  var btn = document.getElementById('emaillog-mass-delete-btn');
+  btn.style.display = checked.length > 0 ? '' : 'none';
+  btn.textContent = '🗑 Delete Selected (' + checked.length + ')';
+  var all = document.querySelectorAll('.emaillog-check');
+  var checkAll = document.getElementById('emaillog-check-all');
+  if (checkAll) checkAll.checked = all.length > 0 && checked.length === all.length;
+}
+
+var _pendingEmailLogDeleteIds = [];
+
+function promptDeleteSingleLog(id) {
+  if (id) {
+    _pendingEmailLogDeleteIds = [id];
+    document.getElementById('delete-emaillog-msg').textContent = 'This will permanently delete this email log entry.';
+  }
+  document.getElementById('modal-delete-emaillog').classList.add('open');
+}
+
+function massDeleteEmailLogs() {
+  var checked = document.querySelectorAll('.emaillog-check:checked');
+  _pendingEmailLogDeleteIds = Array.from(checked).map(function(cb) { return cb.dataset.id; });
+  if (_pendingEmailLogDeleteIds.length === 0) return;
+  document.getElementById('delete-emaillog-msg').textContent = 'This will permanently delete ' + _pendingEmailLogDeleteIds.length + ' email log(s). This cannot be undone.';
+  document.getElementById('modal-delete-emaillog').classList.add('open');
+}
+
+async function confirmDeleteEmailLogs() {
+  document.getElementById('modal-delete-emaillog').classList.remove('open');
+  for (var i = 0; i < _pendingEmailLogDeleteIds.length; i++) {
+    await sb.from('email_log').delete().eq('id', _pendingEmailLogDeleteIds[i]);
+  }
+  toast(_pendingEmailLogDeleteIds.length + ' email log(s) deleted');
+  _pendingEmailLogDeleteIds = [];
+  loadEmailLog();
 }
 
 
