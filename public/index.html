@@ -1468,6 +1468,41 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <option value="">— All Cities —</option>
       </select>
     </div>
+    <!-- ADVANCED FILTERS (Premium/Gold) -->
+    <div id="advanced-filters-section">
+      <div style="font-size:11px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;padding:8px 0 6px;border-top:1px solid var(--gray-border);margin-top:8px">✨ Advanced Filters</div>
+      <div id="advanced-filters-locked" style="display:none;padding:10px 14px;background:linear-gradient(135deg,#FFF5F7,#FFFBEB);border-radius:12px;text-align:center;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--dark);margin-bottom:4px">🔒 Premium Feature</div>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px">Filter by age range, poster type, and more</div>
+        <button onclick="closeModal('modal-filter');showFilterUpsell()" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:8px 20px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit">✨ Upgrade to Unlock</button>
+      </div>
+      <div id="advanced-filters-content" style="display:none">
+        <div class="filter-section" style="margin-bottom:10px">
+          <span class="filter-label">Age Range</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="number" id="filter-age-min" placeholder="Min" min="18" max="99" style="flex:1;padding:8px 10px;border:1px solid var(--gray-border);border-radius:10px;font-size:13px;font-family:inherit">
+            <span style="color:var(--gray);font-size:12px">to</span>
+            <input type="number" id="filter-age-max" placeholder="Max" min="18" max="99" style="flex:1;padding:8px 10px;border:1px solid var(--gray-border);border-radius:10px;font-size:13px;font-family:inherit">
+          </div>
+        </div>
+        <div class="filter-section" style="margin-bottom:10px">
+          <span class="filter-label">Poster Type</span>
+          <select class="form-input" id="filter-poster-type">
+            <option value="">All Types</option>
+            <option value="Date">Date Only</option>
+            <option value="Just for Fun">Just for Fun Only</option>
+          </select>
+        </div>
+        <div class="filter-section" style="margin-bottom:10px">
+          <span class="filter-label">Group Size</span>
+          <select class="form-input" id="filter-group-type">
+            <option value="">All</option>
+            <option value="One-on-One">One-on-One</option>
+            <option value="Group">Group Activities</option>
+          </select>
+        </div>
+      </div>
+    </div>
     <div class="filter-footer">
       <button class="filter-clear" onclick="clearFilter()">Clear All</button>
       <button class="filter-apply" onclick="applyFilter()">Apply Filters</button>
@@ -2059,6 +2094,25 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         </label>
       </div>
       <div id="settings-push-blocked" style="display:none;font-size:11px;color:var(--red);line-height:1.5;padding:6px 14px">⚠️ Blocked by your browser. Click the lock icon in the address bar → set Notifications to "Allow" → refresh this page.</div>
+
+      <!-- PROFILE THEME -->
+      <div style="font-size:11px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;padding:16px 0 6px">🎨 Profile Theme</div>
+      <div id="theme-section">
+        <div id="theme-locked" style="display:none;padding:10px 14px;background:linear-gradient(135deg,#FFF5F7,#FFFBEB);border-radius:12px;text-align:center;margin-bottom:4px">
+          <div style="font-size:11px;color:var(--gray);margin-bottom:6px">🔒 Customize your profile card colors</div>
+          <button onclick="closeModal('modal-settings');showPremiumModal('🎨 Upgrade to customize your profile with unique theme colors!')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:7px 18px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit">✨ Upgrade to Unlock</button>
+        </div>
+        <div id="theme-colors" style="display:none;display:flex;gap:8px;flex-wrap:wrap;padding:8px 14px;background:var(--gray-light);border-radius:12px">
+          <div onclick="setProfileTheme('#FF3B7F')" style="width:32px;height:32px;border-radius:50%;background:#FF3B7F;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#FF3B7F"></div>
+          <div onclick="setProfileTheme('#2196F3')" style="width:32px;height:32px;border-radius:50%;background:#2196F3;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#2196F3"></div>
+          <div onclick="setProfileTheme('#4CAF50')" style="width:32px;height:32px;border-radius:50%;background:#4CAF50;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#4CAF50"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#9C27B0')}" style="width:32px;height:32px;border-radius:50%;background:#9C27B0;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#9C27B0"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#FF9800')}" style="width:32px;height:32px;border-radius:50%;background:#FF9800;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#FF9800"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#E91E63')}" style="width:32px;height:32px;border-radius:50%;background:#E91E63;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#E91E63"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#00BCD4')}" style="width:32px;height:32px;border-radius:50%;background:#00BCD4;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#00BCD4"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#795548')}" style="width:32px;height:32px;border-radius:50%;background:#795548;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#795548"></div>
+        </div>
+      </div>
 
       <!-- DANGER ZONE -->
       <div style="font-size:11px;font-weight:800;color:#DC2626;text-transform:uppercase;letter-spacing:1px;padding:12px 0 2px">⚠️ Danger Zone</div>
@@ -2682,6 +2736,16 @@ async function loadSubscriptionStatus() {
         tierLabel.style.color = isGold() ? '#D97706' : 'var(--pink)';
         if (tierSub) tierSub.textContent = 'Manage your subscription';
       }
+      // Update theme section visibility
+      var themeLocked = document.getElementById('theme-locked');
+      var themeColors = document.getElementById('theme-colors');
+      if (isPremium()) {
+        if (themeLocked) themeLocked.style.display = 'none';
+        if (themeColors) themeColors.style.display = 'flex';
+      } else {
+        if (themeLocked) themeLocked.style.display = '';
+        if (themeColors) themeColors.style.display = 'none';
+      }
     }
   } catch(e) { console.log('[PairdUps] Subscription check error:', e); }
 }
@@ -2825,6 +2889,35 @@ function getBadgeHTML(tier) {
   if (tier === 'gold') return '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px">👑 Gold</span>';
   if (tier === 'premium') return '<span style="font-size:10px;background:var(--pink);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px">✅ Verified</span>';
   return '';
+}
+
+function setProfileTheme(color) {
+  document.documentElement.style.setProperty('--pink', color);
+  // Highlight selected dot
+  document.querySelectorAll('.theme-dot').forEach(function(d) {
+    d.style.borderColor = d.dataset.color === color ? '#333' : 'transparent';
+  });
+  // Save to Supabase
+  if (_supabase && currentUser.supabaseId) {
+    _supabase.from('profiles').update({ theme_color: color }).eq('id', currentUser.supabaseId).then(function() {
+      console.log('[PairdUps] Theme saved:', color);
+    });
+  }
+  // Save locally
+  var s = _getSettings();
+  s.themeColor = color;
+  _saveSettings(s);
+  showToast('Theme updated! 🎨');
+}
+
+function loadProfileTheme() {
+  var s = _getSettings();
+  if (s.themeColor) {
+    document.documentElement.style.setProperty('--pink', s.themeColor);
+    document.querySelectorAll('.theme-dot').forEach(function(d) {
+      d.style.borderColor = d.dataset.color === s.themeColor ? '#333' : 'transparent';
+    });
+  }
 }
 
 // ── PairdUp Analytics Feature ────────────────────────────
@@ -5013,6 +5106,7 @@ function renderUserListing(d) {
     +'<div class="card-type-badge '+typeClass+'">'+typeEmoji+' '+d.pairType+'</div>'
     +'<div class="card-type-badge '+typeClass+'" style="top:36px;left:10px;font-size:10px;padding:3px 10px">'+(d.groupType==='Group'?'👥 Group':'👤 One-on-One')+'</div>'
     +(d.recurring ? '<div style="position:absolute;bottom:10px;left:10px;background:rgba(46,125,50,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;backdrop-filter:blur(4px)">🔄 Recurring</div>' : '')
+    +(d.ownerTier==='gold' ? '<div style="position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;pointer-events:none;box-shadow:0 2px 8px rgba(245,158,11,0.4);z-index:2">⭐ Featured</div>' : '')
     +'</div>'
     +'<div class="card-body">'
     +'<div style="margin-bottom:4px"><span class="card-tag"'+(tagStyle?' style="'+tagStyle+'"':'')+'>Activity Partner &middot; '+(d.lookingFor==='M/F'?'M/F':d.lookingFor)+'</span></div>'
@@ -5067,10 +5161,21 @@ async function loadSupabaseListings() {
     // Fetch all active listings with their poster's profile data
     var { data: rows, error } = await _supabase
       .from('listings')
-      .select('*, profiles!listings_owner_id_fkey(name, age, location, bio, photo_url, face_pos, interests, email)')
+      .select('*, profiles!listings_owner_id_fkey(name, age, location, bio, photo_url, face_pos, interests, email, subscription_tier)')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
     if (error || !rows) { console.log('Listings load error:', error); return; }
+    
+    // Sort: Gold first, then Premium, then Free (priority placement)
+    rows.sort(function(a, b) {
+      var tierOrder = { gold: 0, premium: 1, free: 2 };
+      var aTier = (a.profiles && a.profiles.subscription_tier) || 'free';
+      var bTier = (b.profiles && b.profiles.subscription_tier) || 'free';
+      var aOrd = tierOrder[aTier] !== undefined ? tierOrder[aTier] : 2;
+      var bOrd = tierOrder[bTier] !== undefined ? tierOrder[bTier] : 2;
+      if (aOrd !== bOrd) return aOrd - bOrd;
+      return 0; // keep original order within same tier
+    });
     
     // Clear existing dynamic cards from Discover before re-rendering
     document.querySelectorAll('.listing-card[data-owner-email]').forEach(function(c) {
@@ -5100,7 +5205,8 @@ async function loadSupabaseListings() {
         userPhoto: p.photo_url || _DEFAULT_AVATAR,
         userBio: p.bio || '', userInterests: p.interests || [],
         userFacePos: p.face_pos || 'center 20%',
-        ownerEmail: p.email || ''
+        ownerEmail: p.email || '',
+        ownerTier: p.subscription_tier || 'free'
       };
       userListings.push(d);
       renderUserListing(d);
@@ -5700,6 +5806,19 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
     gtEl.style.padding = '3px 10px';
   }
   document.getElementById('d-poster-name').textContent = fname+', '+age;
+  // Add subscription badge next to poster name in detail view
+  var dPosterBadge = document.getElementById('d-poster-badge');
+  if (!dPosterBadge) {
+    dPosterBadge = document.createElement('span');
+    dPosterBadge.id = 'd-poster-badge';
+    document.getElementById('d-poster-name').appendChild(dPosterBadge);
+  }
+  dPosterBadge.innerHTML = '';
+  var ownerEmail2 = posterKey.split('~')[5] || '';
+  if (_supabase && ownerEmail2) {
+    _supabase.from('profiles').select('subscription_tier').eq('email', ownerEmail2).maybeSingle()
+      .then(function(res) { if (res.data && dPosterBadge) dPosterBadge.innerHTML = getBadgeHTML(res.data.subscription_tier); });
+  }
   document.getElementById('d-poster-loc').textContent = loc;
   document.getElementById('d-poster-img').src = photo;
   // Stash poster info so join modal can use it
@@ -5741,6 +5860,11 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
           showMiniProfile(freshName, freshAge, freshLoc, freshBio, freshInterests, freshPhoto, ownerEmail);
         };
       });
+  }
+  // Log listing view for analytics
+  if (_supabase && isSignedIn) {
+    var matchedListing = userListings.find(function(l) { return l.title === title && l.ownerEmail === posterKey; });
+    if (matchedListing && matchedListing.supabaseId) logListingView(matchedListing.supabaseId);
   }
 }
 
@@ -6031,6 +6155,14 @@ function syncProfileForm() {
   // Sync profile display
   const nameAge = currentUser.name + (currentUser.age ? ', '+currentUser.age : '');
   document.getElementById('my-profile-name').textContent = nameAge;
+  // Add own subscription badge
+  var myBadgeEl = document.getElementById('my-profile-badge');
+  if (!myBadgeEl) {
+    myBadgeEl = document.createElement('span');
+    myBadgeEl.id = 'my-profile-badge';
+    document.getElementById('my-profile-name').appendChild(myBadgeEl);
+  }
+  myBadgeEl.innerHTML = getBadgeHTML(getUserTier());
   document.getElementById('my-profile-loc').textContent = currentUser.loc || '';
   var profileEmailText = document.getElementById('my-profile-email-text');
   var profileEmailWrap = document.getElementById('my-profile-email');
@@ -6233,8 +6365,9 @@ function saveProfile() {
 function triggerPhotoUpload() { document.getElementById('photo-input').click(); }
 function previewPhoto(e) {
   const file = e.target.files[0]; if (!file) return;
-  // Premium photo limit check — currently only 1 photo for free users
-  // (Future: multi-photo gallery. For now, this shows the upsell when relevant)
+  // Premium photo limit check
+  // For now (single-photo system), free users can upload 1 photo (replace existing)
+  // When multi-photo gallery is built, this enforces: Free=1, Premium=5, Gold=12
   // Size check — warn if over 25MB
   if (file.size > 25 * 1024 * 1024) {
     showToast('Image too large. Please choose a smaller photo (under 25MB).');
@@ -6506,6 +6639,15 @@ function doDeclineWithReason() {
   }
   card.dataset.status = 'declined';
   card.style.opacity = '0.6';
+  card.dataset.declinedAt = Date.now().toString();
+  // Add Undo button for premium/gold users
+  if (isPremium()) {
+    var undoBtn = document.createElement('button');
+    undoBtn.style.cssText = 'margin:8px 14px 4px;padding:6px 16px;border-radius:50px;border:1.5px solid var(--pink);background:#FFF5F7;color:var(--pink);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit';
+    undoBtn.textContent = '↩️ Undo Decline';
+    undoBtn.onclick = function() { undoDecline(convoId, card); };
+    card.appendChild(undoBtn);
+  }
   showToast('Response sent with kindness 💛');
   // Update local conversations array
   var convo = conversations.find(function(c) { return c.id === convoId; });
@@ -6548,6 +6690,60 @@ function doDeclineWithReason() {
   _declineTargetBtn = null;
 }
 function updateReqBadge() {
+
+// Undo a previously declined request
+async function undoDecline(convoId, card) {
+  if (!convoId) return;
+  // Check time limit: Premium = 24hrs, Gold = anytime
+  var declinedAt = parseInt(card.dataset.declinedAt || '0');
+  if (!isGold() && declinedAt) {
+    var hoursSince = (Date.now() - declinedAt) / (1000 * 60 * 60);
+    if (hoursSince > 24) {
+      showToast('Undo window expired (24 hours). Upgrade to Gold for unlimited undo.');
+      return;
+    }
+  }
+  // Restore to pending in Supabase
+  if (_supabase) {
+    try {
+      await _supabase.from('conversations').update({
+        status: 'pending',
+        decline_reason: null,
+        requester_unread: false,
+        last_message_text: '📋 Request restored to pending'
+      }).eq('id', convoId);
+    } catch(e) { console.log('[PairdUps] Undo decline error:', e); }
+  }
+  // Restore locally
+  var convo = conversations.find(function(c) { return c.id === convoId; });
+  if (convo) {
+    convo.status = 'pending';
+    convo.declineReason = '';
+    _saveConvos(conversations);
+  }
+  // Restore the card UI
+  if (card) {
+    card.dataset.status = 'pending';
+    card.style.opacity = '1';
+    // Remove the undo button and decline badge/reason
+    card.querySelectorAll('button').forEach(function(b) { if (b.textContent.includes('Undo')) b.remove(); });
+    var actions = card.querySelector('.req-actions');
+    if (actions) {
+      // Remove old badge
+      var oldBadge = actions.querySelector('span');
+      if (oldBadge) oldBadge.remove();
+      // Re-add accept/decline buttons
+      actions.innerHTML = '<button class="req-accept" onclick="acceptReq(this)" style="flex:1;background:#16A34A;color:#fff;border:none;border-radius:50px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer">✓ Accept</button>'
+        + '<button class="req-decline" onclick="openDeclineModal(this)" style="flex:1;background:#F3F4F6;color:#6B7280;border:none;border-radius:50px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer">✗ Decline</button>'
+        + actions.innerHTML;
+    }
+    // Remove decline reason text
+    var reasonDivs = card.querySelectorAll('div[style*="font-style:italic"]');
+    reasonDivs.forEach(function(r) { r.remove(); });
+  }
+  showToast('Request restored to pending! ↩️');
+  updateReqBadge();
+}
   var cards = document.querySelectorAll('.req-card');
   var pending = 0;
   cards.forEach(function(c) { if (c.dataset.status === 'pending' || !c.dataset.status) pending++; });
@@ -6667,6 +6863,16 @@ function openFilter() {
     document.getElementById('pill-canada').classList.toggle('active', activeCountry === 'canada');
     document.getElementById('wrap-state').style.display = activeCountry === 'usa' ? 'block' : 'none';
     document.getElementById('wrap-prov').style.display = activeCountry === 'canada' ? 'block' : 'none';
+  }
+  // Show/hide advanced filters based on subscription tier
+  var locked = document.getElementById('advanced-filters-locked');
+  var content = document.getElementById('advanced-filters-content');
+  if (isPremium()) {
+    if (locked) locked.style.display = 'none';
+    if (content) content.style.display = '';
+  } else {
+    if (locked) locked.style.display = '';
+    if (content) content.style.display = 'none';
   }
   openModal('modal-filter');
 }
@@ -6893,6 +7099,49 @@ function applyFilter() {
     card.style.display = show ? '' : 'none';
     if (show) visibleCount++;
   });
+
+  // Apply advanced filters for Premium/Gold users
+  if (isPremium()) {
+    var ageMin = parseInt(document.getElementById('filter-age-min')?.value) || 0;
+    var ageMax = parseInt(document.getElementById('filter-age-max')?.value) || 999;
+    var posterType = document.getElementById('filter-poster-type')?.value || '';
+    var groupType = document.getElementById('filter-group-type')?.value || '';
+    if (ageMin || ageMax < 999 || posterType || groupType) {
+      visibleCount = 0;
+      cards.forEach(function(card) {
+        if (card.style.display === 'none') return; // already filtered out by location
+        var show = true;
+        // Age filter — check poster age from card
+        if (ageMin || ageMax < 999) {
+          var posterInfo = card.querySelector('.poster-name');
+          if (posterInfo) {
+            var ageMatch = posterInfo.textContent.match(/,\s*(\d+)/);
+            var posterAge = ageMatch ? parseInt(ageMatch[1]) : 0;
+            if (posterAge && (posterAge < ageMin || posterAge > ageMax)) show = false;
+          }
+        }
+        // Poster type filter
+        if (posterType && show) {
+          var typeBadge = card.querySelector('.card-type-badge');
+          if (typeBadge) {
+            var isDate = typeBadge.textContent.indexOf('Date') >= 0;
+            if (posterType === 'Date' && !isDate) show = false;
+            if (posterType === 'Just for Fun' && isDate) show = false;
+          }
+        }
+        // Group type filter
+        if (groupType && show) {
+          var groupBadges = card.querySelectorAll('.card-type-badge');
+          var hasGroup = false;
+          groupBadges.forEach(function(gb) { if (gb.textContent.indexOf('Group') >= 0) hasGroup = true; });
+          if (groupType === 'Group' && !hasGroup) show = false;
+          if (groupType === 'One-on-One' && hasGroup) show = false;
+        }
+        if (!show) card.style.display = 'none';
+        else visibleCount++;
+      });
+    }
+  }
 
   // Show/hide the no-results-location message
   var noResultsEl = document.getElementById('no-results-location');
@@ -7440,6 +7689,8 @@ function hideTypingIndicator() {
 function addReadReceipt(bubbleWrap) {
   var settings = _getSettings();
   if (settings.showReadReceipts === false) return;
+  // Read receipts on sent messages are a Gold-only feature
+  if (!isGold()) return;
   var timeEl = bubbleWrap.querySelector('.bubble-time');
   if (timeEl && !timeEl.querySelector('.read-receipt')) {
     var check = document.createElement('span');
@@ -8121,6 +8372,7 @@ window.addEventListener('load', async function() {
   // Start background polling for new conversations/messages
   if (isSignedIn) setTimeout(startBackgroundPolling, 2000);
   setTimeout(loadCardBadges, 3000);
+  loadProfileTheme();
   checkSubscriptionReturn();
 
   // Handle URL parameters from email links
