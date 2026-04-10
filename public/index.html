@@ -2250,6 +2250,10 @@ function initOneSignal() {
           }
         });
         console.log('[PairdUps] OneSignal initialized');
+        // Auto-tag user if signed in
+        if (typeof isSignedIn !== 'undefined' && isSignedIn) {
+          setTimeout(tagOneSignalUser, 500);
+        }
       } catch(e) { console.log('[PairdUps] OneSignal init error:', e); }
     });
   } catch(e) { console.log('[PairdUps] OneSignal setup error:', e); }
@@ -2263,13 +2267,18 @@ function tagOneSignalUser() {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function(OneSignal) {
       try {
-        await OneSignal.login(currentUser.supabaseId || currentUser.email);
+        var extId = currentUser.supabaseId || currentUser.email;
+        console.log('[PairdUps] OneSignal login with external ID:', extId);
+        await OneSignal.login(extId);
         await OneSignal.User.addTags({
           email: currentUser.email || '',
           name: currentUser.name || '',
           city: currentUser.loc || ''
         });
-      } catch(e) { console.log('OneSignal tag error:', e); }
+        var subId = OneSignal.User.PushSubscription.id;
+        var optedIn = OneSignal.User.PushSubscription.optedIn;
+        console.log('[PairdUps] OneSignal tagged — subscriptionId:', subId, 'optedIn:', optedIn);
+      } catch(e) { console.log('[PairdUps] OneSignal tag error:', e); }
     });
   } catch(e) {}
 }
@@ -2359,17 +2368,35 @@ function enablePushNotifications() {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function(OneSignal) {
       try {
-        await OneSignal.Slidedown.promptPush();
-        // Wait a moment then recheck
-        setTimeout(function() { checkPushStatus(); }, 2000);
+        // First try to opt in if already permitted
+        if (Notification.permission === 'granted') {
+          await OneSignal.User.PushSubscription.optIn();
+          console.log('[PairdUps] OneSignal optIn called');
+        } else {
+          // Show the slidedown prompt
+          await OneSignal.Slidedown.promptPush();
+        }
+        // Re-link the user after subscribing
+        setTimeout(function() {
+          tagOneSignalUser();
+          checkPushStatus();
+          showToast('Push notifications enabled! 🔔');
+        }, 2000);
       } catch(e) {
         console.log('[PairdUps] Push prompt error:', e);
-        // Fallback: try native permission request
+        // Fallback: native permission request
         if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
           Notification.requestPermission().then(function(result) {
             if (result === 'granted') {
-              showToast('Push notifications enabled! 🔔');
-              setTimeout(checkPushStatus, 1000);
+              // Now opt in to OneSignal
+              OneSignalDeferred.push(async function(OS) {
+                try { await OS.User.PushSubscription.optIn(); } catch(e2) {}
+              });
+              setTimeout(function() {
+                tagOneSignalUser();
+                checkPushStatus();
+                showToast('Push notifications enabled! 🔔');
+              }, 2000);
             } else {
               showToast('Notifications were not enabled.');
             }
