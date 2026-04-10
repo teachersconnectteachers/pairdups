@@ -1910,6 +1910,15 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         </div>
       </div>
 
+      <!-- PUSH NOTIFICATIONS SECTION -->
+      <div style="font-size:11px;font-weight:800;color:var(--pink);text-transform:uppercase;letter-spacing:1px;padding:16px 0 6px">🔔 Push Notifications</div>
+      <div style="padding:12px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:4px">
+        <div id="settings-push-status" style="font-size:12px;color:var(--gray);margin-bottom:8px">Checking push notification status...</div>
+        <button id="settings-push-enable-btn" onclick="enablePushNotifications()" style="display:none;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:10px 20px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(255,59,127,0.3)">🔔 Enable Push Notifications</button>
+        <div id="settings-push-enabled" style="display:none;font-size:12px;font-weight:700;color:#16A34A">✅ Push notifications are enabled!</div>
+        <div id="settings-push-blocked" style="display:none;font-size:11px;color:var(--red);line-height:1.5">⚠️ Blocked by your browser. Click the lock icon in the address bar → set Notifications to "Allow" → refresh.</div>
+      </div>
+
       <!-- DANGER ZONE -->
       <div style="font-size:11px;font-weight:800;color:#DC2626;text-transform:uppercase;letter-spacing:1px;padding:12px 0 2px">⚠️ Danger Zone</div>
       <div onclick="closeModal('modal-settings');openModal('modal-cancel-account')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#FEF2F2;border-radius:12px;cursor:pointer;border:1px solid #FECACA">
@@ -2280,52 +2289,64 @@ function sendPush(toUserId, type, extraData) {
 
 // ── Push Notification UI Helpers ─────────────────────────
 function checkPushStatus() {
-  var statusText = document.getElementById('push-status-text');
-  var enableBtn = document.getElementById('push-enable-btn');
-  var enabledBadge = document.getElementById('push-enabled-badge');
-  var blockedMsg = document.getElementById('push-blocked-msg');
-  if (!statusText) return;
+  // Update both the unsubscribe modal and settings modal push sections
+  var elements = [
+    { status: document.getElementById('push-status-text'), btn: document.getElementById('push-enable-btn'), ok: document.getElementById('push-enabled-badge'), blocked: document.getElementById('push-blocked-msg') },
+    { status: document.getElementById('settings-push-status'), btn: document.getElementById('settings-push-enable-btn'), ok: document.getElementById('settings-push-enabled'), blocked: document.getElementById('settings-push-blocked') }
+  ];
 
-  // Hide all first
-  if (enableBtn) enableBtn.style.display = 'none';
-  if (enabledBadge) enabledBadge.style.display = 'none';
-  if (blockedMsg) blockedMsg.style.display = 'none';
+  elements.forEach(function(el) {
+    if (!el.status) return;
+    if (el.btn) el.btn.style.display = 'none';
+    if (el.ok) el.ok.style.display = 'none';
+    if (el.blocked) el.blocked.style.display = 'none';
+  });
 
   if (typeof OneSignal === 'undefined' || typeof Notification === 'undefined') {
-    statusText.textContent = 'Push notifications are not available in this browser.';
+    elements.forEach(function(el) { if (el.status) el.status.textContent = 'Push notifications are not available in this browser.'; });
     return;
   }
 
   var permission = Notification.permission;
   if (permission === 'granted') {
-    statusText.textContent = 'Your browser allows notifications from PairdUps.';
-    // Check if actually subscribed via OneSignal
     try {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         try {
           var subscribed = await OneSignal.User.PushSubscription.optedIn;
-          if (subscribed) {
-            if (enabledBadge) enabledBadge.style.display = '';
-            statusText.textContent = 'You are subscribed to push notifications.';
-          } else {
-            statusText.textContent = 'Notifications allowed but not subscribed yet.';
-            if (enableBtn) enableBtn.style.display = '';
-          }
+          elements.forEach(function(el) {
+            if (!el.status) return;
+            if (subscribed) {
+              el.status.textContent = 'You are subscribed to push notifications.';
+              if (el.ok) el.ok.style.display = '';
+            } else {
+              el.status.textContent = 'Notifications allowed but not subscribed yet.';
+              if (el.btn) el.btn.style.display = '';
+            }
+          });
         } catch(e) {
-          statusText.textContent = 'Notifications allowed. Click below to ensure you are subscribed.';
-          if (enableBtn) enableBtn.style.display = '';
+          elements.forEach(function(el) {
+            if (!el.status) return;
+            el.status.textContent = 'Notifications allowed. Click below to subscribe.';
+            if (el.btn) el.btn.style.display = '';
+          });
         }
       });
     } catch(e) {
-      if (enabledBadge) enabledBadge.style.display = '';
+      elements.forEach(function(el) { if (el.ok) el.ok.style.display = ''; });
     }
   } else if (permission === 'denied') {
-    statusText.textContent = 'Push notifications are blocked by your browser.';
-    if (blockedMsg) blockedMsg.style.display = '';
+    elements.forEach(function(el) {
+      if (!el.status) return;
+      el.status.textContent = 'Push notifications are blocked by your browser.';
+      if (el.blocked) el.blocked.style.display = '';
+    });
   } else {
-    statusText.textContent = 'Push notifications are not yet enabled.';
-    if (enableBtn) enableBtn.style.display = '';
+    elements.forEach(function(el) {
+      if (!el.status) return;
+      el.status.textContent = 'Push notifications are not yet enabled.';
+      if (el.btn) el.btn.style.display = '';
+    });
   }
 }
 
@@ -2900,6 +2921,8 @@ function loadSettings() {
   el = document.getElementById('set-timezone'); if (el) el.value = s.timezone || '';
   // Load email preferences from Supabase
   loadEmailPreferences();
+  // Check push notification status
+  checkPushStatus();
 }
 
 // ── Birthday / Age calculation ────────────────────────────
