@@ -1,13 +1,11 @@
 {
-  "name": "PairdUps — Find Your Activity Partner",
+  "name": "PairdUps",
   "short_name": "PairdUps",
-  "description": "Find activity partners and dates near you. Create and join PairdUps for sports, dining, concerts, coffee, and more!",
+  "description": "Find your next adventure companion — no pressure, just fun.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#FF3B7F",
-  "orientation": "portrait",
-  "categories": ["social", "lifestyle"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
