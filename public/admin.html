@@ -71,7 +71,7 @@ a{color:var(--pink);text-decoration:none}
 
 /* Search */
 .search-bar{display:flex;gap:10px;margin-bottom:20px}
-.search-input{flex:1;padding:10px 16px;background:#F3F4F6;border:1.5px solid #2A2A34;color:#fff;border-radius:10px;font-size:13px;font-family:inherit;outline:none}
+.search-input{flex:1;padding:10px 16px;background:#fff;border:1.5px solid var(--gray-border);color:var(--dark);border-radius:10px;font-size:13px;font-family:inherit;outline:none}
 .search-input:focus{border-color:var(--pink)}
 
 /* Sections */
@@ -445,12 +445,14 @@ a{color:var(--pink);text-decoration:none}
       </div>
       <table class="data-table">
         <thead><tr>
-          <th style="cursor:pointer" onclick="sortEmailLog('email_type')">Type ⇅</th>
-          <th style="cursor:pointer" onclick="sortEmailLog('recipient')">Recipient ⇅</th>
-          <th style="cursor:pointer" onclick="sortEmailLog('sent_at')">Date & Time ⇅</th>
-          <th>Details</th>
-          <th style="width:40px;text-align:center"><button onclick="promptDeleteSingleLog(null)" style="background:none;border:none;cursor:pointer;font-size:18px;opacity:0.4" title="Delete column">🗑</button></th>
-          <th style="text-align:center;width:40px"><label style="cursor:pointer" title="Select All"><input type="checkbox" id="emaillog-check-all" onchange="toggleAllEmailLogChecks(this.checked)" style="accent-color:var(--pink);width:16px;height:16px;cursor:pointer"></label></th>
+          <th style="cursor:pointer" onclick="sortEmailLog('email_type')">Type <span style="font-size:14px">⬍</span></th>
+          <th style="cursor:pointer" onclick="sortEmailLog('recipient')">Recipient <span style="font-size:14px">⬍</span></th>
+          <th style="cursor:pointer" onclick="sortEmailLog('sent_at')">Date & Time <span style="font-size:14px">⬍</span></th>
+          <th>PairdUp Listing</th>
+          <th>Message</th>
+          <th style="text-align:center">View</th>
+          <th style="width:36px;text-align:center">🗑</th>
+          <th style="text-align:center;width:36px"><label style="cursor:pointer" title="Select All"><input type="checkbox" id="emaillog-check-all" onchange="toggleAllEmailLogChecks(this.checked)" style="accent-color:var(--pink);width:16px;height:16px;cursor:pointer"></label></th>
         </tr></thead>
         <tbody id="emaillog-body"></tbody>
       </table>
@@ -469,6 +471,17 @@ a{color:var(--pink);text-decoration:none}
           <button class="btn btn-gray" onclick="document.getElementById('modal-delete-emaillog').classList.remove('open')" style="padding:10px 24px">Cancel</button>
           <button class="btn btn-red" onclick="confirmDeleteEmailLogs()" style="padding:10px 24px">Yes, Delete</button>
         </div>
+      </div>
+    </div>
+
+    <!-- EMAIL VIEW MODAL -->
+    <div class="admin-modal-bg" id="modal-view-email" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="admin-modal" style="max-width:560px;padding:0;overflow:hidden">
+        <div style="padding:16px 24px;border-bottom:1px solid var(--gray-border);display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0;font-size:16px">Email Details</h3>
+          <button class="btn btn-gray" onclick="document.getElementById('modal-view-email').classList.remove('open')">✕ Close</button>
+        </div>
+        <div id="email-view-content" style="padding:20px;max-height:65vh;overflow-y:auto"></div>
       </div>
     </div>
 
@@ -1417,7 +1430,7 @@ async function loadEmailLog() {
   var userIds = _allEmailLogs.map(function(l) { return l.user_id; }).filter(Boolean);
   var profileMap = {};
   if (userIds.length > 0) {
-    var { data: profiles } = await sb.from('profiles').select('id, name, email').in('id', userIds);
+    var { data: profiles } = await sb.from('profiles').select('id, name, email, photo_url').in('id', userIds);
     (profiles || []).forEach(function(p) { profileMap[p.id] = p; });
   }
   _allEmailLogs.forEach(function(l) { l._profile = profileMap[l.user_id] || null; });
@@ -1443,7 +1456,7 @@ async function loadMoreEmailLogs() {
     var userIds = data.map(function(l) { return l.user_id; }).filter(Boolean);
     var profileMap = {};
     if (userIds.length > 0) {
-      var { data: profiles } = await sb.from('profiles').select('id, name, email').in('id', userIds);
+      var { data: profiles } = await sb.from('profiles').select('id, name, email, photo_url').in('id', userIds);
       (profiles || []).forEach(function(p) { profileMap[p.id] = p; });
     }
     data.forEach(function(l) { l._profile = profileMap[l.user_id] || null; });
@@ -1459,21 +1472,28 @@ var _emailLogSortAsc = false;
 function renderEmailLog(logs) {
   var tbody = document.getElementById('emaillog-body');
   var typeColors = { welcome:'#16A34A', join_request:'#2563EB', accepted:'#16A34A', declined:'#DC2626', pairdup_created:'#7C3AED', listing_expired:'#92400E', listing_renewed:'#0D9488', profile_completed:'#0891B2', account_farewell:'#6B7280', birthday:'#EC4899', holiday_christmas:'#DC2626', holiday_newyear:'#7C3AED', holiday_easter:'#F59E0B', inactivity_reminder:'#6366F1', unread_messages:'#F59E0B', new_nearby_pairdups:'#0D9488', user_blocked_confirmation:'#6B7280', user_blocked_notice:'#DC2626', user_unblocked_confirmation:'#16A34A', user_unblocked_notice:'#16A34A', custom:'#FF3B7F' };
+  var typeMessages = { welcome:'Welcome to PairdUps!', join_request:'Someone wants to join your PairdUp', accepted:'Your request was accepted!', declined:'Your request was declined', pairdup_created:'Your PairdUp is live!', listing_expired:'Your PairdUp has expired', listing_renewed:'Your PairdUp was renewed', profile_completed:'Your profile is complete!', account_farewell:'Sorry to see you go', birthday:'Happy Birthday!', holiday_christmas:'Merry Christmas!', holiday_newyear:'Happy New Year!', holiday_easter:'Happy Easter!', inactivity_reminder:'We miss you!', unread_messages:'You have unread messages', new_nearby_pairdups:'New PairdUps near you', user_blocked_confirmation:'You blocked a user', user_blocked_notice:'You were blocked', user_unblocked_confirmation:'You unblocked a user', user_unblocked_notice:'You were unblocked', custom:'Custom announcement' };
   document.getElementById('emaillog-check-all').checked = false;
   document.getElementById('emaillog-mass-delete-btn').style.display = 'none';
   tbody.innerHTML = logs.map(function(l) {
     var p = l._profile || {};
     var tc = typeColors[l.email_type] || '#6B7280';
     var meta = l.metadata || {};
-    var detail = '';
-    if (meta.listing_title) detail = meta.listing_title;
-    else if (meta.requester_name) detail = 'From: ' + meta.requester_name;
-    else if (meta.unread_count) detail = meta.unread_count + ' unread';
-    else if (meta.count) detail = meta.count + ' nearby';
-    else { var keys = Object.keys(meta); if (keys.length) detail = JSON.stringify(meta).substring(0, 50); }
-    return '<tr><td><span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:10px;font-weight:700;background:' + tc + '18;color:' + tc + '">' + (l.email_type || '?') + '</span></td><td><div style="font-weight:600;font-size:12px">' + (p.name || 'External') + '</div><div style="font-size:10px;color:var(--gray)">' + (p.email || '') + '</div></td><td style="font-size:12px">' + new Date(l.sent_at).toLocaleString() + '</td><td style="font-size:11px;color:var(--gray)">' + detail + '</td>'
+    var listing = meta.listing_title || '';
+    var msgPreview = typeMessages[l.email_type] || l.email_type || '';
+    var photoHtml = p.photo_url
+      ? '<img src="' + p.photo_url + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0">'
+      : '<div style="width:28px;height:28px;border-radius:50%;background:var(--gray-light);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">👤</div>';
+    return '<tr>'
+      + '<td><span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:10px;font-weight:700;background:' + tc + '18;color:' + tc + '">' + (l.email_type || '?') + '</span></td>'
+      + '<td><div style="display:flex;align-items:center;gap:8px">' + photoHtml + '<div><div style="font-weight:600;font-size:12px">' + (p.name || 'External') + '</div><div style="font-size:10px;color:var(--gray)">' + (p.email || '') + '</div></div></div></td>'
+      + '<td style="font-size:12px">' + new Date(l.sent_at).toLocaleString() + '</td>'
+      + '<td style="font-size:11px;color:var(--gray)">' + (listing || '—') + '</td>'
+      + '<td style="font-size:11px;color:var(--dark);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + msgPreview + '</td>'
+      + '<td style="text-align:center"><button class="btn btn-blue" style="padding:4px 12px;font-size:11px" onclick="viewEmailDetail(\'' + l.id + '\')">View</button></td>'
       + '<td style="text-align:center"><button onclick="promptDeleteSingleLog(\'' + l.id + '\')" style="background:none;border:none;cursor:pointer;font-size:20px;opacity:0.5;line-height:1" title="Delete" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">🗑</button></td>'
-      + '<td style="text-align:center"><input type="checkbox" class="emaillog-check" data-id="' + l.id + '" onchange="updateEmailLogDeleteBtn()" style="accent-color:var(--pink);width:16px;height:16px;cursor:pointer"></td></tr>';
+      + '<td style="text-align:center"><input type="checkbox" class="emaillog-check" data-id="' + l.id + '" onchange="updateEmailLogDeleteBtn()" style="accent-color:var(--pink);width:16px;height:16px;cursor:pointer"></td>'
+      + '</tr>';
   }).join('');
 }
 
@@ -1546,6 +1566,39 @@ async function confirmDeleteEmailLogs() {
   toast(_pendingEmailLogDeleteIds.length + ' email log(s) deleted');
   _pendingEmailLogDeleteIds = [];
   loadEmailLog();
+}
+
+function viewEmailDetail(logId) {
+  var l = _allEmailLogs.find(function(x) { return x.id === logId; });
+  if (!l) return;
+  var p = l._profile || {};
+  var meta = l.metadata || {};
+  var typeColors = { welcome:'#16A34A', join_request:'#2563EB', accepted:'#16A34A', declined:'#DC2626', pairdup_created:'#7C3AED', listing_expired:'#92400E', birthday:'#EC4899', holiday_christmas:'#DC2626', holiday_newyear:'#7C3AED', holiday_easter:'#F59E0B', inactivity_reminder:'#6366F1', unread_messages:'#F59E0B', new_nearby_pairdups:'#0D9488', custom:'#FF3B7F' };
+  var typeMessages = { welcome:'Welcome to PairdUps — the best way to find activity partners!', join_request:'Someone wants to join your PairdUp "' + (meta.listing_title || '') + '"', accepted:'Your request to join "' + (meta.listing_title || '') + '" has been accepted!', declined:'Your request to join "' + (meta.listing_title || '') + '" was declined.', pairdup_created:'Congratulations! Your PairdUp "' + (meta.listing_title || '') + '" is now live!', listing_expired:'Your PairdUp "' + (meta.listing_title || '') + '" has expired.', listing_renewed:'Your PairdUp "' + (meta.listing_title || '') + '" has been automatically renewed!', profile_completed:'Your PairdUps profile is complete! You\'re ready to start meeting people.', account_farewell:'We\'re sorry to see you go. Your PairdUps account has been cancelled.', birthday:'Happy Birthday from the PairdUps team! 🎂🎈🎁', holiday_christmas:'Merry Christmas from PairdUps! 🎄', holiday_newyear:'Happy New Year from PairdUps! 🎆', holiday_easter:'Happy Easter from PairdUps! 🐣', inactivity_reminder:'It\'s been a while since you\'ve been on PairdUps. We miss you!', unread_messages:'You have ' + (meta.unread_count || 'new') + ' unread message(s) waiting for you.', new_nearby_pairdups:'There are ' + (meta.count || 'new') + ' new PairdUps happening in your area!', user_blocked_confirmation:'You have blocked a user on PairdUps.', user_blocked_notice:'You have been blocked by a user on PairdUps.', user_unblocked_confirmation:'You have unblocked a user on PairdUps.', user_unblocked_notice:'You have been unblocked on PairdUps!', custom:'Custom announcement from PairdUps' };
+  var typeEmojis = { welcome:'🎉', join_request:'🙋', accepted:'✅', declined:'❌', pairdup_created:'🎊', listing_expired:'⏰', listing_renewed:'🔄', profile_completed:'✨', account_farewell:'💛', birthday:'🎂', holiday_christmas:'🎄', holiday_newyear:'🎆', holiday_easter:'🐣', inactivity_reminder:'👋', unread_messages:'💬', new_nearby_pairdups:'📍', user_blocked_confirmation:'🚫', user_blocked_notice:'🚫', user_unblocked_confirmation:'✅', user_unblocked_notice:'✅', custom:'📢' };
+  var tc = typeColors[l.email_type] || '#FF3B7F';
+  var emoji = typeEmojis[l.email_type] || '📧';
+  var msg = typeMessages[l.email_type] || l.email_type;
+
+  var html = '<div style="font-family:\'DM Sans\',system-ui,sans-serif;max-width:500px;margin:0 auto">'
+    + '<div style="background:linear-gradient(135deg,' + tc + ',' + tc + 'AA);padding:24px 20px;border-radius:16px 16px 0 0;text-align:center"><div style="font-size:40px;margin-bottom:6px">' + emoji + '</div><h2 style="color:#fff;font-size:18px;font-weight:800;margin:0">' + (l.email_type || 'Email').replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }) + '</h2></div>'
+    + '<div style="background:#fff;padding:20px;border:1px solid var(--gray-border);border-top:none;border-radius:0 0 16px 16px">'
+    + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--gray-border)">'
+    + (p.photo_url ? '<img src="' + p.photo_url + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">' : '')
+    + '<div><div style="font-weight:700;font-size:13px">To: ' + (p.name || 'User') + '</div><div style="font-size:11px;color:var(--gray)">' + (p.email || '') + '</div></div>'
+    + '<div style="margin-left:auto;font-size:11px;color:var(--gray)">' + new Date(l.sent_at).toLocaleString() + '</div></div>'
+    + '<p style="font-size:14px;color:#1A1A2E;line-height:1.7;margin:0 0 16px">Hey <strong>' + (p.name || 'there') + '</strong>! 👋</p>'
+    + '<p style="font-size:13px;color:#1A1A2E;line-height:1.7;margin:0 0 16px">' + msg + '</p>';
+
+  if (meta.listing_title) html += '<div style="padding:10px 14px;background:var(--gray-light);border-radius:10px;margin-bottom:12px;font-size:12px"><strong>PairdUp:</strong> ' + meta.listing_title + '</div>';
+  if (meta.requester_name) html += '<div style="padding:10px 14px;background:var(--gray-light);border-radius:10px;margin-bottom:12px;font-size:12px"><strong>From:</strong> ' + meta.requester_name + '</div>';
+
+  html += '<div style="text-align:center;margin:20px 0"><span style="background:#FF3B7F;color:#fff;padding:10px 28px;border-radius:50px;font-weight:700;font-size:13px;display:inline-block">Open PairdUps</span></div>'
+    + '<p style="font-size:11px;color:#9CA3AF;text-align:center;margin:16px 0 0">— The PairdUps Team</p>'
+    + '</div></div>';
+
+  document.getElementById('email-view-content').innerHTML = html;
+  document.getElementById('modal-view-email').classList.add('open');
 }
 
 
