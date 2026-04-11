@@ -8693,13 +8693,15 @@ function checkDuplicatePairdUp(title, dateVal) {
 var _shareData = {};
 function sharePairdUp(title, date, venue, posterName) {
   var listingId = _currentDetailPoster?.listingId || '';
+  console.log('[PairdUps] Share — listingId:', listingId, 'title:', title, 'poster:', _currentDetailPoster);
   var shareUrl;
   if (listingId) {
     shareUrl = 'https://pairdups.com/?listing=' + listingId;
   } else {
-    // Fallback: use title slug with ?view param
+    // Fallback: use title with ?view param
     shareUrl = 'https://pairdups.com/?view=' + encodeURIComponent(title);
   }
+  console.log('[PairdUps] Share URL:', shareUrl);
   var text = '🎉 Check out this PairdUp!\n\n' + title + '\n📅 ' + date + '\n📍 ' + venue + '\nPosted by ' + posterName + '\n\nJoin on PairdUps! 💕';
   _shareData = { title: title, text: text, url: shareUrl, date: date, venue: venue, posterName: posterName };
 
@@ -9695,31 +9697,44 @@ window.addEventListener('load', async function() {
   // Handle shared PairdUp links: ?listing=UUID or ?view=title
   var sharedListingId = urlParams.get('listing');
   var sharedViewTitle = urlParams.get('view');
+  var _pendingSharedListing = !!(sharedListingId || sharedViewTitle);
+
   if (sharedListingId && _supabase) {
     window.history.replaceState({}, '', window.location.pathname);
-    setTimeout(async function() {
+    // Use a function that retries until Supabase is ready
+    (async function openSharedListing() {
+      // Wait for session/auth to settle
+      await new Promise(function(r) { setTimeout(r, 2000); });
       try {
+        console.log('[PairdUps] Opening shared listing:', sharedListingId);
         var { data: row, error } = await _supabase
           .from('listings')
           .select('*, profiles!listings_owner_id_fkey(name, age, location, bio, photo_url, face_pos, interests, email, subscription_tier)')
           .eq('id', sharedListingId)
           .maybeSingle();
-        if (error || !row) { showToast('This PairdUp is no longer available.'); return; }
+        if (error || !row) { showToast('This PairdUp is no longer available.'); console.log('[PairdUps] Shared listing not found:', error); return; }
         var p = row.profiles || {};
         var posterKey = esc(p.name||'') + '~' + (p.age||'') + '~' + esc(p.location||'') + '~' + esc(p.bio||'') + '~' + (p.interests||[]).join('|') + '~' + esc(p.email||'');
+        // Force navigate: clear any active screen first
+        document.querySelector('.screen.active')?.classList.remove('active');
+        document.getElementById('screen-discover').classList.add('active');
+        screenHistory = [];
         showDetail(
           row.title || '', p.name || 'Anonymous', p.age || '', p.location || '',
           row.category || 'Other', row.pair_type || 'Just for Fun',
           row.date_str || '', row.venue || '', row.description || '',
           row.emoji || '🎉', p.photo_url || _DEFAULT_AVATAR, posterKey
         );
-      } catch(e) { console.log('Shared listing load error:', e); showToast('Could not load this PairdUp.'); }
-    }, 1500);
+        // Also set the listingId on _currentDetailPoster
+        _currentDetailPoster.listingId = sharedListingId;
+        console.log('[PairdUps] Shared listing opened successfully');
+      } catch(e) { console.log('[PairdUps] Shared listing load error:', e); showToast('Could not load this PairdUp.'); }
+    })();
   } else if (sharedViewTitle) {
     window.history.replaceState({}, '', window.location.pathname);
+    // Wait longer to ensure Supabase listings have loaded
     setTimeout(function() {
       var decodedTitle = decodeURIComponent(sharedViewTitle);
-      // Find the listing card by title and click it
       var found = false;
       document.querySelectorAll('.listing-card .card-title').forEach(function(ct) {
         if (!found && ct.textContent.trim() === decodedTitle) {
@@ -9728,7 +9743,7 @@ window.addEventListener('load', async function() {
         }
       });
       if (!found) showToast('This PairdUp may no longer be available.');
-    }, 2000);
+    }, 3500);
   }
 });
 
