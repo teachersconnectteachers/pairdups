@@ -2895,15 +2895,34 @@ function getPhotoLimit() {
 window.setTestTier = function(tier) {
   if (!['free','premium','gold'].includes(tier)) { console.log('Use: setTestTier("free"), setTestTier("premium"), or setTestTier("gold")'); return; }
   currentUser.subscriptionTier = tier;
-  currentUser.subscriptionExpires = new Date(Date.now() + 30*24*60*60*1000).toISOString();
+  currentUser.subscriptionExpires = tier === 'free' ? null : new Date(Date.now() + 30*24*60*60*1000).toISOString();
   if (_supabase && currentUser.supabaseId) {
     _supabase.from('profiles').update({ subscription_tier: tier, subscription_expires_at: currentUser.subscriptionExpires }).eq('id', currentUser.supabaseId);
   }
-  // Update UI
+  // Refresh all UI that depends on tier
   syncProfileForm();
-  loadSubscriptionStatus();
-  console.log('[PairdUps] Test tier set to: ' + tier + ' (photo limit: ' + getPhotoLimit() + ')');
-  showToast('Test mode: ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' tier active');
+  // Update settings tier label
+  var tierLabel = document.getElementById('settings-tier-label');
+  var tierSub = document.getElementById('settings-tier-sub');
+  if (tierLabel) {
+    if (tier === 'gold') { tierLabel.textContent = '👑 Gold Member'; tierLabel.style.color = '#D97706'; }
+    else if (tier === 'premium') { tierLabel.textContent = '✅ Premium Member'; tierLabel.style.color = 'var(--pink)'; }
+    else { tierLabel.textContent = 'Upgrade to Premium'; tierLabel.style.color = 'var(--pink)'; }
+    if (tierSub) tierSub.textContent = tier === 'free' ? 'Unlock photos, badges, analytics & more' : 'Manage your subscription';
+  }
+  // Show/hide upgrade buttons
+  document.querySelectorAll('#nav-upgrade-btn').forEach(function(btn) { btn.style.display = tier !== 'free' ? 'none' : ''; });
+  var profileUpgrade = document.getElementById('profile-upgrade-action');
+  if (profileUpgrade) profileUpgrade.style.display = tier !== 'free' ? 'none' : '';
+  var avatarUpgrade = document.getElementById('avatar-menu-upgrade');
+  if (avatarUpgrade) avatarUpgrade.style.display = tier !== 'free' ? 'none' : '';
+  // Show/hide theme section
+  var themeLocked = document.getElementById('theme-locked');
+  var themeColors = document.getElementById('theme-colors');
+  if (tier !== 'free') { if (themeLocked) themeLocked.style.display = 'none'; if (themeColors) themeColors.style.display = 'flex'; }
+  else { if (themeLocked) themeLocked.style.display = ''; if (themeColors) themeColors.style.display = 'none'; }
+  console.log('[PairdUps] Test tier set to: ' + tier + ' | Photo limit: ' + getPhotoLimit() + ' | isPremium: ' + isPremium() + ' | isGold: ' + isGold());
+  showToast('Test mode: ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' tier active (' + getPhotoLimit() + ' photos)');
 };
 
 function showPremiumModal(upsellMsg) {
