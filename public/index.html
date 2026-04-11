@@ -5718,7 +5718,7 @@ function renderUserListing(d) {
   var tagStyle = d.pairType === 'Date' ? 'background:#FCE4EC;color:#C2185B' : '';
   var shortDesc = d.desc.length > 80 ? d.desc.substring(0,80)+'...' : d.desc;
 
-  var cardHTML = '<div class="listing-card" data-category="'+d.catName+'" data-city="'+d.city+'" data-user-id="'+d.id+'" data-owner-email="'+(d.ownerEmail||'')+'" data-date-val="'+(d.dateVal||'')+'"'
+  var cardHTML = '<div class="listing-card" data-category="'+d.catName+'" data-city="'+d.city+'" data-user-id="'+d.id+'" data-supabase-id="'+(d.supabaseId||'')+'" data-owner-email="'+(d.ownerEmail||'')+'" data-date-val="'+(d.dateVal||'')+'"'
     +' onclick="showDetail(\''+esc(d.title)+'\',\''+esc(d.userName)+'\',\''+d.userAge+'\',\''+esc(d.userLoc)
     +'\',\''+d.catName+'\',\''+d.pairType+'\',\''+esc(d.dateStr)+'\',\''+esc(d.venue)
     +'\',\''+esc(d.desc)+'\',\''+d.emoji+'\',\''+esc(d.userPhoto)
@@ -6559,7 +6559,17 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   document.getElementById('d-poster-img').src = photo;
   // Stash poster info so join modal can use it
   const parts2 = posterKey.split('~');
-  _currentDetailPoster = { name: fname, photo: photo, title: title, age: age, loc: loc, bio: parts2[3]||'', interests: parts2[4] ? parts2[4].split('|') : [], ownerEmail: parts2[5]||'', dateStr: date||'', venue: venue||'', city: detailCity||'' };
+  // Find the supabase listing ID
+  var _detailListingId = '';
+  document.querySelectorAll('.listing-card').forEach(function(c) {
+    var ct = c.querySelector('.card-title');
+    if (ct && ct.textContent.trim() === title) _detailListingId = c.dataset.supabaseId || '';
+  });
+  if (!_detailListingId) {
+    var matched = userListings.find(function(l) { return l.title === title && l.ownerEmail === (parts2[5]||''); });
+    if (matched) _detailListingId = matched.supabaseId || '';
+  }
+  _currentDetailPoster = { name: fname, photo: photo, title: title, age: age, loc: loc, bio: parts2[3]||'', interests: parts2[4] ? parts2[4].split('|') : [], ownerEmail: parts2[5]||'', dateStr: date||'', venue: venue||'', city: detailCity||'', listingId: _detailListingId };
   // Parse poster data for mini profile
   const parts = posterKey.split('~');
   const interests = parts[4] ? parts[4].split('|') : [];
@@ -8682,7 +8692,14 @@ function checkDuplicatePairdUp(title, dateVal) {
 // ── Share PairdUp ─────────────────────────────────────────
 var _shareData = {};
 function sharePairdUp(title, date, venue, posterName) {
-  var shareUrl = 'https://pairdups.com/p/' + encodeURIComponent(title.toLowerCase().replace(/\s+/g,'-'));
+  var listingId = _currentDetailPoster?.listingId || '';
+  var shareUrl;
+  if (listingId) {
+    shareUrl = 'https://pairdups.com/?listing=' + listingId;
+  } else {
+    // Fallback: use title slug with ?view param
+    shareUrl = 'https://pairdups.com/?view=' + encodeURIComponent(title);
+  }
   var text = '🎉 Check out this PairdUp!\n\n' + title + '\n📅 ' + date + '\n📍 ' + venue + '\nPosted by ' + posterName + '\n\nJoin on PairdUps! 💕';
   _shareData = { title: title, text: text, url: shareUrl, date: date, venue: venue, posterName: posterName };
 
@@ -9665,7 +9682,6 @@ window.addEventListener('load', async function() {
   var urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('unsubscribe') === 'true') {
     setTimeout(openUnsubscribeModal, 1500);
-    // Clean URL
     window.history.replaceState({}, '', window.location.pathname);
   }
   if (urlParams.get('birthday') === 'true') {
@@ -9674,6 +9690,45 @@ window.addEventListener('load', async function() {
       showToast('🎂 Happy Birthday from PairdUps! 🎉');
     }, 1500);
     window.history.replaceState({}, '', window.location.pathname);
+  }
+
+  // Handle shared PairdUp links: ?listing=UUID or ?view=title
+  var sharedListingId = urlParams.get('listing');
+  var sharedViewTitle = urlParams.get('view');
+  if (sharedListingId && _supabase) {
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(async function() {
+      try {
+        var { data: row, error } = await _supabase
+          .from('listings')
+          .select('*, profiles!listings_owner_id_fkey(name, age, location, bio, photo_url, face_pos, interests, email, subscription_tier)')
+          .eq('id', sharedListingId)
+          .maybeSingle();
+        if (error || !row) { showToast('This PairdUp is no longer available.'); return; }
+        var p = row.profiles || {};
+        var posterKey = esc(p.name||'') + '~' + (p.age||'') + '~' + esc(p.location||'') + '~' + esc(p.bio||'') + '~' + (p.interests||[]).join('|') + '~' + esc(p.email||'');
+        showDetail(
+          row.title || '', p.name || 'Anonymous', p.age || '', p.location || '',
+          row.category || 'Other', row.pair_type || 'Just for Fun',
+          row.date_str || '', row.venue || '', row.description || '',
+          row.emoji || '🎉', p.photo_url || _DEFAULT_AVATAR, posterKey
+        );
+      } catch(e) { console.log('Shared listing load error:', e); showToast('Could not load this PairdUp.'); }
+    }, 1500);
+  } else if (sharedViewTitle) {
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(function() {
+      var decodedTitle = decodeURIComponent(sharedViewTitle);
+      // Find the listing card by title and click it
+      var found = false;
+      document.querySelectorAll('.listing-card .card-title').forEach(function(ct) {
+        if (!found && ct.textContent.trim() === decodedTitle) {
+          found = true;
+          ct.closest('.listing-card').click();
+        }
+      });
+      if (!found) showToast('This PairdUp may no longer be available.');
+    }, 2000);
   }
 });
 
