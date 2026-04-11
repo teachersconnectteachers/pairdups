@@ -658,6 +658,10 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
               <div class="avatar-menu-icon" style="background:#DBEAFE;color:#2563EB"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 16V10M12 16V8M16 16V12"/></svg></div>
               PairdUp Analytics
             </div>
+            <div class="avatar-menu-item" onclick="closeAvatarMenu();openRewardsModal()">
+              <div class="avatar-menu-icon" style="background:#FEF3C7;color:#F59E0B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></div>
+              Rewards & Badges
+            </div>
             <div class="avatar-menu-item" onclick="closeAvatarMenu();showPremiumModal()" id="avatar-menu-upgrade">
               <div class="avatar-menu-icon" style="background:linear-gradient(135deg,#FFF0F5,#FFFBEB);color:var(--pink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
               <span style="background:linear-gradient(135deg,#FF3B7F,#FFB347);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800">✨ Upgrade to Premium</span>
@@ -1105,6 +1109,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <div class="profile-action" onclick="openProfileVisitors()"><div class="action-icon" style="background:#FEF3C7;color:#D97706"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="action-label">Who Viewed My Profile</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="openPairdUpAnalytics()"><div class="action-icon" style="background:#DBEAFE;color:#2563EB"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 16V10M12 16V8M16 16V12"/></svg></div><div class="action-label">PairdUp Analytics</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="showPremiumModal()" id="profile-upgrade-action" style="border:1.5px solid var(--pink);background:linear-gradient(135deg,#FFF5F7,#FFFBEB)"><div class="action-icon" style="background:linear-gradient(135deg,#FF3B7F,#FFB347);color:#fff"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="action-label" style="color:var(--pink);font-weight:800">✨ Upgrade to Premium</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+        <div class="profile-action" onclick="openRewardsModal()"><div class="action-icon" style="background:#FEF3C7;color:#F59E0B"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></div><div class="action-label">Rewards & Badges</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="loadSettings();openModal('modal-settings')"><div class="action-icon" style="background:#E0F2FE;color:#0284C7"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div class="action-label">Settings</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="openModal('modal-policies')"><div class="action-icon" style="background:#FEF3C7;color:#92400E"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="action-label">Policies</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="showHelpPage(1);openModal('modal-help')"><div class="action-icon" style="background:#F0FDF4;color:#16A34A"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="action-label">Help &amp; Support</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
@@ -1301,6 +1306,19 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
       </div>
     </div>
     <button onclick="closeModal('modal-analytics')" style="margin-top:14px;width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:14px;cursor:pointer">Close</button>
+  </div>
+</div>
+
+<!-- REWARDS & BADGES MODAL -->
+<div class="modal-bg" id="modal-rewards" onclick="if(event.target===this)closeModal('modal-rewards')" style="align-items:flex-end">
+  <div class="modal-sheet" style="max-height:85vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="font-size:24px">🏆</div>
+      <div><div style="font-size:18px;font-weight:900;color:var(--dark)">Rewards & Badges</div><div style="font-size:11px;color:var(--gray)">Track your progress and earn rewards</div></div>
+    </div>
+    <div id="rewards-content"></div>
+    <button onclick="closeModal('modal-rewards')" style="margin-top:14px;width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:14px;cursor:pointer">Close</button>
   </div>
 </div>
 
@@ -2638,6 +2656,212 @@ function enablePushNotifications() {
   } catch(e) {
     showToast('Could not enable push notifications.');
   }
+}
+
+// ── Gamification / Rewards System ─────────────────────────
+var BADGE_DEFS = {
+  first_pairdup:    { icon: '🎉', name: 'First PairdUp',       desc: 'Posted your first PairdUp', xp: 10 },
+  first_connection: { icon: '🤝', name: 'First Connection',    desc: 'Got your first request accepted', xp: 15 },
+  chat_starter:     { icon: '💬', name: 'Conversation Starter', desc: 'Sent 10 messages', xp: 10 },
+  rising_star:      { icon: '⭐', name: 'Rising Star',         desc: 'Posted 5 PairdUps', xp: 20 },
+  on_fire:          { icon: '🔥', name: 'On Fire',             desc: 'Posted 10 PairdUps', xp: 30 },
+  pairdup_pro:      { icon: '🌟', name: 'PairdUp Pro',         desc: 'Posted 25 PairdUps', xp: 50 },
+  social_butterfly: { icon: '🏆', name: 'Social Butterfly',    desc: 'Connected with 10 different people', xp: 40 },
+  friendly_face:    { icon: '👋', name: 'Friendly Face',       desc: 'Accepted 5 join requests', xp: 20 },
+  photo_ready:      { icon: '📸', name: 'Photo Ready',         desc: 'Added a profile photo', xp: 5 },
+  bio_writer:       { icon: '✍️', name: 'Bio Writer',          desc: 'Completed your bio', xp: 5 },
+  interest_picker:  { icon: '🎯', name: 'Interest Picker',     desc: 'Selected 3+ interests', xp: 5 },
+  regular:          { icon: '📅', name: 'Regular',             desc: 'Active for 30 days', xp: 25 },
+  veteran:          { icon: '🗓️', name: 'Veteran',             desc: 'Active for 90 days', xp: 50 },
+  founding_member:        { icon: '💎', name: 'Diamond Member',           desc: 'Active for 1 year', xp: 100 }
+};
+
+var LEVEL_THRESHOLDS = [
+  { name: 'Bronze',   icon: '🥉', min: 0,    color: '#CD7F32' },
+  { name: 'Silver',   icon: '🥈', min: 100,  color: '#C0C0C0' },
+  { name: 'Gold',     icon: '🥇', min: 300,  color: '#FFD700' },
+  { name: 'Platinum', icon: '💎', min: 600,  color: '#E5E4E2' },
+  { name: 'Diamond',  icon: '👑', min: 1000, color: '#B9F2FF' }
+];
+
+function getLevelInfo(xp) {
+  var lvl = LEVEL_THRESHOLDS[0];
+  for (var i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (xp >= LEVEL_THRESHOLDS[i].min) { lvl = LEVEL_THRESHOLDS[i]; break; }
+  }
+  var nextLvl = null;
+  var idx = LEVEL_THRESHOLDS.indexOf(lvl);
+  if (idx < LEVEL_THRESHOLDS.length - 1) nextLvl = LEVEL_THRESHOLDS[idx + 1];
+  return { level: lvl, next: nextLvl };
+}
+
+function getUserXP() { return currentUser.xp || 0; }
+function getUserBadges() { return currentUser.badges || []; }
+
+async function awardXP(amount, reason) {
+  if (!amount || !_supabase || !currentUser.supabaseId) return;
+  currentUser.xp = (currentUser.xp || 0) + amount;
+  // Update level
+  var info = getLevelInfo(currentUser.xp);
+  var oldLevel = currentUser.level || 'bronze';
+  currentUser.level = info.level.name.toLowerCase();
+  // Save to Supabase
+  try {
+    await _supabase.from('profiles').update({ xp: currentUser.xp, level: currentUser.level }).eq('id', currentUser.supabaseId);
+  } catch(e) {}
+  // Check for level up
+  if (currentUser.level !== oldLevel) {
+    setTimeout(function() {
+      showToast(info.level.icon + ' Level Up! You\'re now ' + info.level.name + '!');
+      showConfetti();
+    }, 500);
+  }
+  console.log('[PairdUps] +' + amount + ' XP (' + reason + ') → Total: ' + currentUser.xp);
+}
+
+async function awardBadge(badgeId) {
+  if (!BADGE_DEFS[badgeId] || !_supabase || !currentUser.supabaseId) return;
+  var badges = getUserBadges();
+  if (badges.indexOf(badgeId) >= 0) return; // Already has it
+  badges.push(badgeId);
+  currentUser.badges = badges;
+  var badge = BADGE_DEFS[badgeId];
+  // Save to Supabase
+  try {
+    await _supabase.from('profiles').update({ badges: JSON.stringify(badges) }).eq('id', currentUser.supabaseId);
+  } catch(e) {}
+  // Award XP for earning the badge
+  await awardXP(badge.xp, 'Badge: ' + badge.name);
+  // Show celebration
+  setTimeout(function() {
+    showToast(badge.icon + ' Badge Earned: ' + badge.name + '!');
+  }, 800);
+  console.log('[PairdUps] Badge earned:', badge.name);
+}
+
+async function awardDailyXP() {
+  if (!_supabase || !currentUser.supabaseId) return;
+  var today = new Date().toISOString().split('T')[0];
+  if (currentUser.lastDailyXP === today) return;
+  currentUser.lastDailyXP = today;
+  try {
+    await _supabase.from('profiles').update({ last_daily_xp: today }).eq('id', currentUser.supabaseId);
+  } catch(e) {}
+  await awardXP(2, 'Daily login');
+}
+
+async function checkAndAwardBadges() {
+  if (!_supabase || !currentUser.supabaseId) return;
+  try {
+    // Get stats from Supabase
+    var stats = {};
+    // Count listings posted
+    var { count: listingCount } = await _supabase.from('listings').select('id', { count: 'exact', head: true }).eq('owner_id', currentUser.supabaseId);
+    stats.listings = listingCount || 0;
+    // Count accepted conversations (connections)
+    var { count: connectionCount } = await _supabase.from('conversations').select('id', { count: 'exact', head: true }).eq('status', 'accepted').or('requester_id.eq.' + currentUser.supabaseId + ',poster_id.eq.' + currentUser.supabaseId);
+    stats.connections = connectionCount || 0;
+    // Count accepted requests I made (as poster)
+    var { count: acceptedCount } = await _supabase.from('conversations').select('id', { count: 'exact', head: true }).eq('status', 'accepted').eq('poster_id', currentUser.supabaseId);
+    stats.accepted = acceptedCount || 0;
+    // Count messages sent
+    var { count: msgCount } = await _supabase.from('messages').select('id', { count: 'exact', head: true }).eq('sender_id', currentUser.supabaseId);
+    stats.messages = msgCount || 0;
+    // Days since member
+    var memberSince = currentUser.memberSince ? new Date(currentUser.memberSince) : new Date();
+    stats.daysMember = Math.floor((Date.now() - memberSince.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Check badge criteria
+    if (stats.listings >= 1) await awardBadge('first_pairdup');
+    if (stats.listings >= 5) await awardBadge('rising_star');
+    if (stats.listings >= 10) await awardBadge('on_fire');
+    if (stats.listings >= 25) await awardBadge('pairdup_pro');
+    if (stats.connections >= 1) await awardBadge('first_connection');
+    if (stats.connections >= 10) await awardBadge('social_butterfly');
+    if (stats.accepted >= 5) await awardBadge('friendly_face');
+    if (stats.messages >= 10) await awardBadge('chat_starter');
+    if (currentUser.photo && currentUser.photo !== _DEFAULT_AVATAR) await awardBadge('photo_ready');
+    if (currentUser.bio && currentUser.bio.length >= 10) await awardBadge('bio_writer');
+    if (currentUser.interests && currentUser.interests.length >= 3) await awardBadge('interest_picker');
+    if (stats.daysMember >= 30) await awardBadge('regular');
+    if (stats.daysMember >= 90) await awardBadge('veteran');
+    if (stats.daysMember >= 365) await awardBadge('founding_member');
+
+    // Save stats
+    currentUser.stats = stats;
+    try { await _supabase.from('profiles').update({ stats: JSON.stringify(stats) }).eq('id', currentUser.supabaseId); } catch(e) {}
+  } catch(e) { console.log('[PairdUps] Badge check error:', e); }
+}
+
+function openRewardsModal() {
+  var xp = getUserXP();
+  var info = getLevelInfo(xp);
+  var badges = getUserBadges();
+  var progressPct = 0;
+  if (info.next) {
+    progressPct = Math.min(100, Math.round(((xp - info.level.min) / (info.next.min - info.level.min)) * 100));
+  } else {
+    progressPct = 100;
+  }
+  var nextText = info.next ? (info.next.min - xp) + ' pts to ' + info.next.icon + ' ' + info.next.name : 'Max level reached!';
+
+  var html = '<div style="text-align:center;margin-bottom:16px">'
+    + '<div style="font-size:48px;margin-bottom:4px">' + info.level.icon + '</div>'
+    + '<div style="font-size:20px;font-weight:900;color:var(--dark)">' + info.level.name + '</div>'
+    + '<div style="font-size:13px;color:var(--gray);margin-top:2px">' + xp + ' Points</div>'
+    + '<div style="background:#E5E7EB;border-radius:50px;height:10px;margin:10px 20px 4px;overflow:hidden">'
+    + '<div style="background:linear-gradient(90deg,var(--pink),#FFB347);height:100%;border-radius:50px;width:' + progressPct + '%;transition:width 0.5s"></div></div>'
+    + '<div style="font-size:11px;color:var(--gray)">' + nextText + '</div></div>';
+
+  // Earned badges
+  html += '<div style="font-size:12px;font-weight:800;color:var(--dark);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Earned Badges (' + badges.length + '/' + Object.keys(BADGE_DEFS).length + ')</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">';
+  Object.keys(BADGE_DEFS).forEach(function(id) {
+    var b = BADGE_DEFS[id];
+    var earned = badges.indexOf(id) >= 0;
+    html += '<div style="width:56px;text-align:center;opacity:' + (earned ? '1' : '0.3') + ';' + (earned ? '' : 'filter:grayscale(1);') + '" title="' + b.name + ': ' + b.desc + '">'
+      + '<div style="font-size:28px;margin-bottom:2px">' + b.icon + '</div>'
+      + '<div style="font-size:9px;font-weight:700;color:var(--dark);line-height:1.2">' + b.name + '</div></div>';
+  });
+  html += '</div>';
+
+  // XP breakdown
+  html += '<div style="font-size:12px;font-weight:800;color:var(--dark);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">How to Earn Points</div>';
+  html += '<div style="font-size:11px;color:var(--gray);line-height:2">'
+    + '🎉 Post a PairdUp: +10 pts<br>'
+    + '📩 Send a join request: +5 pts<br>'
+    + '✅ Accept a request: +5 pts<br>'
+    + '💬 Send a message: +1 pt<br>'
+    + '📸 Complete your profile: +20 pts<br>'
+    + '📅 Daily login: +2 pts<br>'
+    + '🏅 Earn badges for bonus points!</div>';
+
+  document.getElementById('rewards-content').innerHTML = html;
+  openModal('modal-rewards');
+}
+
+function getLevelBadgeHTML(xp) {
+  var info = getLevelInfo(xp || 0);
+  return '<span style="font-size:10px;background:' + info.level.color + ';color:#333;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px">' + info.level.icon + ' ' + info.level.name + '</span>';
+}
+
+async function loadGamificationData() {
+  if (!_supabase || !currentUser.supabaseId) return;
+  try {
+    var { data: profile } = await _supabase.from('profiles').select('xp, level, badges, stats, last_daily_xp').eq('id', currentUser.supabaseId).maybeSingle();
+    if (profile) {
+      currentUser.xp = profile.xp || 0;
+      currentUser.level = profile.level || 'bronze';
+      try { currentUser.badges = typeof profile.badges === 'string' ? JSON.parse(profile.badges) : (profile.badges || []); } catch(e) { currentUser.badges = []; }
+      try { currentUser.stats = typeof profile.stats === 'string' ? JSON.parse(profile.stats) : (profile.stats || {}); } catch(e) { currentUser.stats = {}; }
+      currentUser.lastDailyXP = profile.last_daily_xp || '';
+      console.log('[PairdUps] Gamification loaded — XP:', currentUser.xp, 'Level:', currentUser.level, 'Badges:', currentUser.badges.length);
+    }
+  } catch(e) { console.log('[PairdUps] Gamification load error:', e); }
+  // Award daily XP
+  awardDailyXP();
+  // Check for new badges (delayed to avoid blocking)
+  setTimeout(checkAndAwardBadges, 5000);
 }
 
 // ── Premium Subscription System ──────────────────────────
@@ -4206,6 +4430,7 @@ async function sendJoinRequest() {
   renderConversations();
   updateMsgBadge();
   showToast(msg ? 'Request sent with message! ✨' : 'Request sent! ✨');
+  awardXP(5, 'Sent join request');
 }
 
 function openMiniFromConvo(convoId) {
@@ -5714,6 +5939,7 @@ function saveListing() {
     }
 
     showToast('PairdUp posted! 🎉 Check Discover feed.');
+    awardXP(10, 'Posted a PairdUp');
     showConfetti();
     clearFormDirty();
   }
@@ -5953,6 +6179,11 @@ function sendMsg() {
             if (updateErr) { console.log('[PairdUps] Conversation update error:', updateErr); }
             else {
               console.log('[PairdUps] Message sent to Supabase OK');
+              // Award 1 XP per message (throttled to once per minute)
+              if (!window._lastMsgXP || Date.now() - window._lastMsgXP > 60000) {
+                window._lastMsgXP = Date.now();
+                awardXP(1, 'Sent message');
+              }
               // Send push to the other user
               var otherUserId = convo.iAmRequester ? convo._posterId : convo._requesterId;
               if (!otherUserId) {
@@ -6170,7 +6401,7 @@ function syncProfileForm() {
     myBadgeEl.id = 'my-profile-badge';
     document.getElementById('my-profile-name').appendChild(myBadgeEl);
   }
-  myBadgeEl.innerHTML = getBadgeHTML(getUserTier());
+  myBadgeEl.innerHTML = getBadgeHTML(getUserTier()) + getLevelBadgeHTML(getUserXP());
   document.getElementById('my-profile-loc').textContent = currentUser.loc || '';
   var profileEmailText = document.getElementById('my-profile-email-text');
   var profileEmailWrap = document.getElementById('my-profile-email');
@@ -6562,6 +6793,7 @@ function acceptReq(btn) {
   card.dataset.status = 'accepted';
   showToast('Request accepted! 🎉');
   showConfetti();
+  awardXP(5, 'Accepted a request');
   // Update local conversations array and add system message
   var convo = conversations.find(function(c) { return c.id === convoId; });
   if (convo) {
@@ -8309,7 +8541,7 @@ window.addEventListener('load', async function() {
           document.getElementById('screen-discover').classList.add('active');
           syncProfileForm();
           showTopbarAvatar();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus(); }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus(); loadGamificationData(); }, 500);
         }
       }
     } catch(e) { console.log('Supabase session check:', e); }
