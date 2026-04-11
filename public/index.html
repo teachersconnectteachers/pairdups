@@ -423,6 +423,26 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 .photo-gallery-item .photo-delete-btn{position:absolute;top:5px;right:5px;width:22px;height:22px;background:rgba(0,0,0,0.55);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;opacity:0;transition:opacity 0.2s}
 .photo-gallery-item:hover .photo-delete-btn,.photo-gallery-item:active .photo-delete-btn{opacity:1}
 .photo-gallery-item .photo-delete-btn svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.5}
+.photo-gallery-item .photo-set-main-btn{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50px;padding:2px 8px;font-size:9px;font-weight:700;cursor:pointer;z-index:2;opacity:0;transition:opacity 0.2s;white-space:nowrap}
+.photo-gallery-item:hover .photo-set-main-btn,.photo-gallery-item:active .photo-set-main-btn{opacity:1}
+.photo-gallery-item.dragging{opacity:0.5;transform:scale(0.95)}
+.photo-gallery-item .photo-order-badge{position:absolute;bottom:5px;right:5px;background:rgba(0,0,0,0.5);color:#fff;font-size:9px;font-weight:700;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:2}
+
+/* Tier badge in headers */
+.tier-badge-inline{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;margin-left:8px;vertical-align:middle;cursor:pointer}
+.tier-badge-free{background:var(--gray-light);color:var(--gray)}
+.tier-badge-premium{background:linear-gradient(135deg,#FFF0F5,#FFE0EB);color:var(--pink)}
+.tier-badge-gold{background:linear-gradient(135deg,#FFFBEB,#FEF3C7);color:#D97706}
+
+/* Card carousel on discover */
+.card-carousel{position:relative;width:100%;height:100%;overflow:hidden}
+.card-carousel-track{display:flex;height:100%;transition:transform 0.3s ease}
+.card-carousel-track.dragging{transition:none}
+.card-carousel-slide{min-width:100%;height:100%;flex-shrink:0}
+.card-carousel-slide img{width:100%;height:100%;object-fit:cover;display:block}
+.card-carousel-dots{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:3}
+.card-carousel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.3);transition:all 0.2s}
+.card-carousel-dot.active{background:#fff;transform:scale(1.3)}
 .photo-add-slot{aspect-ratio:1;border:2px dashed var(--gray-border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;gap:4px;background:var(--gray-light)}
 .photo-add-slot:hover{border-color:var(--pink);background:var(--pink-pale)}
 .photo-add-slot svg{width:24px;height:24px;stroke:var(--gray);fill:none;stroke-width:2}
@@ -679,6 +699,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
               <div id="avatar-menu-name" style="font-weight:800;font-size:14px;color:var(--dark)"></div>
               <div id="avatar-menu-loc" style="font-size:11px;color:var(--gray);display:flex;align-items:center;gap:3px;margin-top:1px"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="var(--pink)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span id="avatar-menu-loc-text"></span></div>
               <div id="avatar-menu-email" style="font-size:11px;color:var(--gray);margin-top:1px"></div>
+              <div style="margin-top:5px"><span id="avatar-menu-tier-badge" class="tier-badge-inline tier-badge-free" onclick="closeAvatarMenu();showManagePlanModal()">🆓 Free</span></div>
             </div>
             <div class="avatar-menu-item" onclick="closeAvatarMenu();goToCreate()">
               <div class="avatar-menu-icon" style="background:#FFF0F5;color:var(--pink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
@@ -704,9 +725,9 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
               <div class="avatar-menu-icon" style="background:#FEF3C7;color:#F59E0B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></div>
               Rewards & Badges
             </div>
-            <div class="avatar-menu-item" onclick="closeAvatarMenu();showPremiumModal()" id="avatar-menu-upgrade">
+            <div class="avatar-menu-item" onclick="closeAvatarMenu();showManagePlanModal()" id="avatar-menu-upgrade">
               <div class="avatar-menu-icon" style="background:linear-gradient(135deg,#FFF0F5,#FFFBEB);color:var(--pink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-              <span style="background:linear-gradient(135deg,#FF3B7F,#FFB347);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800">✨ Upgrade to Premium</span>
+              <span id="avatar-menu-upgrade-text" style="background:linear-gradient(135deg,#FF3B7F,#FFB347);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800">✨ Upgrade to Premium</span>
             </div>
             <div class="avatar-menu-item" onclick="closeAvatarMenu();loadSettings();openModal('modal-settings')">
               <div class="avatar-menu-icon" style="background:#E0F2FE;color:#0284C7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
@@ -1158,7 +1179,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <div class="profile-action" onclick="openEditProfile()"><div class="action-icon" style="background:var(--pink-pale);color:var(--pink)"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="action-label">Edit Profile</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="openProfileVisitors()"><div class="action-icon" style="background:#FEF3C7;color:#D97706"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="action-label">Who Viewed My Profile</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="openPairdUpAnalytics()"><div class="action-icon" style="background:#DBEAFE;color:#2563EB"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 16V10M12 16V8M16 16V12"/></svg></div><div class="action-label">PairdUp Analytics</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
-        <div class="profile-action" onclick="showPremiumModal()" id="profile-upgrade-action" style="border:1.5px solid var(--pink);background:linear-gradient(135deg,#FFF5F7,#FFFBEB)"><div class="action-icon" style="background:linear-gradient(135deg,#FF3B7F,#FFB347);color:#fff"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="action-label" style="color:var(--pink);font-weight:800">✨ Upgrade to Premium</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+        <div class="profile-action" onclick="showManagePlanModal()" id="profile-upgrade-action" style="border:1.5px solid var(--pink);background:linear-gradient(135deg,#FFF5F7,#FFFBEB)"><div class="action-icon" style="background:linear-gradient(135deg,#FF3B7F,#FFB347);color:#fff"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="action-label" id="profile-upgrade-label" style="color:var(--pink);font-weight:800">✨ Upgrade to Premium</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="openRewardsModal()"><div class="action-icon" style="background:#FEF3C7;color:#F59E0B"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></div><div class="action-label">Rewards & Badges</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="loadSettings();openModal('modal-settings')"><div class="action-icon" style="background:#E0F2FE;color:#0284C7"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div class="action-label">Settings</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
         <div class="profile-action" onclick="openModal('modal-policies')"><div class="action-icon" style="background:#FEF3C7;color:#92400E"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="action-label">Policies</div><div class="action-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
@@ -1178,7 +1199,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 
 <!-- EDIT PROFILE -->
 <div class="screen" id="screen-editprofile">
-  <div class="screen-header"><button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button><span class="screen-title">Edit Profile</span></div>
+  <div class="screen-header"><button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button><span class="screen-title">Edit Profile</span><span id="edit-profile-tier-badge" class="tier-badge-inline tier-badge-free" onclick="showManagePlanModal()">🆓 Free</span></div>
   <div class="scroll-area"><div class="create-form">
     <div class="photo-gallery" id="photo-gallery-section">
       <div class="photo-gallery-label">
@@ -1461,6 +1482,45 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 </div>
 
 <!-- TOAST -->
+
+<!-- MANAGE PLAN MODAL -->
+<div class="modal-bg" id="modal-manage-plan" onclick="if(event.target===this)closeModal('modal-manage-plan')" style="align-items:center;justify-content:center">
+  <div class="modal-sheet" style="max-height:88vh;overflow-y:auto;padding:20px;border-radius:24px;max-width:380px">
+    <div class="modal-handle"></div>
+    <div style="text-align:center;margin-bottom:16px">
+      <div id="manage-plan-icon" style="font-size:36px;margin-bottom:6px">🆓</div>
+      <div style="font-size:20px;font-weight:900;color:var(--dark)">Manage Your Plan</div>
+      <div id="manage-plan-current" style="font-size:12px;color:var(--gray);margin-top:4px">You're on the Free plan</div>
+    </div>
+    <div id="manage-plan-cards" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <!-- Free -->
+      <div id="mp-free" class="manage-plan-option" onclick="selectPlanChange('free')" style="border:1.5px solid var(--gray-border);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:12px">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--gray-light);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🆓</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--dark)">Free</div><div style="font-size:11px;color:var(--gray)">1 photo · Basic features</div></div>
+        <div id="mp-free-check" style="display:none;color:var(--pink);font-size:18px;font-weight:900">✓</div>
+        <div id="mp-free-badge" style="display:none;background:var(--gray-light);color:var(--gray);font-size:10px;font-weight:700;padding:3px 8px;border-radius:50px">Current</div>
+      </div>
+      <!-- Premium -->
+      <div id="mp-premium" class="manage-plan-option" onclick="selectPlanChange('premium')" style="border:2px solid var(--pink);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#FFF5F7,#fff)">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FF3B7F,#FF6FA3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⭐</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--dark)">Premium <span style="font-size:11px;font-weight:600;color:var(--pink)">$4.99/mo</span></div><div style="font-size:11px;color:var(--gray)">5 photos · Badges · Analytics · Filters</div></div>
+        <div id="mp-premium-check" style="display:none;color:var(--pink);font-size:18px;font-weight:900">✓</div>
+        <div id="mp-premium-badge" style="display:none;background:var(--pink-pale);color:var(--pink);font-size:10px;font-weight:700;padding:3px 8px;border-radius:50px">Current</div>
+      </div>
+      <!-- Gold -->
+      <div id="mp-gold" class="manage-plan-option" onclick="selectPlanChange('gold')" style="border:2px solid #F59E0B;border-radius:14px;padding:12px 14px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#FFFBEB,#fff)">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#F59E0B,#FBBF24);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👑</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--dark)">Gold <span style="font-size:11px;font-weight:600;color:#D97706">$9.99/mo</span></div><div style="font-size:11px;color:var(--gray)">12 photos · Featured listing · Full analytics</div></div>
+        <div id="mp-gold-check" style="display:none;color:#D97706;font-size:18px;font-weight:900">✓</div>
+        <div id="mp-gold-badge" style="display:none;background:#FEF3C7;color:#D97706;font-size:10px;font-weight:700;padding:3px 8px;border-radius:50px">Current</div>
+      </div>
+    </div>
+    <div id="manage-plan-note" style="display:none;font-size:11px;color:var(--gray);text-align:center;margin-bottom:12px;line-height:1.5;background:var(--gray-light);padding:10px;border-radius:10px"></div>
+    <button id="manage-plan-btn" onclick="confirmPlanChange()" style="display:none;width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35);margin-bottom:8px">Change Plan</button>
+    <button onclick="closeModal('modal-manage-plan')" style="width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Close</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- FILTER MODAL -->
@@ -2979,6 +3039,8 @@ window.setTestTier = function(tier) {
   else { if (themeLocked) themeLocked.style.display = ''; if (themeColors) themeColors.style.display = 'none'; }
   console.log('[PairdUps] Test tier set to: ' + tier + ' | Photo limit: ' + getPhotoLimit() + ' | isPremium: ' + isPremium() + ' | isGold: ' + isGold());
   showToast('Test mode: ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' tier active (' + getPhotoLimit() + ' photos)');
+  updateAllTierBadges();
+  renderPhotoGallery();
 };
 
 function showPremiumModal(upsellMsg) {
@@ -3042,6 +3104,135 @@ function updateProfilePhotoCount() {
     } else {
       countEl.style.display = 'none';
     }
+  }
+}
+
+// ── Tier Badge & Plan Management ──────────────────────────
+function updateAllTierBadges() {
+  var tier = getUserTier();
+  var tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
+  var badges = [
+    document.getElementById('edit-profile-tier-badge'),
+    document.getElementById('avatar-menu-tier-badge')
+  ];
+  badges.forEach(function(el) {
+    if (!el) return;
+    el.className = 'tier-badge-inline tier-badge-' + tier;
+    if (tier === 'gold') el.innerHTML = '👑 Gold';
+    else if (tier === 'premium') el.innerHTML = '⭐ Premium';
+    else el.innerHTML = '🆓 Free';
+  });
+  // Update avatar menu upgrade text
+  var upgradeText = document.getElementById('avatar-menu-upgrade-text');
+  if (upgradeText) {
+    if (tier === 'gold') { upgradeText.textContent = '⚙️ Manage Plan'; upgradeText.style.background='none'; upgradeText.style.webkitTextFillColor='var(--dark)'; }
+    else if (tier === 'premium') { upgradeText.textContent = '⚙️ Manage Plan'; upgradeText.style.background='none'; upgradeText.style.webkitTextFillColor='var(--dark)'; }
+    else { upgradeText.innerHTML = '✨ Upgrade to Premium'; upgradeText.style.background='linear-gradient(135deg,#FF3B7F,#FFB347)'; upgradeText.style.webkitBackgroundClip='text'; upgradeText.style.webkitTextFillColor='transparent'; }
+  }
+  // Update profile tab upgrade action
+  var profileLabel = document.getElementById('profile-upgrade-label');
+  if (profileLabel) {
+    if (tier === 'free') profileLabel.textContent = '✨ Upgrade to Premium';
+    else profileLabel.textContent = '⚙️ Manage Plan';
+  }
+  // Always show the upgrade/manage plan button (never hide it)
+  var profileUpgrade = document.getElementById('profile-upgrade-action');
+  if (profileUpgrade) profileUpgrade.style.display = '';
+  var avatarUpgrade = document.getElementById('avatar-menu-upgrade');
+  if (avatarUpgrade) avatarUpgrade.style.display = '';
+}
+
+var _selectedPlanChange = null;
+function showManagePlanModal() {
+  var currentTier = getUserTier();
+  _selectedPlanChange = null;
+  // Set current plan indicator
+  var icon = document.getElementById('manage-plan-icon');
+  var current = document.getElementById('manage-plan-current');
+  if (currentTier === 'gold') { icon.textContent = '👑'; current.textContent = 'You\'re on the Gold plan'; }
+  else if (currentTier === 'premium') { icon.textContent = '⭐'; current.textContent = 'You\'re on the Premium plan'; }
+  else { icon.textContent = '🆓'; current.textContent = 'You\'re on the Free plan'; }
+
+  // Show current badge, hide checks
+  ['free','premium','gold'].forEach(function(t) {
+    var check = document.getElementById('mp-'+t+'-check');
+    var badge = document.getElementById('mp-'+t+'-badge');
+    var card = document.getElementById('mp-'+t);
+    if (check) check.style.display = 'none';
+    if (badge) badge.style.display = t === currentTier ? '' : 'none';
+    if (card) {
+      card.style.opacity = '1';
+      if (t === currentTier) card.style.border = t === 'gold' ? '2px solid #F59E0B' : t === 'premium' ? '2px solid var(--pink)' : '2px solid var(--pink)';
+    }
+  });
+  document.getElementById('manage-plan-btn').style.display = 'none';
+  document.getElementById('manage-plan-note').style.display = 'none';
+  openModal('modal-manage-plan');
+}
+
+function selectPlanChange(plan) {
+  var currentTier = getUserTier();
+  if (plan === currentTier) return;
+  _selectedPlanChange = plan;
+  // Highlight selection
+  ['free','premium','gold'].forEach(function(t) {
+    var check = document.getElementById('mp-'+t+'-check');
+    var card = document.getElementById('mp-'+t);
+    if (check) check.style.display = t === plan ? '' : 'none';
+    if (card) card.style.opacity = t === plan || t === currentTier ? '1' : '0.6';
+  });
+  // Show note and button
+  var note = document.getElementById('manage-plan-note');
+  var btn = document.getElementById('manage-plan-btn');
+  var tierOrder = { free: 0, premium: 1, gold: 2 };
+  var isUpgrade = tierOrder[plan] > tierOrder[currentTier];
+  if (isUpgrade) {
+    note.innerHTML = '⬆️ <strong>Upgrading</strong> takes effect immediately. You\'ll be charged the new rate on your next billing date.';
+    btn.textContent = 'Upgrade to ' + plan.charAt(0).toUpperCase() + plan.slice(1);
+    btn.style.background = plan === 'gold' ? 'linear-gradient(135deg,#F59E0B,#FBBF24)' : 'var(--pink)';
+  } else {
+    if (plan === 'free') {
+      note.innerHTML = '⬇️ <strong>Downgrading to Free</strong> takes effect at the end of your current billing period. You\'ll keep premium features until then. Photos beyond 1 will be hidden (not deleted).';
+    } else {
+      note.innerHTML = '⬇️ <strong>Downgrading to Premium</strong> takes effect at the end of your current billing period. Photos beyond 5 will be hidden (not deleted).';
+    }
+    btn.textContent = 'Switch to ' + plan.charAt(0).toUpperCase() + plan.slice(1);
+    btn.style.background = '#6B7280';
+  }
+  note.style.display = '';
+  btn.style.display = '';
+}
+
+async function confirmPlanChange() {
+  if (!_selectedPlanChange) return;
+  var plan = _selectedPlanChange;
+  var currentTier = getUserTier();
+  var tierOrder = { free: 0, premium: 1, gold: 2 };
+  var isUpgrade = tierOrder[plan] > tierOrder[currentTier];
+
+  if (isUpgrade) {
+    // For upgrades, go through Stripe checkout
+    closeModal('modal-manage-plan');
+    subscribeToPlan(plan);
+  } else {
+    // For downgrades, schedule for next renewal
+    if (!confirm('Are you sure you want to switch to ' + plan.charAt(0).toUpperCase() + plan.slice(1) + '? This will take effect at the end of your current billing period.')) return;
+    closeModal('modal-manage-plan');
+    showToast('Plan change scheduled...');
+    // For now, set the tier directly (in production, this would go through Stripe to cancel/modify)
+    if (_supabase && currentUser.supabaseId) {
+      try {
+        await _supabase.from('profiles').update({
+          subscription_tier: plan,
+          pending_downgrade: plan === 'free' ? true : null
+        }).eq('id', currentUser.supabaseId);
+      } catch(e) { console.log('Plan change error:', e); }
+    }
+    currentUser.subscriptionTier = plan;
+    syncProfileForm();
+    updateAllTierBadges();
+    renderPhotoGallery();
+    showToast(isUpgrade ? 'Upgraded! 🎉' : 'Plan change will take effect at end of billing period.');
   }
 }
 
@@ -3124,10 +3315,7 @@ async function loadSubscriptionStatus() {
       document.querySelectorAll('#nav-upgrade-btn').forEach(function(btn) {
         btn.style.display = isPremium() ? 'none' : '';
       });
-      var profileUpgrade = document.getElementById('profile-upgrade-action');
-      if (profileUpgrade) profileUpgrade.style.display = isPremium() ? 'none' : '';
-      var avatarUpgrade = document.getElementById('avatar-menu-upgrade');
-      if (avatarUpgrade) avatarUpgrade.style.display = isPremium() ? 'none' : '';
+      updateAllTierBadges();
     }
   } catch(e) { console.log('[PairdUps] Subscription check error:', e); }
 }
@@ -5485,8 +5673,12 @@ function renderUserListing(d) {
     +'\',\''+esc(d.desc)+'\',\''+d.emoji+'\',\''+esc(d.userPhoto)
     +'\',\''+esc(d.userName)+'~'+d.userAge+'~'+esc(d.userLoc)+'~'+esc(d.userBio)+'~'+(d.userInterests||[]).join('|')+'~'+esc(d.ownerEmail||'')+'\')">'
     +'<div class="card-image">'
+    +'<div class="card-carousel" id="card-carousel-'+d.id+'">'
+    +'<div class="card-carousel-track" id="card-carousel-track-'+d.id+'">'
+    +'<div class="card-carousel-slide">'
     +'<img class="card-photo" src="'+d.userPhoto+'" alt="'+esc(d.userName)+'" style="'+(d.userPhoto===_DEFAULT_AVATAR ? 'object-fit:contain;object-position:center center' : 'object-position:'+d.userFacePos)+'"'
-    +' onclick="event.stopPropagation();showMiniProfile(\''+esc(d.userName)+'\',\''+d.userAge+'\',\''+esc(d.userLoc)+'\',\''+esc(d.userBio)+'\','+ JSON.stringify(d.userInterests||[]) +',\''+esc(d.userPhoto)+'\',\''+esc(d.ownerEmail||'')+'\')">'+
+    +' onclick="event.stopPropagation();showMiniProfile(\''+esc(d.userName)+'\',\''+d.userAge+'\',\''+esc(d.userLoc)+'\',\''+esc(d.userBio)+'\','+ JSON.stringify(d.userInterests||[]) +',\''+esc(d.userPhoto)+'\',\''+esc(d.ownerEmail||'')+'\')"></div></div>'
+    +'<div class="card-carousel-dots" id="card-carousel-dots-'+d.id+'" style="display:none"></div></div>'+
     '<div class="card-activity-icon">'+d.emoji+'</div>'
     +'<div class="card-cat-badge">'+d.catName+'</div>'
     +'<div class="card-type-badge '+typeClass+'">'+typeEmoji+' '+d.pairType+'</div>'
@@ -5539,6 +5731,96 @@ function renderUserListing(d) {
     };
     myContainer.insertBefore(myCard, myContainer.firstChild);
   }
+
+  // Load card carousel for premium/gold poster
+  if (d.ownerTier === 'premium' || d.ownerTier === 'gold') {
+    loadCardCarousel(d.id, d.ownerEmail);
+  }
+}
+
+// ── Discover Card Carousel for Premium/Gold Users ─────────
+function loadCardCarousel(listingId, ownerEmail) {
+  if (!_supabase || !ownerEmail) return;
+  _supabase.from('profiles').select('id').eq('email', ownerEmail).maybeSingle()
+    .then(function(res) {
+      if (!res.data) return;
+      loadUserGallery(res.data.id).then(function(photos) {
+        if (!photos || photos.length <= 1) return;
+        initCardCarousel(listingId, photos);
+      });
+    });
+}
+
+function initCardCarousel(listingId, photos) {
+  var trackId = 'card-carousel-track-' + listingId;
+  var dotsId = 'card-carousel-dots-' + listingId;
+  var containerId = 'card-carousel-' + listingId;
+  var track = document.getElementById(trackId);
+  var dotsWrap = document.getElementById(dotsId);
+  var container = document.getElementById(containerId);
+  if (!track || !dotsWrap || !container) return;
+
+  // Build slides
+  var slidesHtml = '';
+  photos.forEach(function(p, i) {
+    slidesHtml += '<div class="card-carousel-slide"><img class="card-photo" src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+(p.facePos||'center 20%')+'"></div>';
+  });
+  track.innerHTML = slidesHtml;
+
+  // Build dots
+  var dotsHtml = '';
+  photos.forEach(function(p, i) {
+    dotsHtml += '<div class="card-carousel-dot'+(i===0?' active':'')+'" data-idx="'+i+'"></div>';
+  });
+  dotsWrap.innerHTML = dotsHtml;
+  dotsWrap.style.display = 'flex';
+
+  // Carousel state
+  var currentIdx = 0;
+  var startX = 0, diffX = 0, isDragging = false;
+
+  function goToSlide(idx) {
+    if (idx < 0) idx = 0;
+    if (idx >= photos.length) idx = photos.length - 1;
+    currentIdx = idx;
+    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+    dotsWrap.querySelectorAll('.card-carousel-dot').forEach(function(d, i) {
+      d.classList.toggle('active', i === idx);
+    });
+  }
+
+  container.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    isDragging = true;
+    track.classList.add('dragging');
+  }, { passive: true });
+
+  container.addEventListener('touchmove', function(e) {
+    if (!isDragging) return;
+    diffX = e.touches[0].clientX - startX;
+    track.style.transform = 'translateX(' + (-(currentIdx * 100) + (diffX / container.offsetWidth * 100)) + '%)';
+  }, { passive: true });
+
+  container.addEventListener('touchend', function(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    track.classList.remove('dragging');
+    if (Math.abs(diffX) > 40) {
+      if (diffX < 0 && currentIdx < photos.length - 1) goToSlide(currentIdx + 1);
+      else if (diffX > 0 && currentIdx > 0) goToSlide(currentIdx - 1);
+      else goToSlide(currentIdx);
+    } else {
+      goToSlide(currentIdx);
+    }
+    diffX = 0;
+    e.stopPropagation(); // Prevent card click when swiping
+  });
+
+  dotsWrap.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var dot = e.target.closest('.card-carousel-dot');
+    if (dot) goToSlide(parseInt(dot.dataset.idx));
+  });
 }
 
 async function loadSupabaseListings() {
@@ -7017,9 +7299,11 @@ function renderPhotoGallery() {
 
   var html = '';
   _galleryPhotos.forEach(function(p, i) {
-    html += '<div class="photo-gallery-item" data-photo-id="'+p.id+'" onclick="galleryItemAction(\''+p.id+'\')">';
+    html += '<div class="photo-gallery-item" data-photo-id="'+p.id+'" data-photo-idx="'+i+'" draggable="true">';
     html += '<img src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+'">';
     if (p.isPrimary) html += '<div class="photo-primary-badge">★ Main</div>';
+    else html += '<div class="photo-set-main-btn" onclick="event.stopPropagation();setGalleryPrimary(\''+p.id+'\')">Set as Main</div>';
+    html += '<div class="photo-order-badge">'+(i+1)+'</div>';
     html += '<button class="photo-delete-btn" onclick="event.stopPropagation();confirmDeletePhoto(\''+p.id+'\')" title="Remove photo"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
     html += '</div>';
   });
@@ -7046,26 +7330,110 @@ function renderPhotoGallery() {
 
   grid.innerHTML = html;
   updateProfilePhotoCount();
+
+  // Attach drag-and-drop reorder handlers
+  if (_galleryPhotos.length > 1) initGalleryDragDrop(grid);
+}
+
+// ── Drag-and-Drop Photo Reordering ────────────────────────
+var _dragSrcIdx = null;
+function initGalleryDragDrop(grid) {
+  var items = grid.querySelectorAll('.photo-gallery-item[draggable]');
+  items.forEach(function(item) {
+    item.addEventListener('dragstart', function(e) {
+      _dragSrcIdx = parseInt(item.dataset.photoIdx);
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', function() {
+      item.classList.remove('dragging');
+      _dragSrcIdx = null;
+    });
+    item.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      item.style.outline = '2px solid var(--pink)';
+    });
+    item.addEventListener('dragleave', function() {
+      item.style.outline = '';
+    });
+    item.addEventListener('drop', function(e) {
+      e.preventDefault();
+      item.style.outline = '';
+      var targetIdx = parseInt(item.dataset.photoIdx);
+      if (_dragSrcIdx === null || _dragSrcIdx === targetIdx) return;
+      reorderGalleryPhotos(_dragSrcIdx, targetIdx);
+    });
+    // Touch long-press reorder
+    var touchTimer = null;
+    item.addEventListener('touchstart', function() {
+      touchTimer = setTimeout(function() {
+        _dragSrcIdx = parseInt(item.dataset.photoIdx);
+        item.classList.add('dragging');
+        showToast('Now tap the position to move it to');
+      }, 500);
+    }, { passive: true });
+    item.addEventListener('touchend', function(e) {
+      clearTimeout(touchTimer);
+      if (_dragSrcIdx !== null && item.classList.contains('dragging')) {
+        item.classList.remove('dragging');
+        // On mobile, touching another photo after long-press triggers reorder
+      } else if (_dragSrcIdx !== null && !item.classList.contains('dragging')) {
+        var targetIdx = parseInt(item.dataset.photoIdx);
+        if (_dragSrcIdx !== targetIdx) reorderGalleryPhotos(_dragSrcIdx, targetIdx);
+        _dragSrcIdx = null;
+      }
+    });
+    item.addEventListener('touchmove', function() { clearTimeout(touchTimer); }, { passive: true });
+    // Tap to complete reorder on mobile
+    item.addEventListener('click', function() {
+      if (_dragSrcIdx !== null) {
+        var targetIdx = parseInt(item.dataset.photoIdx);
+        if (_dragSrcIdx !== targetIdx) reorderGalleryPhotos(_dragSrcIdx, targetIdx);
+        _dragSrcIdx = null;
+      }
+    });
+  });
+}
+
+function reorderGalleryPhotos(fromIdx, toIdx) {
+  if (fromIdx === toIdx) return;
+  var movedPhoto = _galleryPhotos.splice(fromIdx, 1)[0];
+  _galleryPhotos.splice(toIdx, 0, movedPhoto);
+  _galleryPhotos.forEach(function(p, i) { p.displayOrder = i; p.isPrimary = (i === 0); });
+
+  var primary = _galleryPhotos[0];
+  currentUser.photo = primary.url;
+  currentUser.facePos = primary.facePos;
+  if (currentUser.email) { USER_DB[currentUser.email] = Object.assign({}, currentUser); _saveDB(USER_DB); _saveSession(currentUser); }
+  syncProfileImages();
+  updateUserListingsProfile();
+
+  if (_supabase && currentUser.supabaseId) {
+    _supabase.from('profiles').update({ photo_url: primary.url, face_pos: primary.facePos }).eq('id', currentUser.supabaseId);
+    _supabase.from('profile_photos').update({ is_primary: false }).eq('user_id', currentUser.supabaseId);
+    _galleryPhotos.forEach(function(p, i) {
+      if (!String(p.id).startsWith('temp_') && !String(p.id).startsWith('legacy_') && !String(p.id).startsWith('local_')) {
+        _supabase.from('profile_photos').update({ display_order: i, is_primary: i === 0 }).eq('id', p.id);
+      }
+    });
+  }
+  renderPhotoGallery();
+  showToast('Photos reordered ✓');
 }
 
 function confirmDeletePhoto(photoId) {
   var p = _galleryPhotos.find(function(x) { return x.id === photoId; });
   if (!p) return;
   if (_galleryPhotos.length === 1) {
-    if (confirm('Remove your only photo? Your listings will show a default avatar.')) deleteGalleryPhoto(photoId);
-  } else if (p.isPrimary) {
-    if (confirm('Remove your main photo? The next photo will become your listing photo.')) deleteGalleryPhoto(photoId);
+    if (confirm('Remove your only photo?')) deleteGalleryPhoto(photoId);
   } else {
-    deleteGalleryPhoto(photoId);
+    if (confirm('Remove this photo?')) deleteGalleryPhoto(photoId);
   }
 }
 
 function galleryItemAction(photoId) {
-  var p = _galleryPhotos.find(function(x) { return x.id === photoId; });
-  if (!p || p.isPrimary) return;
-  if (_galleryPhotos.length > 1) {
-    if (confirm('Set this as your main profile photo?')) setGalleryPrimary(photoId);
-  }
+  // Actions handled by Set Main and Delete buttons
 }
 
 async function loadGalleryPhotos() {
