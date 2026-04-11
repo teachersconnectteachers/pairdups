@@ -1678,6 +1678,11 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         </div>
       </div>
     </div>
+    <div id="saved-filters-section" style="display:none;padding:0 14px 10px">
+      <div style="font-size:11px;font-weight:800;color:var(--dark);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">🔍 Saved Filters</div>
+      <div id="saved-filters-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <button onclick="saveCurrentFilters()" style="width:100%;background:var(--gray-light);border:1.5px dashed var(--gray-border);border-radius:10px;padding:8px;font-size:11px;font-weight:700;color:var(--gray);cursor:pointer;font-family:inherit">+ Save Current Filters</button>
+    </div>
     <div class="filter-footer">
       <button class="filter-clear" onclick="clearFilter()">Clear All</button>
       <button class="filter-apply" onclick="applyFilter()">Apply Filters</button>
@@ -5406,6 +5411,11 @@ function openConvoChat(convoId) {
   }
   // Start polling for new messages while chat is open
   startChatPolling(convoId);
+  // Gold: mark messages as read and check read receipts
+  if (convo.supabaseId) {
+    markMessagesAsRead(convo.supabaseId);
+    setTimeout(function() { checkReadReceipts(convo.supabaseId); }, 1000);
+  }
   goTo('screen-chat');
 }
 
@@ -5739,7 +5749,8 @@ function renderUserListing(d) {
     +'<div class="card-type-badge '+typeClass+'">'+typeEmoji+' '+d.pairType+'</div>'
     +'<div class="card-type-badge '+typeClass+'" style="top:36px;left:10px;font-size:10px;padding:3px 10px">'+(d.groupType==='Group'?'👥 Group':'👤 One-on-One')+'</div>'
     +(d.recurring ? '<div style="position:absolute;bottom:10px;left:10px;background:rgba(46,125,50,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;backdrop-filter:blur(4px)">🔄 Recurring</div>' : '')
-    +(d.ownerTier==='gold' ? '<div style="position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;pointer-events:none;box-shadow:0 2px 8px rgba(245,158,11,0.4);z-index:2">⭐ Featured</div>' : '')
+    +(d.isFeatured ? '<div style="position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;pointer-events:none;box-shadow:0 2px 8px rgba(245,158,11,0.4);z-index:2">⭐ Featured</div>' : (d.ownerTier==='gold' ? '<div style="position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;pointer-events:none;box-shadow:0 2px 8px rgba(245,158,11,0.4);z-index:2">👑 Gold</div>' : ''))
+    +(d.isPinned ? '<div style="position:absolute;bottom:10px;left:10px;background:rgba(217,119,6,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;z-index:2">📌 Pinned</div>' : '')
     +'</div>'
     +'<div class="card-body">'
     +'<div style="margin-bottom:4px"><span class="card-tag"'+(tagStyle?' style="'+tagStyle+'"':'')+'>Activity Partner &middot; '+(d.lookingFor==='M/F'?'M/F':d.lookingFor)+'</span></div>'
@@ -5777,6 +5788,8 @@ function renderUserListing(d) {
       +'<div class="my-actions">'
       +'<button class="act-btn edit">✏️ Edit</button>'
       +'<button class="act-btn delete" onclick="confirmDeleteListing(this)">🗑 Delete</button>'
+      +(isGold() ? '<button class="act-btn" style="background:#FEF3C7;color:#D97706" onclick="pinPairdUp(this,\''+esc(d.supabaseId||'')+'\')">📌 Pin</button>' : '')
+      +(isGold() ? '<button class="act-btn" style="background:#DBEAFE;color:#2563EB" onclick="featurePairdUp(this,\''+esc(d.supabaseId||'')+'\')">⭐ Feature</button>' : '')
       +'</div></div>'
       +'<div class="my-badge" style="background:#E0F7FA;color:#00796B">'+(d.pairType==='Date'?'Date':'Fun')+'</div>';
     // Attach edit handler with closure over current data including recurring
@@ -5900,15 +5913,22 @@ async function loadSupabaseListings() {
       .order('created_at', { ascending: false });
     if (error || !rows) { console.log('Listings load error:', error); return; }
     
-    // Sort: Gold first, then Premium, then Free (priority placement)
+    // Sort: Pinned first, then Featured, then Gold, Premium, Free
     rows.sort(function(a, b) {
+      // Pinned listings always first
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      // Featured listings next
+      if (a.is_featured && !b.is_featured) return -1;
+      if (!a.is_featured && b.is_featured) return 1;
+      // Then tier-based priority
       var tierOrder = { gold: 0, premium: 1, free: 2 };
       var aTier = (a.profiles && a.profiles.subscription_tier) || 'free';
       var bTier = (b.profiles && b.profiles.subscription_tier) || 'free';
       var aOrd = tierOrder[aTier] !== undefined ? tierOrder[aTier] : 2;
       var bOrd = tierOrder[bTier] !== undefined ? tierOrder[bTier] : 2;
       if (aOrd !== bOrd) return aOrd - bOrd;
-      return 0; // keep original order within same tier
+      return 0;
     });
     
     // Clear existing dynamic cards from Discover before re-rendering
@@ -5940,7 +5960,9 @@ async function loadSupabaseListings() {
         userBio: p.bio || '', userInterests: p.interests || [],
         userFacePos: p.face_pos || 'center 20%',
         ownerEmail: p.email || '',
-        ownerTier: p.subscription_tier || 'free'
+        ownerTier: p.subscription_tier || 'free',
+        isPinned: !!row.is_pinned,
+        isFeatured: !!row.is_featured
       };
       userListings.push(d);
       renderUserListing(d);
@@ -8174,6 +8196,12 @@ function openFilter() {
     if (locked) locked.style.display = '';
     if (content) content.style.display = 'none';
   }
+  // Show saved filters for Gold users
+  var savedSection = document.getElementById('saved-filters-section');
+  if (savedSection) {
+    savedSection.style.display = isGold() ? '' : 'none';
+    if (isGold()) renderSavedFilters();
+  }
   openModal('modal-filter');
 }
 let currentMapLoc = '';
@@ -9038,6 +9066,202 @@ function addReadReceipt(bubbleWrap) {
   }
 }
 
+// ── Read Receipt Tracking (Gold) ──────────────────────────
+// Mark messages as read in Supabase when opening a chat
+async function markMessagesAsRead(convoId) {
+  if (!isGold() || !_supabase || !currentUser.supabaseId) return;
+  try {
+    await _supabase.from('messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('conversation_id', convoId)
+      .neq('sender_id', currentUser.supabaseId)
+      .is('read_at', null);
+  } catch(e) { console.log('[PairdUps] Read receipt error:', e); }
+}
+
+// Check if a message has been read and update receipts
+async function checkReadReceipts(convoId) {
+  if (!isGold() || !_supabase || !currentUser.supabaseId) return;
+  var settings = _getSettings();
+  if (settings.showReadReceipts === false) return;
+  try {
+    var { data: msgs } = await _supabase.from('messages')
+      .select('id, read_at, sender_id')
+      .eq('conversation_id', convoId)
+      .eq('sender_id', currentUser.supabaseId)
+      .not('read_at', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (msgs && msgs.length > 0) {
+      // Update the last sent message bubble to show "Seen"
+      var bubbles = document.querySelectorAll('#chat-messages .bubble-wrap.me .bubble-time');
+      if (bubbles.length > 0) {
+        var lastBubble = bubbles[bubbles.length - 1];
+        if (!lastBubble.querySelector('.read-seen')) {
+          var seen = document.createElement('span');
+          seen.className = 'read-seen';
+          seen.style.cssText = 'margin-left:4px;color:var(--pink);font-size:10px;font-weight:600';
+          seen.textContent = '· Seen';
+          lastBubble.appendChild(seen);
+        }
+      }
+    }
+  } catch(e) {}
+}
+
+// ── Pin PairdUp (Gold) ────────────────────────────────────
+async function pinPairdUp(btn, listingId) {
+  if (!isGold()) { showPremiumModal('📌 Pin your PairdUp to the top of your city\'s Discover feed! Upgrade to Gold.'); return; }
+  if (!listingId || !_supabase) { showToast('Cannot pin this listing.'); return; }
+  btn.disabled = true;
+  btn.textContent = '📌 Pinning...';
+  try {
+    // Check if already pinned
+    var { data: listing } = await _supabase.from('listings').select('is_pinned, pinned_at').eq('id', listingId).maybeSingle();
+    if (listing && listing.is_pinned) {
+      // Unpin
+      await _supabase.from('listings').update({ is_pinned: false, pinned_at: null }).eq('id', listingId);
+      btn.textContent = '📌 Pin';
+      showToast('PairdUp unpinned.');
+    } else {
+      // Check weekly limit: 1 pin per week
+      var weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      var { count } = await _supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('owner_id', currentUser.supabaseId).eq('is_pinned', true).gte('pinned_at', weekAgo);
+      if (count > 0) {
+        showToast('You can pin 1 PairdUp per week. Try again later!');
+        btn.textContent = '📌 Pin';
+        btn.disabled = false;
+        return;
+      }
+      await _supabase.from('listings').update({ is_pinned: true, pinned_at: new Date().toISOString() }).eq('id', listingId);
+      btn.textContent = '📌 Pinned!';
+      btn.style.background = '#D97706';
+      btn.style.color = '#fff';
+      showToast('PairdUp pinned to top of Discover! 📌');
+      awardXP(3, 'Pinned a PairdUp');
+    }
+  } catch(e) { console.log('[PairdUps] Pin error:', e); showToast('Could not pin. Try again.'); }
+  btn.disabled = false;
+}
+
+// ── Featured PairdUp (Gold) ──────────────────────────────
+async function featurePairdUp(btn, listingId) {
+  if (!isGold()) { showPremiumModal('⭐ Feature your PairdUp with a special banner! Upgrade to Gold.'); return; }
+  if (!listingId || !_supabase) { showToast('Cannot feature this listing.'); return; }
+  btn.disabled = true;
+  btn.textContent = '⭐ Featuring...';
+  try {
+    var { data: listing } = await _supabase.from('listings').select('is_featured, featured_at').eq('id', listingId).maybeSingle();
+    if (listing && listing.is_featured) {
+      await _supabase.from('listings').update({ is_featured: false, featured_at: null }).eq('id', listingId);
+      btn.textContent = '⭐ Feature';
+      showToast('Feature removed.');
+    } else {
+      // Check weekly limit: 1 featured per week
+      var weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      var { count } = await _supabase.from('listings').select('id', { count: 'exact', head: true })
+        .eq('owner_id', currentUser.supabaseId).eq('is_featured', true).gte('featured_at', weekAgo);
+      if (count > 0) {
+        showToast('You can feature 1 PairdUp per week. Try again later!');
+        btn.textContent = '⭐ Feature';
+        btn.disabled = false;
+        return;
+      }
+      await _supabase.from('listings').update({ is_featured: true, featured_at: new Date().toISOString() }).eq('id', listingId);
+      btn.textContent = '⭐ Featured!';
+      btn.style.background = '#2563EB';
+      btn.style.color = '#fff';
+      showToast('PairdUp featured with a special banner! ⭐');
+      awardXP(3, 'Featured a PairdUp');
+    }
+  } catch(e) { console.log('[PairdUps] Feature error:', e); showToast('Could not feature. Try again.'); }
+  btn.disabled = false;
+}
+
+// ── Saved Search Filters (Gold) ──────────────────────────
+function saveCurrentFilters() {
+  if (!isGold()) { showPremiumModal('🔍 Save your filter settings for quick access! Upgrade to Gold.'); return; }
+  var filters = {
+    category: document.querySelector('.cat-pill.active')?.textContent?.trim() || 'All',
+    ageMin: document.getElementById('filter-age-min')?.value || '',
+    ageMax: document.getElementById('filter-age-max')?.value || '',
+    distance: document.getElementById('filter-distance')?.value || '',
+    pairType: document.querySelector('#modal-filter .pill.active')?.textContent?.trim() || '',
+    savedAt: Date.now()
+  };
+  var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
+  var name = prompt('Name this filter preset:');
+  if (!name) return;
+  savedFilters.push({ name: name, filters: filters });
+  if (savedFilters.length > 5) savedFilters = savedFilters.slice(-5); // Keep last 5
+  localStorage.setItem('pu_saved_filters', JSON.stringify(savedFilters));
+  showToast('Filter saved as "' + name + '" ✓');
+}
+
+function loadSavedFilter(idx) {
+  var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
+  if (!savedFilters[idx]) return;
+  var f = savedFilters[idx].filters;
+  if (f.ageMin) { var el = document.getElementById('filter-age-min'); if (el) el.value = f.ageMin; }
+  if (f.ageMax) { var el = document.getElementById('filter-age-max'); if (el) el.value = f.ageMax; }
+  if (f.distance) { var el = document.getElementById('filter-distance'); if (el) el.value = f.distance; }
+  showToast('Filter "' + savedFilters[idx].name + '" loaded');
+}
+
+function renderSavedFilters() {
+  var container = document.getElementById('saved-filters-list');
+  if (!container) return;
+  if (!isGold()) { container.innerHTML = ''; return; }
+  var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
+  if (savedFilters.length === 0) { container.innerHTML = '<div style="font-size:11px;color:var(--gray);text-align:center;padding:8px">No saved filters yet</div>'; return; }
+  container.innerHTML = savedFilters.map(function(sf, i) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--gray-light);border-radius:8px;cursor:pointer" onclick="loadSavedFilter('+i+')">'
+      + '<span style="font-size:12px;font-weight:600;color:var(--dark);flex:1">🔍 ' + sf.name + '</span>'
+      + '<button onclick="event.stopPropagation();deleteSavedFilter('+i+')" style="background:none;border:none;color:#DC2626;font-size:14px;cursor:pointer">✕</button></div>';
+  }).join('');
+}
+
+function deleteSavedFilter(idx) {
+  var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
+  savedFilters.splice(idx, 1);
+  localStorage.setItem('pu_saved_filters', JSON.stringify(savedFilters));
+  renderSavedFilters();
+  showToast('Filter deleted');
+}
+
+// ── Instant Alerts for Matching PairdUps (Gold) ──────────
+async function checkInstantAlerts() {
+  if (!isGold() || !_supabase || !currentUser.supabaseId) return;
+  try {
+    // Get user's interests
+    var interests = currentUser.interests || [];
+    if (interests.length === 0) return;
+    // Check for new listings in the last 24 hours matching user's interests/location
+    var yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    var { data: newListings } = await _supabase.from('listings')
+      .select('id, title, category, city, owner_id')
+      .gte('created_at', yesterday)
+      .neq('owner_id', currentUser.supabaseId)
+      .eq('is_active', true)
+      .limit(10);
+    if (!newListings || newListings.length === 0) return;
+    // Check against already-alerted IDs
+    var alertedIds = JSON.parse(localStorage.getItem('pu_alerted_listings') || '[]');
+    var newMatches = newListings.filter(function(l) {
+      return !alertedIds.includes(l.id) && (
+        (currentUser.loc && l.city && l.city.toLowerCase().indexOf(currentUser.loc.split(',')[0].trim().toLowerCase()) !== -1)
+      );
+    });
+    if (newMatches.length > 0) {
+      alertedIds = alertedIds.concat(newMatches.map(function(l) { return l.id; }));
+      if (alertedIds.length > 100) alertedIds = alertedIds.slice(-100);
+      localStorage.setItem('pu_alerted_listings', JSON.stringify(alertedIds));
+      showToast('🔔 ' + newMatches.length + ' new PairdUp' + (newMatches.length > 1 ? 's' : '') + ' near you!');
+    }
+  } catch(e) { console.log('[PairdUps] Instant alerts error:', e); }
+}
+
 
 // ── City suggestions for create form ─────────────────────────────────────────
 function showCreateCitySug(val) {
@@ -9709,6 +9933,8 @@ window.addEventListener('load', async function() {
   // Start background polling for new conversations/messages
   if (isSignedIn) setTimeout(startBackgroundPolling, 2000);
   setTimeout(loadCardBadges, 3000);
+  // Gold: check for matching PairdUps alerts
+  if (isSignedIn) setTimeout(checkInstantAlerts, 5000);
   loadProfileTheme();
   checkSubscriptionReturn();
 
