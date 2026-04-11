@@ -378,7 +378,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 .profile-avatar{width:76px;height:76px;border-radius:50%;overflow:hidden;border:4px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,0.15)}
 .profile-avatar img{width:100%;height:100%;object-fit:cover;object-position:center 15%;transition:object-position 0.3s}
 .profile-info{padding:24px 18px 18px}
-.profile-name{font-size:21px;font-weight:900;color:var(--dark)}
+.profile-name{font-size:21px;font-weight:900;color:var(--dark);display:flex;align-items:center;gap:6px}
 .profile-loc{font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;margin-bottom:3px}
 .profile-loc svg{width:12px;height:12px;stroke:var(--pink);fill:none;stroke-width:2}
 .profile-bio{font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:14px}
@@ -2843,7 +2843,7 @@ function openRewardsModal() {
 
 function getLevelBadgeHTML(xp) {
   var info = getLevelInfo(xp || 0);
-  return '<span onclick="openRewardsModal()" style="cursor:pointer;font-size:12px;background:' + info.level.color + ';color:' + (info.level.textColor || '#fff') + ';padding:3px 10px;border-radius:50px;font-weight:800;margin-left:6px;display:inline-flex;align-items:center;gap:3px;vertical-align:middle;box-shadow:0 2px 6px rgba(0,0,0,0.2)">' + info.level.icon + ' ' + info.level.name + '</span>';
+  return '<span onclick="event.stopPropagation();openRewardsModal()" style="cursor:pointer;font-size:13px;background:linear-gradient(135deg,#DC2626,#1D4ED8);color:#fff;padding:4px 12px;border-radius:50px;font-weight:800;margin-left:auto;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;box-shadow:0 2px 8px rgba(29,78,216,0.35);float:right">' + info.level.icon + ' ' + info.level.name + '</span>';
 }
 
 async function loadGamificationData() {
