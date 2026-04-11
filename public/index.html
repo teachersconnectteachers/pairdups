@@ -411,6 +411,48 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 .photo-notice p{font-size:12px;color:var(--dark);line-height:1.5}
 .photo-notice strong{color:var(--pink)}
 
+/* PHOTO GALLERY */
+.photo-gallery{margin-bottom:18px}
+.photo-gallery-label{font-size:13px;font-weight:700;color:var(--dark);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.photo-gallery-count{font-size:11px;font-weight:600;color:var(--gray)}
+.photo-gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.photo-gallery-item{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--gray-light);cursor:pointer}
+.photo-gallery-item img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.2s}
+.photo-gallery-item:active img{transform:scale(1.03)}
+.photo-gallery-item .photo-primary-badge{position:absolute;top:5px;left:5px;background:var(--pink);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:50px;z-index:2}
+.photo-gallery-item .photo-delete-btn{position:absolute;top:5px;right:5px;width:22px;height:22px;background:rgba(0,0,0,0.55);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;opacity:0;transition:opacity 0.2s}
+.photo-gallery-item:hover .photo-delete-btn,.photo-gallery-item:active .photo-delete-btn{opacity:1}
+.photo-gallery-item .photo-delete-btn svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.5}
+.photo-add-slot{aspect-ratio:1;border:2px dashed var(--gray-border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;gap:4px;background:var(--gray-light)}
+.photo-add-slot:hover{border-color:var(--pink);background:var(--pink-pale)}
+.photo-add-slot svg{width:24px;height:24px;stroke:var(--gray);fill:none;stroke-width:2}
+.photo-add-slot:hover svg{stroke:var(--pink)}
+.photo-add-slot span{font-size:10px;color:var(--gray);font-weight:600}
+.photo-add-slot.locked{opacity:0.5;cursor:not-allowed}
+.photo-add-slot.locked:hover{border-color:var(--gray-border);background:var(--gray-light)}
+.photo-reorder-hint{font-size:10px;color:var(--gray);text-align:center;margin-top:6px}
+
+/* Photo Carousel (detail view / profile view) */
+.photo-carousel{position:relative;width:100%;height:100%;overflow:hidden;touch-action:pan-y}
+.photo-carousel-track{display:flex;height:100%;transition:transform 0.3s ease}
+.photo-carousel-track.dragging{transition:none}
+.photo-carousel-slide{min-width:100%;height:100%;flex-shrink:0}
+.photo-carousel-slide img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-carousel-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:3}
+.photo-carousel-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;border:1px solid rgba(255,255,255,0.3)}
+.photo-carousel-dot.active{background:#fff;transform:scale(1.2)}
+.photo-carousel-nav{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;background:rgba(255,255,255,0.7);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;opacity:0;transition:opacity 0.2s}
+.photo-carousel:hover .photo-carousel-nav{opacity:1}
+.photo-carousel-nav.prev{left:8px}
+.photo-carousel-nav.next{right:8px}
+.photo-carousel-nav svg{width:14px;height:14px;stroke:var(--dark);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.photo-carousel-counter{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.5);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:50px;z-index:3}
+
+/* Dark mode gallery overrides */
+.dark-mode .photo-gallery-item{background:#2A2A2E}
+.dark-mode .photo-add-slot{background:#2A2A2E;border-color:#444}
+.dark-mode .photo-add-slot:hover{border-color:var(--pink);background:#2A1A22}
+
 /* MINI PROFILE MODAL */
 .mini-profile-header{display:flex;align-items:center;gap:13px;margin-bottom:14px}
 .mini-avatar-lg{width:68px;height:68px;border-radius:50%;overflow:hidden;flex-shrink:0;border:3px solid var(--pink-pale)}
@@ -750,7 +792,12 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   <div class="detail-hero">
     <button class="detail-back" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
     <div class="detail-hero-badges"><div class="card-cat-badge" id="d-cat" style="position:static"></div><div class="card-type-badge badge-fun" id="d-type" style="position:static"></div><div class="card-type-badge badge-fun" id="d-group-type" style="position:static;font-size:10px;padding:3px 10px"></div></div>
-    <img id="d-photo" class="detail-hero-img" src="" alt="">
+    <div class="photo-carousel" id="detail-carousel">
+      <div class="photo-carousel-track" id="detail-carousel-track">
+        <div class="photo-carousel-slide"><img id="d-photo" class="detail-hero-img" src="" alt=""></div>
+      </div>
+      <div class="photo-carousel-dots" id="detail-carousel-dots"></div>
+    </div>
     <div class="detail-emoji" id="d-emoji"></div>
   </div>
   <div class="scroll-area"><div class="detail-body">
@@ -1090,7 +1137,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="profile-hero">
       <button class="profile-back-btn" id="profile-back-btn" onclick="profileBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
       <button class="profile-edit-top-btn" onclick="openEditProfile()">Edit Profile</button>
-      <div class="profile-avatar-wrap"><div class="profile-avatar"><img id="my-profile-img" src="" alt="me"></div></div>
+      <div class="profile-avatar-wrap"><div class="profile-avatar" onclick="showOwnGallery()"><img id="my-profile-img" src="" alt="me"></div><div id="profile-photo-count" style="display:none;position:absolute;bottom:-2px;right:-2px;background:var(--pink);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;border:2px solid #fff"></div></div>
     </div>
     <div id="profile-completion-bar"></div>
     <div class="profile-info">
@@ -1133,15 +1180,18 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <div class="screen" id="screen-editprofile">
   <div class="screen-header"><button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button><span class="screen-title">Edit Profile</span></div>
   <div class="scroll-area"><div class="create-form">
-    <div class="avatar-upload">
-      <div class="avatar-circle" onclick="triggerPhotoUpload()">
-        <img id="avatar-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23E5E7EB'/%3E%3Ccircle cx='50' cy='38' r='16' fill='%239CA3AF'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='22' fill='%239CA3AF'/%3E%3C/svg%3E" alt="Profile photo">
-        <div class="camera-badge"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+    <div class="photo-gallery" id="photo-gallery-section">
+      <div class="photo-gallery-label">
+        <span>📸 Profile Photos</span>
+        <span class="photo-gallery-count" id="photo-gallery-count">0/1 photos</span>
       </div>
-      <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="previewPhoto(event)">
-      <div class="avatar-upload-label">Tap to change photo<br><span style="font-size:11px;font-weight:400;color:var(--pink)">(users with a real photo get more responses!)</span></div>
+      <div class="photo-gallery-grid" id="photo-gallery-grid">
+        <!-- Photos render here dynamically -->
+      </div>
+      <div class="photo-reorder-hint" id="photo-reorder-hint" style="display:none">Long-press &amp; drag to reorder · First photo = your listing photo</div>
+      <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handleGalleryUpload(event)">
     </div>
-    <div class="photo-notice"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p><strong>Your photo = your listing photo.</strong> Choose a clear, friendly photo — it appears on all your PairdUp listings!</p></div>
+    <div class="photo-notice"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p><strong>Your first photo = your listing photo.</strong> Choose a clear, friendly photo — it appears on all your PairdUp listings!</p></div>
     <div id="photo-limit-note" style="text-align:center;margin:-4px 0 12px">
       <span style="font-size:11px;color:var(--gray)" id="photo-limit-text">1 photo allowed (Free plan)</span>
       <button onclick="showPhotoUpsell()" id="photo-upgrade-btn" style="display:inline;background:none;border:none;color:var(--pink);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline;margin-left:4px">Want more photos? Upgrade →</button>
@@ -2419,8 +2469,14 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <div class="modal-bg" id="modal-mini" onclick="if(event.target===this)closeModal('modal-mini')">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <div id="mini-gallery-carousel" style="display:none;width:100%;height:200px;border-radius:14px;overflow:hidden;margin-bottom:12px;background:#333">
+      <div class="photo-carousel" id="mini-carousel">
+        <div class="photo-carousel-track" id="mini-carousel-track"></div>
+        <div class="photo-carousel-dots" id="mini-carousel-dots"></div>
+      </div>
+    </div>
     <div class="mini-profile-header">
-      <div class="mini-avatar-lg"><img id="mini-photo" src="" alt=""></div>
+      <div class="mini-avatar-lg" id="mini-avatar-wrap"><img id="mini-photo" src="" alt=""></div>
       <div><div class="mini-name" id="mini-name"><span id="mini-badge"></span></div><div class="mini-loc" id="mini-loc"></div><div id="mini-active" style="font-size:10px;font-weight:600;margin-top:2px;display:none"></div></div>
     </div>
     <p class="mini-bio" id="mini-bio"></p>
@@ -2942,6 +2998,51 @@ function showPremiumModal(upsellMsg) {
   if (goldCard) goldCard.querySelector('button').textContent = tier === 'gold' ? '✅ Current Plan' : 'Upgrade to Gold — $9.99/mo';
   if (goldCard) goldCard.querySelector('button').disabled = tier === 'gold';
   openModal('modal-premium');
+}
+
+function showOwnGallery() {
+  if (_galleryPhotos.length > 1) {
+    showFullscreenGallery(_galleryPhotos.map(function(p) { return { url: p.url, facePos: p.facePos }; }));
+  } else if (_galleryPhotos.length === 1) {
+    showFullscreenGallery([{ url: _galleryPhotos[0].url, facePos: _galleryPhotos[0].facePos }]);
+  } else if (currentUser.photo) {
+    showFullscreenGallery([{ url: currentUser.photo, facePos: currentUser.facePos || 'center 20%' }]);
+  }
+}
+
+function showFullscreenGallery(photos) {
+  if (!photos || photos.length === 0) return;
+  var overlay = document.getElementById('fullscreen-gallery-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'fullscreen-gallery-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center';
+    overlay.innerHTML = '<button onclick="closeFullscreenGallery()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10001"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
+      + '<div style="width:100%;max-width:500px;height:70vh;position:relative"><div class="photo-carousel" id="fs-carousel"><div class="photo-carousel-track" id="fs-carousel-track"></div><div class="photo-carousel-dots" id="fs-carousel-dots"></div></div></div>'
+      + '<div id="fs-gallery-counter" style="color:#fff;font-size:13px;margin-top:12px;font-weight:600"></div>';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  var counterEl = document.getElementById('fs-gallery-counter');
+  if (counterEl) counterEl.textContent = photos.length > 1 ? '1 / ' + photos.length : '';
+  setTimeout(function() { initCarousel('fs-carousel', photos); }, 50);
+}
+
+function closeFullscreenGallery() {
+  var overlay = document.getElementById('fullscreen-gallery-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function updateProfilePhotoCount() {
+  var countEl = document.getElementById('profile-photo-count');
+  if (countEl) {
+    if (_galleryPhotos.length > 1) {
+      countEl.textContent = _galleryPhotos.length;
+      countEl.style.display = '';
+    } else {
+      countEl.style.display = 'none';
+    }
+  }
 }
 
 function showPhotoUpsell() {
@@ -6057,7 +6158,12 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   document.getElementById('d-date').textContent = date;
   document.getElementById('d-cat').textContent = cat;
   document.getElementById('d-emoji').textContent = emoji;
-  document.getElementById('d-photo').src = photo;
+  // Reset carousel to single photo state
+  var dTrack = document.getElementById('detail-carousel-track');
+  var dDots = document.getElementById('detail-carousel-dots');
+  if (dTrack) dTrack.innerHTML = '<div class="photo-carousel-slide"><img id="d-photo" class="detail-hero-img" src="'+photo+'" alt=""></div>';
+  if (dTrack) dTrack.style.transform = 'translateX(0)';
+  if (dDots) { dDots.innerHTML = ''; dDots.style.display = 'none'; }
   const dv = document.getElementById('d-venue');
   dv.textContent = venue; dv.dataset.v = venue;
   // Find city from the source discover card for map fallback
@@ -6133,7 +6239,8 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
         document.getElementById('d-poster-name').textContent = freshName + ', ' + freshAge;
         document.getElementById('d-poster-loc').textContent = freshLoc;
         document.getElementById('d-poster-img').src = freshPhoto;
-        document.getElementById('d-photo').src = freshPhoto;
+        var dPhotoEl = document.getElementById('d-photo');
+        if (dPhotoEl) dPhotoEl.src = freshPhoto;
         // Update stashed poster data for join modal
         _currentDetailPoster.name = freshName;
         _currentDetailPoster.age = freshAge;
@@ -6146,6 +6253,23 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
           showMiniProfile(freshName, freshAge, freshLoc, freshBio, freshInterests, freshPhoto, ownerEmail);
         };
       });
+    // Load poster's photo gallery for carousel
+    _supabase.from('profiles').select('id').eq('email', ownerEmail).maybeSingle()
+      .then(function(res2) {
+        if (!res2.data) return;
+        loadUserGallery(res2.data.id).then(function(photos) {
+          if (photos && photos.length > 1) {
+            initCarousel('detail-carousel', photos);
+          }
+        });
+      });
+  } else {
+    // Own listing or no Supabase — try own gallery
+    if (isSignedIn && ownerEmail === currentUser.email && _galleryPhotos.length > 1) {
+      setTimeout(function() {
+        initCarousel('detail-carousel', _galleryPhotos.map(function(p) { return { url: p.url, facePos: p.facePos }; }));
+      }, 100);
+    }
   }
   // Log listing view for analytics
   if (_supabase && isSignedIn) {
@@ -6488,8 +6612,9 @@ function syncProfileForm() {
     }
   };
   _syncImg('my-profile-img');
-  _syncImg('avatar-preview');
   _syncImg('topbar-avatar-img');
+  // Load photo gallery when edit profile is synced
+  if (typeof loadGalleryPhotos === 'function') loadGalleryPhotos();
   // Update topbar avatar menu header
   const nameEl  = document.getElementById('avatar-menu-name');
   const emailEl = document.getElementById('avatar-menu-email');
@@ -6663,23 +6788,29 @@ function saveProfile() {
 }
 
 function triggerPhotoUpload() { document.getElementById('photo-input').click(); }
-function previewPhoto(e) {
-  const file = e.target.files[0]; if (!file) return;
-  // Premium photo limit check
-  // For now (single-photo system), free users can upload 1 photo (replace existing)
-  // When multi-photo gallery is built, this enforces: Free=1, Premium=5, Gold=12
-  // Size check — warn if over 25MB
-  if (file.size > 25 * 1024 * 1024) {
-    showToast('Image too large. Please choose a smaller photo (under 25MB).');
+
+// ── Multi-Photo Gallery System ────────────────────────────
+var _galleryPhotos = []; // Array of {id, url, facePos, isPrimary, displayOrder}
+
+function handleGalleryUpload(e) {
+  var file = e.target.files[0]; if (!file) return;
+  e.target.value = ''; // Reset so same file can be re-selected
+  var limit = getPhotoLimit();
+  if (_galleryPhotos.length >= limit) {
+    if (isGold()) { showToast('You\'ve reached the maximum of 12 photos.'); }
+    else { showPhotoUpsell(); }
     return;
   }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const rawSrc = ev.target.result;
-    // Compress image via canvas
+  if (file.size > 25 * 1024 * 1024) {
+    showToast('Image too large. Please choose a photo under 25MB.');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var rawSrc = ev.target.result;
     var img = new Image();
     img.onload = function() {
-      var maxDim = 600;
+      var maxDim = 800;
       var w = img.width, h = img.height;
       if (w > maxDim || h > maxDim) {
         if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
@@ -6687,58 +6818,447 @@ function previewPhoto(e) {
       }
       var canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
 
-      // If Supabase available, upload to Storage
-      if (_supabase && currentUser.supabaseId) {
-        var localSrc = canvas.toDataURL('image/jpeg', 0.8);
-        // Show preview IMMEDIATELY with local data
-        applyPhoto(localSrc);
+      var localSrc = canvas.toDataURL('image/jpeg', 0.82);
+      var isPrimary = _galleryPhotos.length === 0;
+      var order = _galleryPhotos.length;
+      var tempId = 'temp_' + Date.now();
 
-        canvas.toBlob(async function(blob) {
-          if (!blob) return;
-          showToast('Uploading photo...');
-          var filePath = currentUser.supabaseId + '/avatar.jpg';
-          try {
-            try { await _supabase.storage.from('avatars').remove([filePath]); } catch(e) {}
-            var { data, error } = await _supabase.storage.from('avatars').upload(filePath, blob, {
-              contentType: 'image/jpeg', upsert: true
-            });
-            if (error) { console.log('Upload error:', error); return; }
-            // Get public URL and save to profile
-            var { data: urlData } = _supabase.storage.from('avatars').getPublicUrl(filePath);
-            var publicUrl = urlData.publicUrl + '?t=' + Date.now();
-            try { await _supabase.from('profiles').update({ photo_url: publicUrl, face_pos: currentUser.facePos || 'center 20%' }).eq('id', currentUser.supabaseId); } catch(e) {}
-            // Update stored URL (but don't re-render — the local preview is already showing)
-            currentUser.photo = publicUrl;
+      // Add to local array immediately
+      _galleryPhotos.push({ id: tempId, url: localSrc, facePos: 'center 20%', isPrimary: isPrimary, displayOrder: order });
+      renderPhotoGallery();
+
+      // Detect face position
+      detectFacePosition(localSrc, function(pos) {
+        var p = _galleryPhotos.find(function(x) { return x.id === tempId; });
+        if (p) { p.facePos = pos; renderPhotoGallery(); }
+
+        // Upload to Supabase storage
+        if (_supabase && currentUser.supabaseId) {
+          canvas.toBlob(async function(blob) {
+            if (!blob) return;
+            showToast('Uploading photo...');
+            var fileName = Date.now() + '_' + Math.random().toString(36).substr(2,6) + '.jpg';
+            var filePath = currentUser.supabaseId + '/' + fileName;
+            try {
+              var { data, error } = await _supabase.storage.from('gallery').upload(filePath, blob, {
+                contentType: 'image/jpeg', upsert: true
+              });
+              if (error) {
+                // Fallback: try avatars bucket
+                var res2 = await _supabase.storage.from('avatars').upload(filePath, blob, {
+                  contentType: 'image/jpeg', upsert: true
+                });
+                if (res2.error) { console.log('Upload error:', res2.error); showToast('Upload failed. Try again.'); return; }
+                var urlData2 = _supabase.storage.from('avatars').getPublicUrl(filePath);
+                var publicUrl = urlData2.data.publicUrl + '?t=' + Date.now();
+              } else {
+                var urlData = _supabase.storage.from('gallery').getPublicUrl(filePath);
+                var publicUrl = urlData.data.publicUrl + '?t=' + Date.now();
+              }
+
+              // Insert into profile_photos table
+              var { data: photoRow, error: dbErr } = await _supabase.from('profile_photos').insert({
+                user_id: currentUser.supabaseId,
+                photo_url: publicUrl,
+                display_order: order,
+                face_pos: pos,
+                is_primary: isPrimary
+              }).select().single();
+
+              // Update local gallery entry with real data
+              var p2 = _galleryPhotos.find(function(x) { return x.id === tempId; });
+              if (p2 && photoRow) {
+                p2.id = photoRow.id;
+                p2.url = publicUrl;
+              } else if (p2) {
+                p2.url = publicUrl;
+              }
+
+              // If this is the primary photo, also update profiles.photo_url for backward compat
+              if (isPrimary) {
+                await _supabase.from('profiles').update({ photo_url: publicUrl, face_pos: pos }).eq('id', currentUser.supabaseId);
+                currentUser.photo = publicUrl;
+                currentUser.facePos = pos;
+                if (currentUser.email && USER_DB[currentUser.email]) {
+                  USER_DB[currentUser.email].photo = publicUrl;
+                  USER_DB[currentUser.email].facePos = pos;
+                  _saveDB(USER_DB); _saveSession(currentUser);
+                }
+                syncProfileImages();
+                updateUserListingsProfile();
+              }
+              renderPhotoGallery();
+              showToast('Photo uploaded! 📸');
+              awardBadge('photo_ready');
+            } catch(err) { console.log('Gallery upload error:', err); showToast('Upload failed. Try again.'); }
+          }, 'image/jpeg', 0.82);
+        } else {
+          // No Supabase — local only
+          if (isPrimary) {
+            currentUser.photo = localSrc;
+            currentUser.facePos = pos;
             if (currentUser.email && USER_DB[currentUser.email]) {
-              USER_DB[currentUser.email].photo = publicUrl;
+              USER_DB[currentUser.email].photo = localSrc;
+              USER_DB[currentUser.email].facePos = pos;
               _saveDB(USER_DB); _saveSession(currentUser);
             }
-            showToast('Photo uploaded! 📸');
-          } catch(err) {
-            console.log('Photo upload error:', err);
+            syncProfileImages();
+            updateUserListingsProfile();
           }
-        }, 'image/jpeg', 0.8);
-      } else {
-        // Fallback: base64 in localStorage
-        var src = canvas.toDataURL('image/jpeg', 0.8);
-        applyPhoto(src);
-      }
+        }
+      });
     };
-    img.onerror = function() { applyPhoto(rawSrc); };
+    img.onerror = function() { showToast('Could not load image. Try another.'); };
     img.src = rawSrc;
   };
   reader.readAsDataURL(file);
 }
+
+function deleteGalleryPhoto(photoId) {
+  var idx = _galleryPhotos.findIndex(function(p) { return p.id === photoId; });
+  if (idx === -1) return;
+  var photo = _galleryPhotos[idx];
+  var wasPrimary = photo.isPrimary;
+
+  _galleryPhotos.splice(idx, 1);
+
+  // If deleted photo was primary, promote next photo
+  if (wasPrimary && _galleryPhotos.length > 0) {
+    _galleryPhotos[0].isPrimary = true;
+    _galleryPhotos[0].displayOrder = 0;
+    var newPrimary = _galleryPhotos[0];
+    currentUser.photo = newPrimary.url;
+    currentUser.facePos = newPrimary.facePos;
+    if (_supabase && currentUser.supabaseId) {
+      _supabase.from('profiles').update({ photo_url: newPrimary.url, face_pos: newPrimary.facePos }).eq('id', currentUser.supabaseId);
+      if (!String(newPrimary.id).startsWith('temp_')) {
+        _supabase.from('profile_photos').update({ is_primary: true, display_order: 0 }).eq('id', newPrimary.id);
+      }
+    }
+    syncProfileImages();
+    updateUserListingsProfile();
+  } else if (_galleryPhotos.length === 0) {
+    currentUser.photo = '';
+    currentUser.facePos = 'center 20%';
+    if (_supabase && currentUser.supabaseId) {
+      _supabase.from('profiles').update({ photo_url: null, face_pos: 'center 20%' }).eq('id', currentUser.supabaseId);
+    }
+    syncProfileImages();
+    updateUserListingsProfile();
+  }
+  if (currentUser.email) { USER_DB[currentUser.email] = Object.assign({}, currentUser); _saveDB(USER_DB); _saveSession(currentUser); }
+
+  // Reorder remaining
+  _galleryPhotos.forEach(function(p, i) { p.displayOrder = i; });
+
+  // Delete from Supabase
+  if (_supabase && !String(photoId).startsWith('temp_')) {
+    _supabase.from('profile_photos').delete().eq('id', photoId);
+  }
+  renderPhotoGallery();
+  showToast('Photo removed.');
+}
+
+function setGalleryPrimary(photoId) {
+  _galleryPhotos.forEach(function(p) { p.isPrimary = false; });
+  var photo = _galleryPhotos.find(function(p) { return p.id === photoId; });
+  if (!photo) return;
+  photo.isPrimary = true;
+
+  // Move to front
+  _galleryPhotos = _galleryPhotos.filter(function(p) { return p.id !== photoId; });
+  _galleryPhotos.unshift(photo);
+  _galleryPhotos.forEach(function(p, i) { p.displayOrder = i; });
+
+  // Update profile
+  currentUser.photo = photo.url;
+  currentUser.facePos = photo.facePos;
+  if (currentUser.email) { USER_DB[currentUser.email] = Object.assign({}, currentUser); _saveDB(USER_DB); _saveSession(currentUser); }
+
+  // Supabase updates
+  if (_supabase && currentUser.supabaseId) {
+    _supabase.from('profile_photos').update({ is_primary: false }).eq('user_id', currentUser.supabaseId);
+    if (!String(photoId).startsWith('temp_')) {
+      _supabase.from('profile_photos').update({ is_primary: true, display_order: 0 }).eq('id', photoId);
+    }
+    _supabase.from('profiles').update({ photo_url: photo.url, face_pos: photo.facePos }).eq('id', currentUser.supabaseId);
+    // Update display_order for all
+    _galleryPhotos.forEach(function(p, i) {
+      if (!String(p.id).startsWith('temp_')) {
+        _supabase.from('profile_photos').update({ display_order: i }).eq('id', p.id);
+      }
+    });
+  }
+  syncProfileImages();
+  updateUserListingsProfile();
+  renderPhotoGallery();
+  showToast('Primary photo updated! ✨');
+}
+
+function renderPhotoGallery() {
+  var grid = document.getElementById('photo-gallery-grid');
+  if (!grid) return;
+  var limit = getPhotoLimit();
+  var countEl = document.getElementById('photo-gallery-count');
+  if (countEl) countEl.textContent = _galleryPhotos.length + '/' + limit + ' photos';
+  var hintEl = document.getElementById('photo-reorder-hint');
+  if (hintEl) hintEl.style.display = _galleryPhotos.length > 1 ? '' : 'none';
+
+  // Update upgrade button visibility
+  var photoUpgradeBtn = document.getElementById('photo-upgrade-btn');
+  var photoLimitText = document.getElementById('photo-limit-text');
+  if (photoLimitText) {
+    var tier = getUserTier();
+    photoLimitText.textContent = limit + ' photo' + (limit > 1 ? 's' : '') + ' allowed (' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' plan)';
+  }
+  if (photoUpgradeBtn) photoUpgradeBtn.style.display = isGold() ? 'none' : 'inline';
+
+  var html = '';
+  _galleryPhotos.forEach(function(p, i) {
+    html += '<div class="photo-gallery-item" data-photo-id="'+p.id+'" onclick="galleryItemAction(\''+p.id+'\')">';
+    html += '<img src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+'">';
+    if (p.isPrimary) html += '<div class="photo-primary-badge">★ Main</div>';
+    html += '<button class="photo-delete-btn" onclick="event.stopPropagation();confirmDeletePhoto(\''+p.id+'\')" title="Remove photo"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+    html += '</div>';
+  });
+
+  // Add slot(s) if under limit
+  if (_galleryPhotos.length < limit) {
+    html += '<div class="photo-add-slot" onclick="triggerPhotoUpload()">';
+    html += '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+    html += '<span>Add Photo</span></div>';
+  }
+
+  // Show locked slots to tease upgrade
+  if (!isGold() && _galleryPhotos.length >= limit) {
+    var nextLimit = isPremium() ? 12 : 5;
+    var lockedCount = Math.min(nextLimit - limit, 3);
+    for (var li = 0; li < lockedCount; li++) {
+      html += '<div class="photo-add-slot locked" onclick="showPhotoUpsell()">';
+      html += '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+      html += '<span>🔒 Upgrade</span></div>';
+    }
+  }
+
+  grid.innerHTML = html;
+  updateProfilePhotoCount();
+}
+
+function confirmDeletePhoto(photoId) {
+  var p = _galleryPhotos.find(function(x) { return x.id === photoId; });
+  if (!p) return;
+  if (_galleryPhotos.length === 1) {
+    if (confirm('Remove your only photo? Your listings will show a default avatar.')) deleteGalleryPhoto(photoId);
+  } else if (p.isPrimary) {
+    if (confirm('Remove your main photo? The next photo will become your listing photo.')) deleteGalleryPhoto(photoId);
+  } else {
+    deleteGalleryPhoto(photoId);
+  }
+}
+
+function galleryItemAction(photoId) {
+  var p = _galleryPhotos.find(function(x) { return x.id === photoId; });
+  if (!p || p.isPrimary) return;
+  if (_galleryPhotos.length > 1) {
+    if (confirm('Set this as your main profile photo?')) setGalleryPrimary(photoId);
+  }
+}
+
+async function loadGalleryPhotos() {
+  if (!_supabase || !currentUser.supabaseId) {
+    // Load from currentUser.photo as single photo fallback
+    _galleryPhotos = [];
+    if (currentUser.photo && currentUser.photo !== _DEFAULT_AVATAR) {
+      _galleryPhotos.push({ id: 'local_0', url: currentUser.photo, facePos: currentUser.facePos || 'center 20%', isPrimary: true, displayOrder: 0 });
+    }
+    renderPhotoGallery();
+    return;
+  }
+  try {
+    var { data, error } = await _supabase.from('profile_photos')
+      .select('*')
+      .eq('user_id', currentUser.supabaseId)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      console.log('Gallery load error (table may not exist yet):', error.message);
+      // Fallback: use single photo from profiles
+      _galleryPhotos = [];
+      if (currentUser.photo && currentUser.photo !== _DEFAULT_AVATAR) {
+        _galleryPhotos.push({ id: 'legacy_0', url: currentUser.photo, facePos: currentUser.facePos || 'center 20%', isPrimary: true, displayOrder: 0 });
+      }
+      renderPhotoGallery();
+      return;
+    }
+
+    if (data && data.length > 0) {
+      _galleryPhotos = data.map(function(row) {
+        return { id: row.id, url: row.photo_url, facePos: row.face_pos || 'center 20%', isPrimary: row.is_primary, displayOrder: row.display_order };
+      });
+      // Ensure at least one is primary
+      if (!_galleryPhotos.some(function(p) { return p.isPrimary; })) _galleryPhotos[0].isPrimary = true;
+      // Set currentUser.photo to primary
+      var primary = _galleryPhotos.find(function(p) { return p.isPrimary; });
+      if (primary) {
+        currentUser.photo = primary.url;
+        currentUser.facePos = primary.facePos;
+      }
+    } else {
+      // No gallery rows yet — use legacy photo
+      _galleryPhotos = [];
+      if (currentUser.photo && currentUser.photo !== _DEFAULT_AVATAR) {
+        _galleryPhotos.push({ id: 'legacy_0', url: currentUser.photo, facePos: currentUser.facePos || 'center 20%', isPrimary: true, displayOrder: 0 });
+      }
+    }
+    renderPhotoGallery();
+  } catch(e) {
+    console.log('Gallery load exception:', e);
+    _galleryPhotos = [];
+    if (currentUser.photo && currentUser.photo !== _DEFAULT_AVATAR) {
+      _galleryPhotos.push({ id: 'legacy_0', url: currentUser.photo, facePos: currentUser.facePos || 'center 20%', isPrimary: true, displayOrder: 0 });
+    }
+    renderPhotoGallery();
+  }
+}
+
+// Load another user's gallery for carousel display
+async function loadUserGallery(userId) {
+  if (!_supabase || !userId) return [];
+  try {
+    var { data, error } = await _supabase.from('profile_photos')
+      .select('photo_url, face_pos, display_order, is_primary')
+      .eq('user_id', userId)
+      .order('display_order', { ascending: true });
+    if (error || !data || data.length === 0) return [];
+    return data.map(function(row) {
+      return { url: row.photo_url, facePos: row.face_pos || 'center 20%', isPrimary: row.is_primary };
+    });
+  } catch(e) { return []; }
+}
+
+// Sync profile avatar images (topbar, profile page, etc.)
+function syncProfileImages() {
+  var photo = currentUser.photo || '';
+  var defaultAvatar = _DEFAULT_AVATAR_SQ;
+  var facePos = currentUser.facePos || 'center 15%';
+  ['my-profile-img', 'topbar-avatar-img'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (photo) {
+      el.style.objectPosition = facePos;
+      if (el.src !== photo) { el.onload = function() { this.style.objectPosition = facePos; }; el.src = photo; }
+    } else {
+      el.style.objectPosition = 'center center';
+      el.src = defaultAvatar;
+    }
+  });
+}
+
+// ── Photo Carousel Engine ─────────────────────────────────
+function initCarousel(containerId, photos) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  var trackId = containerId + '-track';
+  var dotsId = containerId + '-dots';
+  var track = document.getElementById(trackId);
+  var dotsWrap = document.getElementById(dotsId);
+  if (!track || !dotsWrap) return;
+
+  if (!photos || photos.length <= 1) {
+    // Single or no photo — just show the existing img, hide dots
+    dotsWrap.innerHTML = '';
+    dotsWrap.style.display = 'none';
+    // Make sure d-photo is set if we have a photo
+    if (photos && photos.length === 1) {
+      track.innerHTML = '<div class="photo-carousel-slide"><img class="detail-hero-img" src="'+photos[0].url+'" alt="" style="object-position:'+photos[0].facePos+'"></div>';
+    }
+    return;
+  }
+
+  // Build slides
+  var slidesHtml = '';
+  photos.forEach(function(p, i) {
+    slidesHtml += '<div class="photo-carousel-slide"><img class="detail-hero-img" src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+(p.facePos||'center 20%')+'"></div>';
+  });
+  track.innerHTML = slidesHtml;
+
+  // Build dots
+  var dotsHtml = '';
+  photos.forEach(function(p, i) {
+    dotsHtml += '<div class="photo-carousel-dot'+(i===0?' active':'')+'" data-idx="'+i+'"></div>';
+  });
+  dotsWrap.innerHTML = dotsHtml;
+  dotsWrap.style.display = 'flex';
+
+  // Carousel state
+  var currentIdx = 0;
+  var startX = 0, diffX = 0, isDragging = false;
+
+  function goToSlide(idx) {
+    if (idx < 0) idx = 0;
+    if (idx >= photos.length) idx = photos.length - 1;
+    currentIdx = idx;
+    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+    dotsWrap.querySelectorAll('.photo-carousel-dot').forEach(function(d, i) {
+      d.classList.toggle('active', i === idx);
+    });
+  }
+
+  // Touch/swipe
+  container.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    isDragging = true;
+    track.classList.add('dragging');
+  }, { passive: true });
+
+  container.addEventListener('touchmove', function(e) {
+    if (!isDragging) return;
+    diffX = e.touches[0].clientX - startX;
+    var pct = -(currentIdx * 100) + (diffX / container.offsetWidth * 100);
+    track.style.transform = 'translateX(' + pct + '%)';
+  }, { passive: true });
+
+  container.addEventListener('touchend', function() {
+    if (!isDragging) return;
+    isDragging = false;
+    track.classList.remove('dragging');
+    if (Math.abs(diffX) > 40) {
+      if (diffX < 0 && currentIdx < photos.length - 1) goToSlide(currentIdx + 1);
+      else if (diffX > 0 && currentIdx > 0) goToSlide(currentIdx - 1);
+      else goToSlide(currentIdx);
+    } else {
+      goToSlide(currentIdx);
+    }
+    diffX = 0;
+  });
+
+  // Click dots
+  dotsWrap.addEventListener('click', function(e) {
+    var dot = e.target.closest('.photo-carousel-dot');
+    if (dot) goToSlide(parseInt(dot.dataset.idx));
+  });
+
+  // Tap left/right halves for navigation
+  container.addEventListener('click', function(e) {
+    if (Math.abs(diffX) > 5) return; // Was a swipe, not a tap
+    var rect = container.getBoundingClientRect();
+    var tapX = e.clientX - rect.left;
+    if (tapX < rect.width * 0.3 && currentIdx > 0) goToSlide(currentIdx - 1);
+    else if (tapX > rect.width * 0.7 && currentIdx < photos.length - 1) goToSlide(currentIdx + 1);
+  });
+}
+
+// Legacy compatibility: previewPhoto still works for the old flow
+function previewPhoto(e) { handleGalleryUpload(e); }
+
 function applyPhoto(src) {
     currentUser.photo = src;
     facePositionCache.delete(src);
-    // Detect best face position using canvas BEFORE applying to all elements
     detectFacePosition(src, function(pos) {
       facePositionCache.set(src, pos);
-      const ids = ['avatar-preview','my-profile-img','topbar-avatar-img'];
+      const ids = ['my-profile-img','topbar-avatar-img'];
       ids.forEach(function(id) {
         var el = document.getElementById(id);
         if (!el) return;
@@ -6750,19 +7270,16 @@ function applyPhoto(src) {
       });
       currentUser.facePos = pos;
       if (typeof facePositionCache !== 'undefined') facePositionCache.set(src, pos);
-      // Save to localStorage cache
       if (currentUser.email && USER_DB[currentUser.email]) {
         USER_DB[currentUser.email].photo = src;
         USER_DB[currentUser.email].facePos = pos;
         _saveDB(USER_DB); _saveSession(currentUser);
       }
-      // Save face position to Supabase
       if (_supabase && currentUser.supabaseId) {
         (async function() {
           try { await _supabase.from('profiles').update({ face_pos: pos }).eq('id', currentUser.supabaseId); } catch(e) {}
         })();
       }
-      // Sync new photo into user's listing cards
       updateUserListingsProfile();
     });
 }
@@ -7094,6 +7611,29 @@ function showMiniProfile(name, age, loc, bio, interests, photo, ownerEmail) {
     var t = document.createElement('span'); t.className = 'interest-tag'; t.textContent = i; wrap.appendChild(t);
   });
   openModal('modal-mini');
+  // Reset mini gallery carousel
+  var miniGalleryEl = document.getElementById('mini-gallery-carousel');
+  var miniAvatarWrap = document.getElementById('mini-avatar-wrap');
+  if (miniGalleryEl) miniGalleryEl.style.display = 'none';
+  if (miniAvatarWrap) miniAvatarWrap.style.display = '';
+
+  // Load gallery photos for carousel in mini profile
+  if (_supabase && ownerEmail) {
+    _supabase.from('profiles').select('id').eq('email', ownerEmail).maybeSingle()
+      .then(function(res) {
+        if (!res.data) return;
+        loadUserGallery(res.data.id).then(function(photos) {
+          var miniModal = document.getElementById('modal-mini');
+          if (!miniModal || !miniModal.classList.contains('open')) return;
+          if (photos && photos.length > 1) {
+            // Show carousel, hide round avatar
+            if (miniGalleryEl) miniGalleryEl.style.display = '';
+            if (miniAvatarWrap) miniAvatarWrap.style.display = 'none';
+            initCarousel('mini-carousel', photos);
+          }
+        });
+      });
+  }
 
   // Log profile visit and show badge
   if (_supabase && ownerEmail && isSignedIn && ownerEmail !== currentUser.email) {
@@ -8437,7 +8977,7 @@ function applyFaceCentering() {
     '.req-avatar img', '.applied-avatar img', '.mini-avatar img',
     '.mini-avatar-lg img', '.profile-avatar img', '.avatar-circle img',
     '.user-avatar-topbar img', '#topbar-avatar-img', '#my-profile-img',
-    '#avatar-preview', '#chat-hdr-img',
+    '#chat-hdr-img',
   ];
   sel.forEach(s => {
     document.querySelectorAll(s).forEach(img => {
