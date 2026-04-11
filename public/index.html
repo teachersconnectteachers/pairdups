@@ -1534,6 +1534,19 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   </div>
 </div>
 
+<!-- PLAN CHANGE CONFIRMATION MODAL -->
+<div class="modal-bg" id="modal-confirm-plan" onclick="if(event.target===this)closeModal('modal-confirm-plan')" style="align-items:center;justify-content:center">
+  <div class="modal-sheet" style="max-width:340px;padding:28px 24px;border-radius:24px;text-align:center">
+    <div id="plan-change-icon" style="font-size:52px;margin-bottom:10px">🔄</div>
+    <div id="plan-change-title" style="font-size:18px;font-weight:900;color:var(--dark);margin-bottom:6px">Switch Plans?</div>
+    <div id="plan-change-msg" style="font-size:13px;color:var(--gray);margin-bottom:20px;line-height:1.6"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button id="plan-change-confirm-btn" onclick="executePlanChange()" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:13px 28px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.3)">Yes, switch plan!</button>
+      <button onclick="closeModal('modal-confirm-plan')" style="background:var(--gray-light);color:var(--dark);border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- FILTER MODAL -->
@@ -3228,25 +3241,50 @@ async function confirmPlanChange() {
     closeModal('modal-manage-plan');
     subscribeToPlan(plan);
   } else {
-    // For downgrades, schedule for next renewal
-    if (!confirm('Are you sure you want to switch to ' + plan.charAt(0).toUpperCase() + plan.slice(1) + '? This will take effect at the end of your current billing period.')) return;
-    closeModal('modal-manage-plan');
-    showToast('Plan change scheduled...');
-    // For now, set the tier directly (in production, this would go through Stripe to cancel/modify)
-    if (_supabase && currentUser.supabaseId) {
-      try {
-        await _supabase.from('profiles').update({
-          subscription_tier: plan,
-          pending_downgrade: plan === 'free' ? true : null
-        }).eq('id', currentUser.supabaseId);
-      } catch(e) { console.log('Plan change error:', e); }
+    // For downgrades, show custom confirmation modal
+    var planName = plan.charAt(0).toUpperCase() + plan.slice(1);
+    var iconEl = document.getElementById('plan-change-icon');
+    var titleEl = document.getElementById('plan-change-title');
+    var msgEl = document.getElementById('plan-change-msg');
+    var btnEl = document.getElementById('plan-change-confirm-btn');
+
+    if (plan === 'free') {
+      iconEl.textContent = '⬇️';
+      titleEl.textContent = 'Switch to Free?';
+      msgEl.innerHTML = 'Your premium features will remain active until the end of your current billing period.<br><br>Your extra photos won\'t be deleted — they\'ll just be hidden until you upgrade again.';
+      btnEl.textContent = 'Yes, switch to Free';
+      btnEl.style.background = '#6B7280';
+    } else {
+      iconEl.textContent = '⬇️';
+      titleEl.textContent = 'Switch to ' + planName + '?';
+      msgEl.innerHTML = 'Your Gold features will remain active until the end of your current billing period.<br><br>Photos beyond 5 won\'t be deleted — they\'ll just be hidden until you upgrade again.';
+      btnEl.textContent = 'Yes, switch to ' + planName;
+      btnEl.style.background = 'var(--pink)';
     }
-    currentUser.subscriptionTier = plan;
-    syncProfileForm();
-    updateAllTierBadges();
-    renderPhotoGallery();
-    showToast(isUpgrade ? 'Upgraded! 🎉' : 'Plan change will take effect at end of billing period.');
+    closeModal('modal-manage-plan');
+    openModal('modal-confirm-plan');
   }
+}
+
+async function executePlanChange() {
+  closeModal('modal-confirm-plan');
+  if (!_selectedPlanChange) return;
+  var plan = _selectedPlanChange;
+  showToast('Plan change scheduled...');
+  if (_supabase && currentUser.supabaseId) {
+    try {
+      await _supabase.from('profiles').update({
+        subscription_tier: plan,
+        pending_downgrade: plan === 'free' ? true : null
+      }).eq('id', currentUser.supabaseId);
+    } catch(e) { console.log('Plan change error:', e); }
+  }
+  currentUser.subscriptionTier = plan;
+  syncProfileForm();
+  updateAllTierBadges();
+  renderPhotoGallery();
+  showToast('Plan change will take effect at end of billing period. ✓');
+  _selectedPlanChange = null;
 }
 
 function showPhotoUpsell() {
