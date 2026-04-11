@@ -1521,6 +1521,19 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   </div>
 </div>
 
+<!-- PHOTO DELETE CONFIRMATION MODAL -->
+<div class="modal-bg" id="modal-delete-photo" onclick="if(event.target===this)closeModal('modal-delete-photo')" style="align-items:center;justify-content:center">
+  <div class="modal-sheet" style="max-width:320px;padding:28px 24px;border-radius:24px;text-align:center">
+    <div style="font-size:52px;margin-bottom:10px">🤔</div>
+    <div style="font-size:18px;font-weight:900;color:var(--dark);margin-bottom:6px">Delete this photo?</div>
+    <div id="delete-photo-msg" style="font-size:13px;color:var(--gray);margin-bottom:20px;line-height:1.5">Are you sure you want to remove this photo from your profile?</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button id="delete-photo-confirm-btn" onclick="executeDeletePhoto()" style="background:#DC2626;color:#fff;border:none;border-radius:50px;padding:13px 28px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(220,38,38,0.3)">🗑️ Yes, delete this photo!</button>
+      <button onclick="closeModal('modal-delete-photo')" style="background:var(--gray-light);color:var(--dark);border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- FILTER MODAL -->
@@ -7422,14 +7435,28 @@ function reorderGalleryPhotos(fromIdx, toIdx) {
   showToast('Photos reordered ✓');
 }
 
+var _pendingDeletePhotoId = null;
 function confirmDeletePhoto(photoId) {
   var p = _galleryPhotos.find(function(x) { return x.id === photoId; });
   if (!p) return;
+  _pendingDeletePhotoId = photoId;
+  var msgEl = document.getElementById('delete-photo-msg');
   if (_galleryPhotos.length === 1) {
-    if (confirm('Remove your only photo?')) deleteGalleryPhoto(photoId);
+    msgEl.textContent = 'This is your only photo. Removing it means your listings will show a default avatar.';
+  } else if (p.isPrimary) {
+    msgEl.textContent = 'This is your main photo. The next photo will become your new listing photo.';
   } else {
-    if (confirm('Remove this photo?')) deleteGalleryPhoto(photoId);
+    msgEl.textContent = 'Are you sure you want to remove this photo from your profile?';
   }
+  openModal('modal-delete-photo');
+}
+
+function executeDeletePhoto() {
+  if (_pendingDeletePhotoId) {
+    deleteGalleryPhoto(_pendingDeletePhotoId);
+    _pendingDeletePhotoId = null;
+  }
+  closeModal('modal-delete-photo');
 }
 
 function galleryItemAction(photoId) {
