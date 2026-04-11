@@ -740,6 +740,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="nav-item active" onclick="navTo('discover')"><div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><span class="nav-label">Discover</span></div>
     <div class="nav-item" onclick="navTo('my')"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="notif-badge my-pairdup-badge" style="display:none">0</div></div><span class="nav-label">My PairdUps</span></div>
     <div class="nav-item" onclick="navTo('messages')"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div class="notif-badge msg-badge-count" style="display:none">0</div></div><span class="nav-label">Messages</span></div>
+    <div class="nav-item" onclick="showPremiumModal()" id="nav-upgrade-btn"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><span class="nav-label" style="color:var(--pink)">Upgrade</span></div>
     <div class="nav-item" onclick="navTo('profile')"><div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="nav-label">Profile</span></div>
   </div>
 </div>
@@ -985,6 +986,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="nav-item" onclick="navTo('discover')"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><span class="nav-label">Discover</span></div>
     <div class="nav-item active" onclick="navTo('my')"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="notif-badge my-pairdup-badge" style="display:none">0</div></div><span class="nav-label">My PairdUps</span></div>
     <div class="nav-item" onclick="navTo('messages')"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div class="notif-badge msg-badge-count" style="display:none">0</div></div><span class="nav-label">Messages</span></div>
+    <div class="nav-item" onclick="showPremiumModal()" id="nav-upgrade-btn"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><span class="nav-label" style="color:var(--pink)">Upgrade</span></div>
     <div class="nav-item" onclick="navTo('profile')"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="nav-label">Profile</span></div>
   </div>
 </div>
@@ -1021,6 +1023,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="nav-item" onclick="navTo('discover')"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><span class="nav-label">Discover</span></div>
     <div class="nav-item" onclick="navTo('my')"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="notif-badge my-pairdup-badge" style="display:none">0</div></div><span class="nav-label">My PairdUps</span></div>
     <div class="nav-item active" onclick="navTo('messages')"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><span class="nav-label">Messages</span></div>
+    <div class="nav-item" onclick="showPremiumModal()" id="nav-upgrade-btn"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><span class="nav-label" style="color:var(--pink)">Upgrade</span></div>
     <div class="nav-item" onclick="navTo('profile')"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="nav-label">Profile</span></div>
   </div>
 </div>
@@ -1121,6 +1124,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="nav-item" onclick="navTo('discover')"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><span class="nav-label">Discover</span></div>
     <div class="nav-item" onclick="navTo('my')"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="notif-badge my-pairdup-badge" style="display:none">0</div></div><span class="nav-label">My PairdUps</span></div>
     <div class="nav-item" onclick="navTo('messages')"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div class="notif-badge msg-badge-count" style="display:none">0</div></div><span class="nav-label">Messages</span></div>
+    <div class="nav-item" onclick="showPremiumModal()" id="nav-upgrade-btn"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><span class="nav-label" style="color:var(--pink)">Upgrade</span></div>
     <div class="nav-item active" onclick="navTo('profile')"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="nav-label">Profile</span></div>
   </div>
 </div>
@@ -1138,6 +1142,10 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
       <div class="avatar-upload-label">Tap to change photo<br><span style="font-size:11px;font-weight:400;color:var(--pink)">(users with a real photo get more responses!)</span></div>
     </div>
     <div class="photo-notice"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p><strong>Your photo = your listing photo.</strong> Choose a clear, friendly photo — it appears on all your PairdUp listings!</p></div>
+    <div id="photo-limit-note" style="text-align:center;margin:-4px 0 12px">
+      <span style="font-size:11px;color:var(--gray)" id="photo-limit-text">1 photo allowed (Free plan)</span>
+      <button onclick="showPhotoUpsell()" id="photo-upgrade-btn" style="display:inline;background:none;border:none;color:var(--pink);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline;margin-left:4px">Want more photos? Upgrade →</button>
+    </div>
     <div class="form-group"><label class="form-label">Name * <span style="font-size:11px;font-weight:400;color:var(--gray)">(first name only)</span></label><input type="text" class="form-input" id="edit-name" value="" placeholder="Your first name" maxlength="30"></div>
     <div class="form-group"><label class="form-label">Email * <span style="font-size:10px;font-weight:400;color:var(--gray)">(Users will NEVER see your email — it's only used by PairdUps to send you notifications)</span></label><input type="email" class="form-input" id="edit-email" value=""></div>
     <div class="form-group"><label class="form-label">Birthday 🎂 <span style="font-size:10px;font-weight:400;color:var(--gray)">(auto-calculates your age — we'll also send you a birthday greeting!)</span></label><input type="date" class="form-input" id="edit-birthday" onchange="calcAgeFromBirthday()"></div>
@@ -2882,6 +2890,22 @@ function getPhotoLimit() {
   return 1;
 }
 
+// ── DEBUG: Test tier switching (browser console only) ────
+// Usage: setTestTier('premium') or setTestTier('gold') or setTestTier('free')
+window.setTestTier = function(tier) {
+  if (!['free','premium','gold'].includes(tier)) { console.log('Use: setTestTier("free"), setTestTier("premium"), or setTestTier("gold")'); return; }
+  currentUser.subscriptionTier = tier;
+  currentUser.subscriptionExpires = new Date(Date.now() + 30*24*60*60*1000).toISOString();
+  if (_supabase && currentUser.supabaseId) {
+    _supabase.from('profiles').update({ subscription_tier: tier, subscription_expires_at: currentUser.subscriptionExpires }).eq('id', currentUser.supabaseId);
+  }
+  // Update UI
+  syncProfileForm();
+  loadSubscriptionStatus();
+  console.log('[PairdUps] Test tier set to: ' + tier + ' (photo limit: ' + getPhotoLimit() + ')');
+  showToast('Test mode: ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' tier active');
+};
+
 function showPremiumModal(upsellMsg) {
   var msgEl = document.getElementById('premium-upsell-msg');
   if (msgEl) {
@@ -2976,6 +3000,14 @@ async function loadSubscriptionStatus() {
         if (themeLocked) themeLocked.style.display = '';
         if (themeColors) themeColors.style.display = 'none';
       }
+      // Hide upgrade buttons for paid members
+      document.querySelectorAll('#nav-upgrade-btn').forEach(function(btn) {
+        btn.style.display = isPremium() ? 'none' : '';
+      });
+      var profileUpgrade = document.getElementById('profile-upgrade-action');
+      if (profileUpgrade) profileUpgrade.style.display = isPremium() ? 'none' : '';
+      var avatarUpgrade = document.getElementById('avatar-menu-upgrade');
+      if (avatarUpgrade) avatarUpgrade.style.display = isPremium() ? 'none' : '';
     }
   } catch(e) { console.log('[PairdUps] Subscription check error:', e); }
 }
@@ -6361,6 +6393,15 @@ function syncProfileForm() {
   if (bdEl) bdEl.value = currentUser.birthday || '';
   document.getElementById('edit-loc').value   = currentUser.loc   || '';
   document.getElementById('edit-bio').value   = currentUser.bio   || '';
+  // Update photo limit display
+  var photoLimitText = document.getElementById('photo-limit-text');
+  var photoUpgradeBtn = document.getElementById('photo-upgrade-btn');
+  if (photoLimitText) {
+    var limit = getPhotoLimit();
+    var tier = getUserTier();
+    photoLimitText.textContent = limit + ' photo' + (limit > 1 ? 's' : '') + ' allowed (' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' plan)';
+    if (photoUpgradeBtn) photoUpgradeBtn.style.display = isPremium() && isGold() ? 'none' : 'inline';
+  }
   // Sync interest pills: mark saved interests as active, create custom ones if missing
   const pillGroup = document.getElementById('interest-pill-group');
   if (pillGroup) {
