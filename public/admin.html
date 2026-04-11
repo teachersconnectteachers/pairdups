@@ -175,7 +175,11 @@ a{color:var(--pink);text-decoration:none}
     </div>
     <div class="nav-item" onclick="showSection('reports')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span>Reports</span>
+      <span>Listing Reports</span>
+    </div>
+    <div class="nav-item" onclick="showSection('support')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Support Tickets</span>
     </div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showSection('email-log')">
@@ -357,8 +361,8 @@ a{color:var(--pink);text-decoration:none}
     <!-- REPORTS -->
     <!-- REPORTS -->
     <div class="section" id="sec-reports">
-      <div class="page-title">Reports</div>
-      <div class="page-sub">Review and manage user-submitted reports</div>
+      <div class="page-title">Listing Reports</div>
+      <div class="page-sub">Review and manage user-submitted listing reports</div>
       <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-pink" onclick="loadReports('all')" id="report-filter-all">All</button>
         <button class="btn btn-gray" onclick="loadReports('pending')" id="report-filter-pending">Pending</button>
@@ -409,6 +413,49 @@ a{color:var(--pink);text-decoration:none}
           <button class="btn btn-red" onclick="blockReportedUser()">⛔ Block User</button>
           <div style="flex:1"></div>
           <button class="btn btn-gray" onclick="document.getElementById('modal-report-detail').classList.remove('open')">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPORT TICKETS -->
+    <div class="section" id="sec-support">
+      <div class="page-title">Support Tickets</div>
+      <div class="page-sub">Contact Support messages from users</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-pink" onclick="loadSupportTickets('all')" id="support-filter-all">All</button>
+        <button class="btn btn-gray" onclick="loadSupportTickets('open')" id="support-filter-open">Open</button>
+        <button class="btn btn-gray" onclick="loadSupportTickets('in_progress')" id="support-filter-in_progress">In Progress</button>
+        <button class="btn btn-gray" onclick="loadSupportTickets('resolved')" id="support-filter-resolved">Resolved</button>
+        <button class="btn btn-gray" onclick="loadSupportTickets('closed')" id="support-filter-closed">Closed</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-pink" onclick="loadSupportTickets(_currentSupportFilter)">Refresh</button>
+      </div>
+      <div id="support-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
+      <table class="data-table" id="support-table">
+        <thead><tr><th>Date</th><th>User</th><th>Subject</th><th>Message</th><th>Status</th><th style="text-align:center">Actions</th></tr></thead>
+        <tbody id="support-body"></tbody>
+      </table>
+      <div id="support-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--gray)">
+        <div style="font-size:40px;margin-bottom:10px">📭</div>
+        <div style="font-size:15px;font-weight:700;color:var(--dark)">No tickets</div>
+        <div style="font-size:13px;margin-top:4px">No support tickets match this filter.</div>
+      </div>
+    </div>
+
+    <!-- SUPPORT TICKET DETAIL MODAL -->
+    <div class="admin-modal-bg" id="modal-support-detail" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="admin-modal" style="max-width:520px">
+        <h3>Support Ticket</h3>
+        <div id="support-detail-content"></div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--gray);margin:16px 0 6px;text-transform:uppercase">Admin Notes / Reply</label>
+        <textarea id="support-admin-notes" style="width:100%;padding:10px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:13px;font-family:inherit;min-height:80px;outline:none;resize:vertical;color:var(--dark)" placeholder="Add notes or draft a reply..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn btn-blue" onclick="updateSupportStatus('in_progress')">In Progress</button>
+          <button class="btn btn-green" onclick="updateSupportStatus('resolved')">Resolve</button>
+          <button class="btn btn-gray" onclick="updateSupportStatus('closed')">Close</button>
+          <button class="btn btn-red" onclick="deleteSupportTicket()">🗑 Delete</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-gray" onclick="document.getElementById('modal-support-detail').classList.remove('open')">Cancel</button>
         </div>
       </div>
     </div>
@@ -649,6 +696,7 @@ function showSection(id) {
   if (id === 'listings') loadListings();
   if (id === 'messages') loadConversations();
   if (id === 'reports') loadReports(_currentReportFilter || 'all');
+  if (id === 'support') loadSupportTickets(_currentSupportFilter || 'all');
   if (id === 'email-log') loadEmailLog();
 }
 
@@ -1688,6 +1736,97 @@ if ('serviceWorker' in navigator) {
   if (savedEmail) document.getElementById('admin-email').value = savedEmail;
   if (remember) document.getElementById('admin-remember').checked = true;
 })();
+
+// ── Support Tickets ───────────────────────────────────────
+var _allSupportTickets = [];
+var _currentSupportFilter = 'all';
+var _currentSupportId = null;
+
+async function loadSupportTickets(filter) {
+  _currentSupportFilter = filter || 'all';
+  ['all','open','in_progress','resolved','closed'].forEach(function(f) {
+    var btn = document.getElementById('support-filter-' + f);
+    if (btn) btn.className = (f === _currentSupportFilter) ? 'btn btn-pink' : 'btn btn-gray';
+  });
+  var query = sb.from('support_tickets').select('*').order('created_at', { ascending: false });
+  if (filter && filter !== 'all') query = query.eq('status', filter);
+  var { data, error } = await query;
+  if (error) { console.error('Support tickets error:', error); }
+  _allSupportTickets = data || [];
+  renderSupportTickets(_allSupportTickets);
+  // Stats
+  var { data: allT } = await sb.from('support_tickets').select('status');
+  var stats = { open: 0, in_progress: 0, resolved: 0, closed: 0 };
+  (allT || []).forEach(function(t) { if (stats[t.status] !== undefined) stats[t.status]++; });
+  document.getElementById('support-stats').innerHTML =
+    '<div class="stat-card" style="padding:10px 16px;flex:1;min-width:100px"><div class="label">Open</div><div class="value" style="font-size:20px;color:var(--red)">' + stats.open + '</div></div>'
+    + '<div class="stat-card" style="padding:10px 16px;flex:1;min-width:100px"><div class="label">In Progress</div><div class="value" style="font-size:20px;color:var(--blue)">' + stats.in_progress + '</div></div>'
+    + '<div class="stat-card" style="padding:10px 16px;flex:1;min-width:100px"><div class="label">Resolved</div><div class="value" style="font-size:20px;color:var(--green)">' + stats.resolved + '</div></div>'
+    + '<div class="stat-card" style="padding:10px 16px;flex:1;min-width:100px"><div class="label">Closed</div><div class="value" style="font-size:20px;color:var(--gray)">' + stats.closed + '</div></div>';
+}
+
+function renderSupportTickets(tickets) {
+  var tbody = document.getElementById('support-body');
+  var emptyEl = document.getElementById('support-empty');
+  var tableEl = document.getElementById('support-table');
+  if (tickets.length === 0) { emptyEl.style.display = 'block'; tableEl.style.display = 'none'; return; }
+  emptyEl.style.display = 'none'; tableEl.style.display = '';
+  var subjectLabels = { general: 'General Question', bug: 'Bug Report', feature: 'Feature Request', account: 'Account Issue', billing: 'Billing', safety: 'Safety Concern', other: 'Other' };
+  var statusBadge = { open: 'badge-blocked', in_progress: 'badge-pending', resolved: 'badge-active', closed: 'badge-hidden' };
+  var statusLabel = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed' };
+  tbody.innerHTML = tickets.map(function(t) {
+    var msgPreview = (t.message || '').length > 60 ? t.message.substring(0, 60) + '...' : (t.message || '-');
+    return '<tr>'
+      + '<td style="font-size:12px">' + new Date(t.created_at).toLocaleDateString() + '<div style="font-size:10px;color:var(--gray)">' + new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</div></td>'
+      + '<td><div style="font-weight:600;font-size:12px">' + (t.email || '?') + '</div></td>'
+      + '<td><span class="badge badge-hidden" style="font-size:10px">' + (subjectLabels[t.subject] || t.subject || 'General') + '</span></td>'
+      + '<td style="font-size:12px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + msgPreview + '</td>'
+      + '<td><span class="badge ' + (statusBadge[t.status] || 'badge-hidden') + '">' + (statusLabel[t.status] || t.status || 'open') + '</span></td>'
+      + '<td style="text-align:center;white-space:nowrap"><button class="btn btn-blue" onclick="openSupportDetail(\'' + t.id + '\')">View</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function openSupportDetail(id) {
+  var t = _allSupportTickets.find(function(x) { return x.id === id; });
+  if (!t) return;
+  _currentSupportId = id;
+  var subjectLabels = { general: 'General Question', bug: 'Bug Report', feature: 'Feature Request', account: 'Account Issue', billing: 'Billing', safety: 'Safety Concern', other: 'Other' };
+  var content = document.getElementById('support-detail-content');
+  content.innerHTML =
+    '<div style="margin-bottom:16px">'
+    + '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">'
+    + '<div><div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;margin-bottom:2px">From</div><div style="font-size:14px;font-weight:600">' + (t.email || '?') + '</div></div>'
+    + '<div><div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;margin-bottom:2px">Date</div><div style="font-size:14px">' + new Date(t.created_at).toLocaleString() + '</div></div>'
+    + '<div><div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;margin-bottom:2px">Subject</div><div style="font-size:14px">' + (subjectLabels[t.subject] || t.subject || 'General') + '</div></div>'
+    + '</div>'
+    + '<div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;margin-bottom:4px">Message</div>'
+    + '<div style="background:#F3F4F6;border-radius:10px;padding:14px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word">' + (t.message || '-') + '</div>'
+    + '</div>';
+  document.getElementById('support-admin-notes').value = t.admin_notes || '';
+  document.getElementById('modal-support-detail').classList.add('open');
+}
+
+async function updateSupportStatus(status) {
+  if (!_currentSupportId) return;
+  var notes = document.getElementById('support-admin-notes').value.trim();
+  var updateData = { status: status, updated_at: new Date().toISOString() };
+  if (notes) updateData.admin_notes = notes;
+  var { error } = await sb.from('support_tickets').update(updateData).eq('id', _currentSupportId);
+  if (error) { alert('Error updating ticket: ' + error.message); return; }
+  document.getElementById('modal-support-detail').classList.remove('open');
+  loadSupportTickets(_currentSupportFilter);
+}
+
+async function deleteSupportTicket() {
+  if (!_currentSupportId) return;
+  if (!confirm('Delete this support ticket?')) return;
+  var { error } = await sb.from('support_tickets').delete().eq('id', _currentSupportId);
+  if (error) { alert('Error deleting ticket: ' + error.message); return; }
+  document.getElementById('modal-support-detail').classList.remove('open');
+  _currentSupportId = null;
+  loadSupportTickets(_currentSupportFilter);
+}
 
 checkSession();
 </script>

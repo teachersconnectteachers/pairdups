@@ -4558,10 +4558,25 @@ function submitSupportForm() {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Please enter a valid email.'); return; }
   if (!subject) { showToast('Please select a topic.'); return; }
   if (!message) { showToast('Please enter a message.'); return; }
-  // In production, this sends to the backend API
-  console.log('[PairdUps Support]', { email: email, subject: subject, message: message, timestamp: new Date().toISOString() });
+
+  // Save to Supabase support_tickets table
+  if (_supabase) {
+    (async function() {
+      try {
+        var ticketData = {
+          email: email,
+          subject: subject,
+          message: message,
+          user_id: currentUser.supabaseId || null
+        };
+        var { error } = await _supabase.from('support_tickets').insert(ticketData);
+        if (error) console.log('[PairdUps] Support ticket error:', error);
+        else console.log('[PairdUps] Support ticket saved');
+      } catch(e) { console.log('[PairdUps] Support ticket exception:', e); }
+    })();
+  }
+
   closeModal('modal-support');
-  // Clear form
   document.getElementById('support-email').value = '';
   document.getElementById('support-subject').value = '';
   document.getElementById('support-message').value = '';
