@@ -2458,8 +2458,7 @@ function initOneSignal() {
           appId: ONESIGNAL_APP_ID,
           allowLocalhostAsSecureOrigin: false,
           welcomeNotification: {
-            title: 'PairdUps',
-            message: 'Thanks for subscribing to PairdUps notifications!'
+            disable: true
           },
           promptOptions: {
             slidedown: {
@@ -2467,9 +2466,9 @@ function initOneSignal() {
                 type: 'push',
                 autoPrompt: true,
                 text: {
-                  actionMessage: 'Subscribe to PairdUps notifications for new PairdUps near you, messages, and more!',
-                  acceptButton: 'Subscribe',
-                  cancelButton: 'Later'
+                  actionMessage: 'Get notified about new PairdUps, messages, and more!',
+                  acceptButton: 'Yes, Notify Me',
+                  cancelButton: 'Not Now'
                 }
               }]
             }
@@ -2611,46 +2610,48 @@ function enablePushNotifications() {
     showToast('Push notifications not available in this browser.');
     return;
   }
+  
+  // If browser has blocked notifications, guide user to fix it
+  if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+    showToast('Notifications are blocked. Tap the lock icon in your browser\'s address bar → Site settings → Notifications → Allow, then refresh.');
+    return;
+  }
+  
   try {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function(OneSignal) {
       try {
-        // First try to opt in if already permitted
         if (Notification.permission === 'granted') {
+          // Already permitted — just opt in to OneSignal
           await OneSignal.User.PushSubscription.optIn();
           console.log('[PairdUps] OneSignal optIn called');
+          setTimeout(function() {
+            tagOneSignalUser();
+            checkPushStatus();
+            showToast('Push notifications enabled! 🔔');
+          }, 2000);
         } else {
-          // Show the slidedown prompt
-          await OneSignal.Slidedown.promptPush();
+          // Need browser permission — show native prompt
+          var result = await Notification.requestPermission();
+          if (result === 'granted') {
+            await OneSignal.User.PushSubscription.optIn();
+            setTimeout(function() {
+              tagOneSignalUser();
+              checkPushStatus();
+              showToast('Push notifications enabled! 🔔');
+            }, 2000);
+          } else if (result === 'denied') {
+            showToast('Notifications blocked. Go to browser settings to allow notifications for pairdups.com.');
+            setTimeout(checkPushStatus, 500);
+          } else {
+            showToast('Notifications not enabled. You can try again later.');
+            setTimeout(checkPushStatus, 500);
+          }
         }
-        // Re-link the user after subscribing
-        setTimeout(function() {
-          tagOneSignalUser();
-          checkPushStatus();
-          showToast('Push notifications enabled! 🔔');
-        }, 2000);
       } catch(e) {
-        console.log('[PairdUps] Push prompt error:', e);
-        // Fallback: native permission request
-        if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-          Notification.requestPermission().then(function(result) {
-            if (result === 'granted') {
-              // Now opt in to OneSignal
-              OneSignalDeferred.push(async function(OS) {
-                try { await OS.User.PushSubscription.optIn(); } catch(e2) {}
-              });
-              setTimeout(function() {
-                tagOneSignalUser();
-                checkPushStatus();
-                showToast('Push notifications enabled! 🔔');
-              }, 2000);
-            } else {
-              showToast('Notifications were not enabled.');
-            }
-          });
-        } else {
-          showToast('Please check your browser notification settings.');
-        }
+        console.log('[PairdUps] Push enable error:', e);
+        showToast('Could not enable notifications. Try refreshing the page.');
+        setTimeout(checkPushStatus, 500);
       }
     });
   } catch(e) {
@@ -2677,11 +2678,11 @@ var BADGE_DEFS = {
 };
 
 var LEVEL_THRESHOLDS = [
-  { name: 'Bronze',   icon: '🥉', min: 0,    color: '#CD7F32' },
-  { name: 'Silver',   icon: '🥈', min: 100,  color: '#C0C0C0' },
-  { name: 'Gold',     icon: '🥇', min: 300,  color: '#FFD700' },
-  { name: 'Platinum', icon: '💎', min: 600,  color: '#E5E4E2' },
-  { name: 'Diamond',  icon: '👑', min: 1000, color: '#B9F2FF' }
+  { name: 'Bronze',   icon: '🥉', min: 0,    color: '#8B5E3C', textColor: '#fff' },
+  { name: 'Silver',   icon: '🥈', min: 100,  color: '#6B7280', textColor: '#fff' },
+  { name: 'Gold',     icon: '🥇', min: 300,  color: '#B8860B', textColor: '#fff' },
+  { name: 'Platinum', icon: '💎', min: 600,  color: '#5B6ABF', textColor: '#fff' },
+  { name: 'Diamond',  icon: '👑', min: 1000, color: '#1E90FF', textColor: '#fff' }
 ];
 
 function getLevelInfo(xp) {
@@ -2842,7 +2843,7 @@ function openRewardsModal() {
 
 function getLevelBadgeHTML(xp) {
   var info = getLevelInfo(xp || 0);
-  return '<span style="font-size:10px;background:' + info.level.color + ';color:#333;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px">' + info.level.icon + ' ' + info.level.name + '</span>';
+  return '<span onclick="openRewardsModal()" style="cursor:pointer;font-size:12px;background:' + info.level.color + ';color:' + (info.level.textColor || '#fff') + ';padding:3px 10px;border-radius:50px;font-weight:800;margin-left:6px;display:inline-flex;align-items:center;gap:3px;vertical-align:middle;box-shadow:0 2px 6px rgba(0,0,0,0.2)">' + info.level.icon + ' ' + info.level.name + '</span>';
 }
 
 async function loadGamificationData() {
