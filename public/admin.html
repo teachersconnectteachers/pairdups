@@ -428,11 +428,12 @@ a{color:var(--pink);text-decoration:none}
         <button class="btn btn-gray" onclick="loadSupportTickets('resolved')" id="support-filter-resolved">Resolved</button>
         <button class="btn btn-gray" onclick="loadSupportTickets('closed')" id="support-filter-closed">Closed</button>
         <div style="flex:1"></div>
+        <button class="btn btn-red" id="support-mass-delete-btn" onclick="massSupportDelete()" style="display:none">🗑 Delete Selected</button>
         <button class="btn btn-pink" onclick="loadSupportTickets(_currentSupportFilter)">Refresh</button>
       </div>
       <div id="support-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
       <table class="data-table" id="support-table">
-        <thead><tr><th>Date</th><th>User</th><th>Subject</th><th>Message</th><th>Status</th><th style="text-align:center">Actions</th></tr></thead>
+        <thead><tr><th>Date</th><th>User</th><th>Subject</th><th>Message</th><th>Status</th><th style="text-align:center">Actions</th><th style="text-align:center;width:40px"><label style="cursor:pointer;display:flex;align-items:center;justify-content:center" title="Select All"><input type="checkbox" id="support-check-all" onchange="toggleAllSupportChecks(this.checked)" style="accent-color:var(--pink);width:16px;height:16px;cursor:pointer"></label></th></tr></thead>
         <tbody id="support-body"></tbody>
       </table>
       <div id="support-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--gray)">
@@ -456,6 +457,19 @@ a{color:var(--pink);text-decoration:none}
           <button class="btn btn-red" onclick="deleteSupportTicket()">🗑 Delete</button>
           <div style="flex:1"></div>
           <button class="btn btn-gray" onclick="document.getElementById('modal-support-detail').classList.remove('open')">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELETE SUPPORT TICKET CONFIRMATION MODAL -->
+    <div class="admin-modal-bg" id="modal-delete-support" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="admin-modal" style="max-width:380px;text-align:center">
+        <div style="font-size:48px;margin-bottom:8px">🤔</div>
+        <h3 style="margin-bottom:6px">Delete Support Ticket?</h3>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:20px;line-height:1.6" id="delete-support-msg">Are you sure you want to delete this support ticket? This action cannot be undone.</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button class="btn btn-gray" onclick="document.getElementById('modal-delete-support').classList.remove('open')" style="padding:10px 24px;border-radius:50px">Cancel</button>
+          <button class="btn btn-red" onclick="confirmDeleteSupport()" style="padding:10px 24px;border-radius:50px">Yes, delete this ticket!</button>
         </div>
       </div>
     </div>
@@ -1769,9 +1783,11 @@ function renderSupportTickets(tickets) {
   var tbody = document.getElementById('support-body');
   var emptyEl = document.getElementById('support-empty');
   var tableEl = document.getElementById('support-table');
-  if (tickets.length === 0) { emptyEl.style.display = 'block'; tableEl.style.display = 'none'; return; }
+  if (tickets.length === 0) { emptyEl.style.display = 'block'; tableEl.style.display = 'none'; document.getElementById('support-mass-delete-btn').style.display = 'none'; return; }
   emptyEl.style.display = 'none'; tableEl.style.display = '';
-  var subjectLabels = { general: 'General Question', bug: 'Bug Report', feature: 'Feature Request', account: 'Account Issue', billing: 'Billing', safety: 'Safety Concern', other: 'Other' };
+  document.getElementById('support-check-all').checked = false;
+  document.getElementById('support-mass-delete-btn').style.display = 'none';
+  var subjectLabels = { general: 'General Question', bug: 'Bug Report', feature: 'Feature Request', account: 'Account Issue', billing: 'Billing', safety: 'Safety Concern', complaint: 'Complaint', other: 'Other' };
   var statusBadge = { open: 'badge-blocked', in_progress: 'badge-pending', resolved: 'badge-active', closed: 'badge-hidden' };
   var statusLabel = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed' };
   tbody.innerHTML = tickets.map(function(t) {
@@ -1782,9 +1798,55 @@ function renderSupportTickets(tickets) {
       + '<td><span class="badge badge-hidden" style="font-size:10px">' + (subjectLabels[t.subject] || t.subject || 'General') + '</span></td>'
       + '<td style="font-size:12px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + msgPreview + '</td>'
       + '<td><span class="badge ' + (statusBadge[t.status] || 'badge-hidden') + '">' + (statusLabel[t.status] || t.status || 'open') + '</span></td>'
-      + '<td style="text-align:center;white-space:nowrap"><button class="btn btn-blue" onclick="openSupportDetail(\'' + t.id + '\')">View</button></td>'
+      + '<td style="text-align:center;white-space:nowrap"><button class="btn btn-blue" onclick="openSupportDetail(\'' + t.id + '\')" style="margin-right:6px">View</button><button onclick="promptDeleteSupportSingle(\'' + t.id + '\')" style="background:none;border:none;cursor:pointer;font-size:24px;opacity:0.6;vertical-align:middle;padding:4px 6px;line-height:1" title="Delete ticket" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">🗑</button></td>'
+      + '<td style="text-align:center"><input type="checkbox" class="support-check" data-id="' + t.id + '" onchange="updateSupportMassDeleteBtn()" style="accent-color:var(--pink);width:16px;height:16px;cursor:pointer"></td>'
       + '</tr>';
   }).join('');
+}
+
+function toggleAllSupportChecks(checked) {
+  document.querySelectorAll('.support-check').forEach(function(cb) { cb.checked = checked; });
+  updateSupportMassDeleteBtn();
+}
+
+function updateSupportMassDeleteBtn() {
+  var checked = document.querySelectorAll('.support-check:checked');
+  var btn = document.getElementById('support-mass-delete-btn');
+  if (checked.length > 0) {
+    btn.style.display = '';
+    btn.textContent = '🗑 Delete Selected (' + checked.length + ')';
+  } else {
+    btn.style.display = 'none';
+  }
+  var all = document.querySelectorAll('.support-check');
+  var checkAll = document.getElementById('support-check-all');
+  if (checkAll) checkAll.checked = all.length > 0 && checked.length === all.length;
+}
+
+var _pendingSupportDeleteIds = [];
+
+function promptDeleteSupportSingle(id) {
+  _pendingSupportDeleteIds = [id];
+  document.getElementById('delete-support-msg').textContent = 'Are you sure you want to delete this support ticket? This action cannot be undone.';
+  document.getElementById('modal-delete-support').classList.add('open');
+}
+
+function massSupportDelete() {
+  var checked = document.querySelectorAll('.support-check:checked');
+  if (checked.length === 0) return;
+  _pendingSupportDeleteIds = Array.from(checked).map(function(cb) { return cb.dataset.id; });
+  document.getElementById('delete-support-msg').textContent = 'Are you sure you want to delete ' + _pendingSupportDeleteIds.length + ' support ticket(s)? This action cannot be undone.';
+  document.getElementById('modal-delete-support').classList.add('open');
+}
+
+async function confirmDeleteSupport() {
+  document.getElementById('modal-delete-support').classList.remove('open');
+  if (_pendingSupportDeleteIds.length === 0) return;
+  for (var i = 0; i < _pendingSupportDeleteIds.length; i++) {
+    await sb.from('support_tickets').delete().eq('id', _pendingSupportDeleteIds[i]);
+  }
+  _pendingSupportDeleteIds = [];
+  loadSupportTickets(_currentSupportFilter);
 }
 
 function openSupportDetail(id) {
@@ -1820,12 +1882,10 @@ async function updateSupportStatus(status) {
 
 async function deleteSupportTicket() {
   if (!_currentSupportId) return;
-  if (!confirm('Delete this support ticket?')) return;
-  var { error } = await sb.from('support_tickets').delete().eq('id', _currentSupportId);
-  if (error) { alert('Error deleting ticket: ' + error.message); return; }
+  _pendingSupportDeleteIds = [_currentSupportId];
   document.getElementById('modal-support-detail').classList.remove('open');
-  _currentSupportId = null;
-  loadSupportTickets(_currentSupportFilter);
+  document.getElementById('delete-support-msg').textContent = 'Are you sure you want to delete this support ticket? This action cannot be undone.';
+  document.getElementById('modal-delete-support').classList.add('open');
 }
 
 checkSession();
