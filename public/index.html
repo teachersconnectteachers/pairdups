@@ -3286,6 +3286,28 @@ async function executePlanChange() {
         subscription_tier: plan,
         pending_downgrade: plan === 'free' ? true : null
       }).eq('id', currentUser.supabaseId);
+
+      // Send downgrade email
+      var planName = plan === 'premium' ? 'Premium' : 'Free';
+      var session = await _supabase.auth.getSession();
+      var token = session.data?.session?.access_token;
+      if (token && currentUser.email) {
+        fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            type: 'plan_downgraded',
+            to_email: currentUser.email,
+            to_user_id: currentUser.supabaseId,
+            to_name: currentUser.name || 'there',
+            plan_name: planName
+          })
+        }).then(function() {
+          console.log('[PairdUps] Downgrade email sent');
+        }).catch(function(e) {
+          console.log('[PairdUps] Downgrade email error:', e);
+        });
+      }
     } catch(e) { console.log('Plan change error:', e); }
   }
   currentUser.subscriptionTier = plan;
