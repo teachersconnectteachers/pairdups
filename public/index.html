@@ -3192,6 +3192,7 @@ function updateProfilePhotoCount() {
 // ── Tier Badge & Plan Management ──────────────────────────
 function updateAllTierBadges() {
   var tier = getUserTier();
+  console.log('[PairdUps] updateAllTierBadges called — tier:', tier, 'raw subscriptionTier:', currentUser.subscriptionTier, 'expires:', currentUser.subscriptionExpires);
   var tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
   var badges = [
     document.getElementById('edit-profile-tier-badge'),
@@ -10104,6 +10105,7 @@ window.addEventListener('load', async function() {
             subscriptionTier: profile.subscription_tier || 'free',
             subscriptionExpires: profile.subscription_expires_at || null
           };
+          console.log('[PairdUps] Session restored — tier from DB:', profile.subscription_tier, 'set as:', currentUser.subscriptionTier);
           USER_DB[session.user.email] = Object.assign({}, currentUser); _saveDB(USER_DB);
           _saveSession(currentUser);
           isSignedIn = true;
@@ -10112,7 +10114,7 @@ window.addEventListener('load', async function() {
           syncProfileForm();
           showTopbarAvatar();
           updateAllTierBadges();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus(); loadGamificationData(); }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); }); loadGamificationData(); }, 500);
         }
       }
     } catch(e) { console.log('Supabase session check:', e); }
@@ -10134,7 +10136,8 @@ window.addEventListener('load', async function() {
           document.getElementById('screen-discover').classList.add('active');
           syncProfileForm();
           showTopbarAvatar();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); if (_supabase && currentUser.supabaseId) { loadSubscriptionStatus(); loadGamificationData(); } }, 500);
+          updateAllTierBadges();
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); if (_supabase && currentUser.supabaseId) { loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); }); loadGamificationData(); } }, 500);
         }
       }
     } catch(e) {}
