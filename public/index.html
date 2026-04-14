@@ -113,6 +113,7 @@ body{background:#d0d0d8;display:flex;justify-content:center;align-items:center;m
 .nav-item.active .nav-icon{background:var(--pink-pale)}
 .nav-item svg{width:22px;height:22px;stroke:var(--gray);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .nav-item.active svg{stroke:var(--pink)}
+.nav-item svg.gold-star{fill:#F59E0B!important;stroke:#D97706!important;filter:drop-shadow(0 0 4px rgba(245,158,11,0.6))}
 .nav-label{font-size:10px;color:var(--gray);font-weight:600}
 .nav-item.active .nav-label{color:var(--pink)}
 .notif-badge{position:absolute;top:-3px;right:-3px;width:16px;height:16px;background:var(--pink);border-radius:50%;font-size:9px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
@@ -3080,7 +3081,7 @@ window.setTestTier = function(tier) {
       btn.style.display = '';
       var iconWrap = btn.querySelector('.nav-icon');
       if (iconWrap) {
-        iconWrap.innerHTML = '<svg viewBox="0 0 24 24" fill="#F59E0B" stroke="#D97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px rgba(245,158,11,0.6))"><polygon fill="#F59E0B" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+        iconWrap.innerHTML = '<svg class="gold-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
       }
       var label = btn.querySelector('.nav-label');
       if (label) { label.textContent = 'Go Gold'; label.style.color = '#D97706'; label.style.fontWeight = '800'; }
