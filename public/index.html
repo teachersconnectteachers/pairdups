@@ -3028,8 +3028,17 @@ async function loadGamificationData() {
 
 // ── Premium Subscription System ──────────────────────────
 function getUserTier() {
-  if (!currentUser.subscriptionTier) return 'free';
-  if (currentUser.subscriptionExpires && new Date(currentUser.subscriptionExpires) < new Date()) return 'free';
+  if (!currentUser.subscriptionTier || currentUser.subscriptionTier === 'free') return 'free';
+  // Only check expiry if we have a date — be lenient with 24hr grace period
+  if (currentUser.subscriptionExpires) {
+    var expiryDate = new Date(currentUser.subscriptionExpires);
+    var now = new Date();
+    var gracePeriod = 24 * 60 * 60 * 1000; // 24 hours grace
+    if (expiryDate.getTime() + gracePeriod < now.getTime()) {
+      console.log('[PairdUps] Subscription expired:', currentUser.subscriptionExpires);
+      return 'free';
+    }
+  }
   return currentUser.subscriptionTier;
 }
 
@@ -3412,13 +3421,14 @@ async function subscribeToPlan(plan) {
 }
 
 async function loadSubscriptionStatus() {
-  if (!_supabase || !currentUser.supabaseId) return;
+  if (!_supabase || !currentUser.supabaseId) { console.log('[PairdUps] loadSubscriptionStatus skipped — no supabase or userId'); return; }
   try {
-    var { data: profile } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at').eq('id', currentUser.supabaseId).maybeSingle();
+    var { data: profile, error } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id').eq('id', currentUser.supabaseId).maybeSingle();
+    if (error) { console.log('[PairdUps] Subscription load error:', error); return; }
     if (profile) {
       currentUser.subscriptionTier = profile.subscription_tier || 'free';
       currentUser.subscriptionExpires = profile.subscription_expires_at || null;
-      console.log('[PairdUps] Subscription:', currentUser.subscriptionTier, 'expires:', currentUser.subscriptionExpires);
+      console.log('[PairdUps] Subscription:', currentUser.subscriptionTier, 'expires:', currentUser.subscriptionExpires, 'stripe_cust:', profile.stripe_customer_id, 'stripe_sub:', profile.stripe_subscription_id);
       // Update settings tier label
       var tierLabel = document.getElementById('settings-tier-label');
       var tierSub = document.getElementById('settings-tier-sub');
@@ -3480,10 +3490,35 @@ function checkSubscriptionReturn() {
   var params = new URLSearchParams(window.location.search);
   if (params.get('subscription') === 'success') {
     var plan = params.get('plan') || 'premium';
-    setTimeout(function() {
-      showToast('🎉 Welcome to PairdUps ' + (plan === 'gold' ? 'Gold' : 'Premium') + '! Your upgrade is active.');
-      loadSubscriptionStatus();
-    }, 1000);
+    showToast('🎉 Processing your upgrade...');
+    // Poll for tier change — webhook may take a few seconds
+    var retries = 0;
+    var maxRetries = 10;
+    function pollForUpgrade() {
+      retries++;
+      loadSubscriptionStatus().then(function() {
+        var currentTier = getUserTier();
+        console.log('[PairdUps] Poll #' + retries + ': tier=' + currentTier + ', expected=' + plan);
+        if (currentTier === plan || retries >= maxRetries) {
+          if (currentTier === plan) {
+            showToast('🎉 Welcome to PairdUps ' + (plan === 'gold' ? 'Gold' : 'Premium') + '! Your upgrade is active.');
+          } else {
+            // Webhook hasn't fired yet — force set tier from URL param
+            console.log('[PairdUps] Webhook slow — forcing tier from checkout return');
+            currentUser.subscriptionTier = plan;
+            currentUser.subscriptionExpires = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
+            updateAllTierBadges();
+            renderPhotoGallery();
+            showToast('🎉 Welcome to PairdUps ' + (plan === 'gold' ? 'Gold' : 'Premium') + '! Your upgrade is active.');
+            // Keep polling in background to get real data
+            setTimeout(function() { loadSubscriptionStatus(); }, 15000);
+          }
+        } else {
+          setTimeout(pollForUpgrade, 2000);
+        }
+      });
+    }
+    setTimeout(pollForUpgrade, 2000);
     // Clean URL
     window.history.replaceState({}, '', window.location.pathname);
   } else if (params.get('subscription') === 'cancelled') {
@@ -10058,7 +10093,9 @@ window.addEventListener('load', async function() {
             interests: profile.interests || [], photo: profile.photo_url || '',
             facePos: profile.face_pos || 'center 20%',
             birthday: profile.birthday || '',
-            memberSince: profile.member_since || '', supabaseId: session.user.id, isNewUser: false
+            memberSince: profile.member_since || '', supabaseId: session.user.id, isNewUser: false,
+            subscriptionTier: profile.subscription_tier || 'free',
+            subscriptionExpires: profile.subscription_expires_at || null
           };
           USER_DB[session.user.email] = Object.assign({}, currentUser); _saveDB(USER_DB);
           _saveSession(currentUser);
@@ -10089,7 +10126,7 @@ window.addEventListener('load', async function() {
           document.getElementById('screen-discover').classList.add('active');
           syncProfileForm();
           showTopbarAvatar();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); if (_supabase && currentUser.supabaseId) { loadSubscriptionStatus(); loadGamificationData(); } }, 500);
         }
       }
     } catch(e) {}
