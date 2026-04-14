@@ -1158,7 +1158,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="profile-hero">
       <button class="profile-back-btn" id="profile-back-btn" onclick="profileBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
       <button class="profile-edit-top-btn" onclick="openEditProfile()">Edit Profile</button>
-      <div class="profile-avatar-wrap"><div class="profile-avatar" onclick="showOwnGallery()"><img id="my-profile-img" src="" alt="me"></div><div id="profile-photo-count" style="display:none;position:absolute;bottom:-2px;right:-2px;background:var(--pink);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;border:2px solid #fff"></div></div>
+      <div class="profile-avatar-wrap"><div class="profile-avatar" onclick="showOwnGallery()"><img id="my-profile-img" src="" alt="me"></div><div id="profile-photo-count" style="display:none;position:absolute;bottom:-2px;right:-2px;background:var(--pink);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;border:2px solid #fff"></div><div id="profile-plan-badge" style="position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:5" onclick="showManagePlanModal()"></div></div>
     </div>
     <div id="profile-completion-bar"></div>
     <div class="profile-info">
@@ -3004,7 +3004,7 @@ function openRewardsModal() {
 
 function getLevelBadgeHTML(xp) {
   var info = getLevelInfo(xp || 0);
-  return '<span onclick="event.stopPropagation();openRewardsModal()" style="cursor:pointer;font-size:13px;background:linear-gradient(135deg,#DC2626,#1D4ED8);color:#fff;padding:4px 12px;border-radius:50px;font-weight:800;margin-left:auto;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;box-shadow:0 2px 8px rgba(29,78,216,0.35);float:right">' + info.level.icon + ' ' + info.level.name + '</span>';
+  return '<span onclick="event.stopPropagation();openRewardsModal()" style="cursor:pointer;font-size:12px;background:linear-gradient(135deg,#DC2626,#1D4ED8);color:#fff;padding:4px 12px;border-radius:50px;font-weight:800;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;box-shadow:0 2px 8px rgba(29,78,216,0.35)">' + info.level.icon + ' ' + info.level.name + '</span>';
 }
 
 async function loadGamificationData() {
@@ -3064,7 +3064,24 @@ window.setTestTier = function(tier) {
     if (tierSub) tierSub.textContent = tier === 'free' ? 'Unlock photos, badges, analytics & more' : 'Manage your subscription';
   }
   // Show/hide upgrade buttons
-  document.querySelectorAll('#nav-upgrade-btn').forEach(function(btn) { btn.style.display = tier !== 'free' ? 'none' : ''; });
+  document.querySelectorAll('#nav-upgrade-btn').forEach(function(btn) {
+    if (tier === 'gold') {
+      btn.style.display = 'none'; // Gold users don't need upgrade
+    } else if (tier === 'premium') {
+      btn.style.display = ''; // Show for Premium users
+      var icon = btn.querySelector('.nav-icon svg');
+      if (icon) { icon.style.fill = '#F59E0B'; icon.style.stroke = '#F59E0B'; }
+      var label = btn.querySelector('.nav-label');
+      if (label) { label.textContent = 'Go Gold'; label.style.color = '#D97706'; }
+      btn.onclick = function() { showPremiumModal(); };
+    } else {
+      btn.style.display = ''; // Show for Free users
+      var icon = btn.querySelector('.nav-icon svg');
+      if (icon) { icon.style.fill = 'none'; icon.style.stroke = 'currentColor'; }
+      var label = btn.querySelector('.nav-label');
+      if (label) { label.textContent = 'Upgrade'; label.style.color = 'var(--pink)'; }
+    }
+  });
   var profileUpgrade = document.getElementById('profile-upgrade-action');
   if (profileUpgrade) profileUpgrade.style.display = tier !== 'free' ? 'none' : '';
   var avatarUpgrade = document.getElementById('avatar-menu-upgrade');
@@ -3100,10 +3117,10 @@ function showPremiumModal(upsellMsg) {
 }
 
 function showOwnGallery() {
-  if (_galleryPhotos.length > 1) {
-    showFullscreenGallery(_galleryPhotos.map(function(p) { return { url: p.url, facePos: p.facePos }; }));
-  } else if (_galleryPhotos.length === 1) {
-    showFullscreenGallery([{ url: _galleryPhotos[0].url, facePos: _galleryPhotos[0].facePos }]);
+  var limit = getPhotoLimit();
+  var visiblePhotos = _galleryPhotos.slice(0, limit);
+  if (visiblePhotos.length > 0) {
+    showFullscreenGallery(visiblePhotos.map(function(p) { return { url: p.url, facePos: p.facePos }; }));
   } else if (currentUser.photo) {
     showFullscreenGallery([{ url: currentUser.photo, facePos: currentUser.facePos || 'center 20%' }]);
   }
@@ -3111,20 +3128,32 @@ function showOwnGallery() {
 
 function showFullscreenGallery(photos) {
   if (!photos || photos.length === 0) return;
+  // Limit to tier for own photos
+  var limit = getPhotoLimit();
+  if (photos.length > limit) photos = photos.slice(0, limit);
   var overlay = document.getElementById('fullscreen-gallery-overlay');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'fullscreen-gallery-overlay';
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center';
     overlay.innerHTML = '<button onclick="closeFullscreenGallery()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10001"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
-      + '<div style="width:100%;max-width:500px;height:70vh;position:relative"><div class="photo-carousel" id="fs-carousel"><div class="photo-carousel-track" id="fs-carousel-track"></div><div class="photo-carousel-dots" id="fs-carousel-dots"></div></div></div>'
+      + '<div style="width:100%;max-width:500px;height:70vh;position:relative;overflow:hidden"><div class="photo-carousel" id="fs-carousel" style="height:100%"><div class="photo-carousel-track" id="fs-carousel-track" style="height:100%"></div><div class="photo-carousel-dots" id="fs-carousel-dots"></div></div></div>'
       + '<div id="fs-gallery-counter" style="color:#fff;font-size:13px;margin-top:12px;font-weight:600"></div>';
     document.body.appendChild(overlay);
   }
   overlay.style.display = 'flex';
   var counterEl = document.getElementById('fs-gallery-counter');
   if (counterEl) counterEl.textContent = photos.length > 1 ? '1 / ' + photos.length : '';
-  setTimeout(function() { initCarousel('fs-carousel', photos); }, 50);
+  // Use contain for fullscreen so photos aren't cropped
+  setTimeout(function() {
+    initCarousel('fs-carousel', photos);
+    // Override img styling for fullscreen
+    document.querySelectorAll('#fs-carousel-track .photo-carousel-slide img').forEach(function(img) {
+      img.style.objectFit = 'contain';
+      img.style.objectPosition = 'center center';
+      img.style.background = '#000';
+    });
+  }, 50);
 }
 
 function closeFullscreenGallery() {
@@ -3134,9 +3163,11 @@ function closeFullscreenGallery() {
 
 function updateProfilePhotoCount() {
   var countEl = document.getElementById('profile-photo-count');
+  var limit = getPhotoLimit();
+  var visibleCount = Math.min(_galleryPhotos.length, limit);
   if (countEl) {
-    if (_galleryPhotos.length > 1) {
-      countEl.textContent = _galleryPhotos.length;
+    if (visibleCount > 1) {
+      countEl.textContent = visibleCount;
       countEl.style.display = '';
     } else {
       countEl.style.display = 'none';
@@ -3159,6 +3190,17 @@ function updateAllTierBadges() {
     else if (tier === 'premium') el.innerHTML = '⭐ Premium';
     else el.innerHTML = '🆓 Free';
   });
+  // Update profile photo plan badge
+  var profilePlanBadge = document.getElementById('profile-plan-badge');
+  if (profilePlanBadge) {
+    if (tier === 'gold') {
+      profilePlanBadge.innerHTML = '<span style="font-size:10px;font-weight:800;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:3px 10px;border-radius:50px;border:2px solid #fff;cursor:pointer;box-shadow:0 2px 8px rgba(245,158,11,0.4)">👑 Gold</span>';
+    } else if (tier === 'premium') {
+      profilePlanBadge.innerHTML = '<span style="font-size:10px;font-weight:800;background:var(--pink);color:#fff;padding:3px 10px;border-radius:50px;border:2px solid #fff;cursor:pointer;box-shadow:0 2px 8px rgba(255,59,127,0.4)">⭐ Premium</span>';
+    } else {
+      profilePlanBadge.innerHTML = '';
+    }
+  }
   // Update avatar menu upgrade text
   var upgradeText = document.getElementById('avatar-menu-upgrade-text');
   if (upgradeText) {
@@ -3401,10 +3443,7 @@ async function loadSubscriptionStatus() {
         if (themeLocked) themeLocked.style.display = '';
         if (themeColors) themeColors.style.display = 'none';
       }
-      // Hide upgrade buttons for paid members
-      document.querySelectorAll('#nav-upgrade-btn').forEach(function(btn) {
-        btn.style.display = isPremium() ? 'none' : '';
-      });
+      // Update upgrade buttons via updateAllTierBadges
       updateAllTierBadges();
     }
   } catch(e) { console.log('[PairdUps] Subscription check error:', e); }
@@ -3557,8 +3596,8 @@ function getTimeAgo(date) {
 }
 
 function getBadgeHTML(tier) {
-  if (tier === 'gold') return '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px" title="Gold Member — PairdUps Gold subscriber">👑 Gold</span>';
-  if (tier === 'premium') return '<span style="font-size:10px;background:var(--pink);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px;cursor:help" title="Verified — This user has a PairdUps Premium subscription, confirming they are a committed, real member of the community." onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
+  if (tier === 'gold') return '<span style="font-size:12px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:4px 12px;border-radius:50px;font-weight:800;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(245,158,11,0.35)" title="Gold Member — PairdUps Gold subscriber">👑 Gold</span>';
+  if (tier === 'premium') return '<span style="font-size:12px;background:var(--pink);color:#fff;padding:4px 12px;border-radius:50px;font-weight:800;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(255,59,127,0.35);cursor:help" title="Verified — This user has a PairdUps Premium subscription, confirming they are a committed, real member of the community." onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
   return '';
 }
 
@@ -7066,7 +7105,7 @@ function syncProfileForm() {
     myBadgeEl.id = 'my-profile-badge';
     document.getElementById('my-profile-name').appendChild(myBadgeEl);
   }
-  myBadgeEl.innerHTML = getBadgeHTML(getUserTier()) + getLevelBadgeHTML(getUserXP());
+  myBadgeEl.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + getBadgeHTML(getUserTier()) + getLevelBadgeHTML(getUserXP()) + '</div>';
   document.getElementById('my-profile-loc').textContent = currentUser.loc || '';
   var profileEmailText = document.getElementById('my-profile-email-text');
   var profileEmailWrap = document.getElementById('my-profile-email');
@@ -7482,7 +7521,7 @@ function renderPhotoGallery() {
   if (!grid) return;
   var limit = getPhotoLimit();
   var countEl = document.getElementById('photo-gallery-count');
-  if (countEl) countEl.textContent = _galleryPhotos.length + '/' + limit + ' photos';
+  if (countEl) countEl.textContent = Math.min(_galleryPhotos.length, limit) + '/' + limit + ' photos';
   var hintEl = document.getElementById('photo-reorder-hint');
   if (hintEl) hintEl.style.display = _galleryPhotos.length > 1 ? '' : 'none';
 
@@ -7497,17 +7536,28 @@ function renderPhotoGallery() {
 
   var html = '';
   _galleryPhotos.forEach(function(p, i) {
-    html += '<div class="photo-gallery-item" data-photo-id="'+p.id+'" data-photo-idx="'+i+'" draggable="true">';
-    html += '<img src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+'">';
-    if (p.isPrimary) html += '<div class="photo-primary-badge">★ Main</div>';
-    else html += '<div class="photo-set-main-btn" onclick="event.stopPropagation();setGalleryPrimary(\''+p.id+'\')">Set as Main</div>';
-    html += '<div class="photo-order-badge">'+(i+1)+'</div>';
-    html += '<button class="photo-delete-btn" onclick="event.stopPropagation();confirmDeletePhoto(\''+p.id+'\')" title="Remove photo"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
-    html += '</div>';
+    if (i < limit) {
+      // Visible photos within tier limit
+      html += '<div class="photo-gallery-item" data-photo-id="'+p.id+'" data-photo-idx="'+i+'" draggable="true">';
+      html += '<img src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+'">';
+      if (p.isPrimary) html += '<div class="photo-primary-badge">★ Main</div>';
+      else html += '<div class="photo-set-main-btn" onclick="event.stopPropagation();setGalleryPrimary(\''+p.id+'\')">Set as Main</div>';
+      html += '<div class="photo-order-badge">'+(i+1)+'</div>';
+      html += '<button class="photo-delete-btn" onclick="event.stopPropagation();confirmDeletePhoto(\''+p.id+'\')" title="Remove photo"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+      html += '</div>';
+    } else {
+      // Photos beyond limit — show locked with thumbnail
+      html += '<div class="photo-gallery-item" style="opacity:0.4;position:relative;cursor:pointer" onclick="showPhotoUpsell()">';
+      html += '<img src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+';filter:blur(2px)">';
+      html += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:24px;background:rgba(0,0,0,0.5);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center">🔒</div>';
+      html += '<div class="photo-order-badge" style="background:rgba(0,0,0,0.5)">'+(i+1)+'</div>';
+      html += '</div>';
+    }
   });
 
-  // Add slot(s) if under limit
-  if (_galleryPhotos.length < limit) {
+  // Add slot(s) if under limit and visible photos under limit
+  var visibleCount = Math.min(_galleryPhotos.length, limit);
+  if (visibleCount < limit) {
     html += '<div class="photo-add-slot" onclick="triggerPhotoUpload()">';
     html += '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
     html += '<span>Add Photo</span></div>';
@@ -7516,8 +7566,8 @@ function renderPhotoGallery() {
   // Show locked slots to tease upgrade (fill remaining grid to next tier's limit)
   if (!isGold()) {
     var nextLimit = isPremium() ? 12 : 5;
-    var filledSlots = _galleryPhotos.length + (_galleryPhotos.length < limit ? 1 : 0); // photos + add button
-    var lockedCount = nextLimit - filledSlots;
+    var totalSlots = _galleryPhotos.length + (_galleryPhotos.length < limit ? 1 : 0);
+    var lockedCount = nextLimit - totalSlots;
     if (lockedCount < 0) lockedCount = 0;
     for (var li = 0; li < lockedCount; li++) {
       html += '<div class="photo-add-slot locked" onclick="showPhotoUpsell()">';
@@ -7709,10 +7759,16 @@ async function loadGalleryPhotos() {
 async function loadUserGallery(userId) {
   if (!_supabase || !userId) return [];
   try {
+    // Get the user's tier to limit photos
+    var { data: profile } = await _supabase.from('profiles').select('subscription_tier').eq('id', userId).maybeSingle();
+    var tier = profile?.subscription_tier || 'free';
+    var photoLimit = tier === 'gold' ? 12 : (tier === 'premium' ? 5 : 1);
+
     var { data, error } = await _supabase.from('profile_photos')
       .select('photo_url, face_pos, display_order, is_primary')
       .eq('user_id', userId)
-      .order('display_order', { ascending: true });
+      .order('display_order', { ascending: true })
+      .limit(photoLimit);
     if (error || !data || data.length === 0) return [];
     return data.map(function(row) {
       return { url: row.photo_url, facePos: row.face_pos || 'center 20%', isPrimary: row.is_primary };
@@ -7821,9 +7877,45 @@ function initCarousel(containerId, photos) {
     if (dot) goToSlide(parseInt(dot.dataset.idx));
   });
 
-  // Tap left/right halves for navigation
+  // Mouse drag for desktop
+  var mouseStartX = 0, mouseDiffX = 0, isMouseDragging = false;
+  container.addEventListener('mousedown', function(e) {
+    mouseStartX = e.clientX;
+    isMouseDragging = true;
+    mouseDiffX = 0;
+    track.classList.add('dragging');
+    e.preventDefault();
+  });
+  container.addEventListener('mousemove', function(e) {
+    if (!isMouseDragging) return;
+    mouseDiffX = e.clientX - mouseStartX;
+    var pct = -(currentIdx * 100) + (mouseDiffX / container.offsetWidth * 100);
+    track.style.transform = 'translateX(' + pct + '%)';
+  });
+  container.addEventListener('mouseup', function(e) {
+    if (!isMouseDragging) return;
+    isMouseDragging = false;
+    track.classList.remove('dragging');
+    if (Math.abs(mouseDiffX) > 40) {
+      if (mouseDiffX < 0) goToSlide(currentIdx + 1);
+      else goToSlide(currentIdx - 1);
+    } else {
+      goToSlide(currentIdx);
+    }
+    mouseDiffX = 0;
+  });
+  container.addEventListener('mouseleave', function() {
+    if (isMouseDragging) {
+      isMouseDragging = false;
+      track.classList.remove('dragging');
+      goToSlide(currentIdx);
+      mouseDiffX = 0;
+    }
+  });
+
+  // Tap left/right halves for navigation (only if not dragging)
   container.addEventListener('click', function(e) {
-    if (Math.abs(diffX) > 5) return;
+    if (Math.abs(diffX) > 5 || Math.abs(mouseDiffX) > 5) return;
     var rect = container.getBoundingClientRect();
     var tapX = e.clientX - rect.left;
     if (tapX < rect.width * 0.3) goToSlide(currentIdx - 1);
