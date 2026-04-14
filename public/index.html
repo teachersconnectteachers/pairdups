@@ -3079,16 +3079,24 @@ window.setTestTier = function(tier) {
     } else if (tier === 'premium') {
       btn.style.display = ''; // Show for Premium users
       var icon = btn.querySelector('.nav-icon svg');
-      if (icon) { icon.style.fill = '#F59E0B'; icon.style.stroke = '#F59E0B'; }
+      if (icon) {
+        icon.setAttribute('fill', '#F59E0B');
+        icon.setAttribute('stroke', '#D97706');
+        icon.style.filter = 'drop-shadow(0 0 4px rgba(245,158,11,0.5))';
+      }
       var label = btn.querySelector('.nav-label');
-      if (label) { label.textContent = 'Go Gold'; label.style.color = '#D97706'; }
+      if (label) { label.textContent = 'Go Gold'; label.style.color = '#D97706'; label.style.fontWeight = '800'; }
       btn.onclick = function() { showPremiumModal(); };
     } else {
       btn.style.display = ''; // Show for Free users
       var icon = btn.querySelector('.nav-icon svg');
-      if (icon) { icon.style.fill = 'none'; icon.style.stroke = 'currentColor'; }
+      if (icon) {
+        icon.setAttribute('fill', 'none');
+        icon.setAttribute('stroke', 'currentColor');
+        icon.style.filter = '';
+      }
       var label = btn.querySelector('.nav-label');
-      if (label) { label.textContent = 'Upgrade'; label.style.color = 'var(--pink)'; }
+      if (label) { label.textContent = 'Upgrade'; label.style.color = 'var(--pink)'; label.style.fontWeight = ''; }
     }
   });
   var profileUpgrade = document.getElementById('profile-upgrade-action');
