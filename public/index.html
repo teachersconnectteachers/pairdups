@@ -3075,35 +3075,21 @@ window.setTestTier = function(tier) {
   // Show/hide upgrade buttons
   document.querySelectorAll('#nav-upgrade-btn').forEach(function(btn) {
     if (tier === 'gold') {
-      btn.style.display = 'none'; // Gold users don't need upgrade
+      btn.style.display = 'none';
     } else if (tier === 'premium') {
-      btn.style.display = ''; // Show for Premium users
-      var svgEl = btn.querySelector('.nav-icon svg');
-      var polyEl = btn.querySelector('.nav-icon svg polygon');
-      if (svgEl) {
-        svgEl.setAttribute('fill', '#F59E0B');
-        svgEl.setAttribute('stroke', '#D97706');
-        svgEl.style.filter = 'drop-shadow(0 0 4px rgba(245,158,11,0.5))';
-      }
-      if (polyEl) {
-        polyEl.setAttribute('fill', '#F59E0B');
-        polyEl.setAttribute('stroke', '#D97706');
+      btn.style.display = '';
+      var iconWrap = btn.querySelector('.nav-icon');
+      if (iconWrap) {
+        iconWrap.innerHTML = '<svg viewBox="0 0 24 24" fill="#F59E0B" stroke="#D97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px rgba(245,158,11,0.6))"><polygon fill="#F59E0B" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
       }
       var label = btn.querySelector('.nav-label');
       if (label) { label.textContent = 'Go Gold'; label.style.color = '#D97706'; label.style.fontWeight = '800'; }
       btn.onclick = function() { showPremiumModal(); };
     } else {
-      btn.style.display = ''; // Show for Free users
-      var svgEl = btn.querySelector('.nav-icon svg');
-      var polyEl = btn.querySelector('.nav-icon svg polygon');
-      if (svgEl) {
-        svgEl.setAttribute('fill', 'none');
-        svgEl.setAttribute('stroke', 'currentColor');
-        svgEl.style.filter = '';
-      }
-      if (polyEl) {
-        polyEl.setAttribute('fill', 'none');
-        polyEl.setAttribute('stroke', 'currentColor');
+      btn.style.display = '';
+      var iconWrap = btn.querySelector('.nav-icon');
+      if (iconWrap) {
+        iconWrap.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
       }
       var label = btn.querySelector('.nav-label');
       if (label) { label.textContent = 'Upgrade'; label.style.color = 'var(--pink)'; label.style.fontWeight = ''; }
