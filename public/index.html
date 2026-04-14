@@ -1685,6 +1685,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     </div>
     <div class="filter-footer">
       <button class="filter-clear" onclick="clearFilter()">Clear All</button>
+      <button class="filter-clear" onclick="clearAdvancedFilters()" style="background:#EDE9FE;color:#7C3AED">Clear Advanced</button>
       <button class="filter-apply" onclick="applyFilter()">Apply Filters</button>
     </div>
   </div>
@@ -2286,15 +2287,16 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
           <div style="font-size:11px;color:var(--gray);margin-bottom:6px">🔒 Customize your profile card colors</div>
           <button onclick="closeModal('modal-settings');showPremiumModal('🎨 Upgrade to customize your profile with unique theme colors!')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:7px 18px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit">✨ Upgrade to Unlock</button>
         </div>
-        <div id="theme-colors" style="display:none;display:flex;gap:8px;flex-wrap:wrap;padding:8px 14px;background:var(--gray-light);border-radius:12px">
+        <div id="theme-colors" style="display:none;gap:8px;flex-wrap:wrap;padding:8px 14px;background:var(--gray-light);border-radius:12px">
           <div onclick="setProfileTheme('#FF3B7F')" style="width:32px;height:32px;border-radius:50%;background:#FF3B7F;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#FF3B7F"></div>
           <div onclick="setProfileTheme('#2196F3')" style="width:32px;height:32px;border-radius:50%;background:#2196F3;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#2196F3"></div>
           <div onclick="setProfileTheme('#4CAF50')" style="width:32px;height:32px;border-radius:50%;background:#4CAF50;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#4CAF50"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#9C27B0')}" style="width:32px;height:32px;border-radius:50%;background:#9C27B0;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#9C27B0"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#FF9800')}" style="width:32px;height:32px;border-radius:50%;background:#FF9800;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#FF9800"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#E91E63')}" style="width:32px;height:32px;border-radius:50%;background:#E91E63;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#E91E63"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#00BCD4')}" style="width:32px;height:32px;border-radius:50%;background:#00BCD4;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#00BCD4"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#795548')}" style="width:32px;height:32px;border-radius:50%;background:#795548;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#795548"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#9C27B0')}" style="width:32px;height:32px;border-radius:50%;background:#9C27B0;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#9C27B0"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#FF9800')}" style="width:32px;height:32px;border-radius:50%;background:#FF9800;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#FF9800"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#E91E63')}" style="width:32px;height:32px;border-radius:50%;background:#E91E63;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#E91E63"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#00BCD4')}" style="width:32px;height:32px;border-radius:50%;background:#00BCD4;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#00BCD4"></div>
+          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#795548')}" style="width:32px;height:32px;border-radius:50%;background:#795548;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#795548"></div>
+          <div style="font-size:10px;color:var(--gray);width:100%;margin-top:4px" id="theme-gold-hint">🔒 More colors available with Gold</div>
         </div>
       </div>
 
@@ -3389,6 +3391,12 @@ async function loadSubscriptionStatus() {
       if (isPremium()) {
         if (themeLocked) themeLocked.style.display = 'none';
         if (themeColors) themeColors.style.display = 'flex';
+        // Gold users get all colors unlocked
+        document.querySelectorAll('.theme-gold-only').forEach(function(dot) {
+          dot.style.opacity = isGold() ? '1' : '0.4';
+        });
+        var goldHint = document.getElementById('theme-gold-hint');
+        if (goldHint) goldHint.style.display = isGold() ? 'none' : '';
       } else {
         if (themeLocked) themeLocked.style.display = '';
         if (themeColors) themeColors.style.display = 'none';
@@ -3514,14 +3522,22 @@ async function openProfileVisitors() {
     if (list) list.style.display = '';
     for (var i = 0; i < visitors.length; i++) {
       var v = visitors[i];
-      var { data: vProfile } = await _supabase.from('profiles').select('name, age, location, photo_url, subscription_tier').eq('id', v.visitor_id).maybeSingle();
+      var { data: vProfile } = await _supabase.from('profiles').select('name, age, location, photo_url, bio, interests, email, subscription_tier').eq('id', v.visitor_id).maybeSingle();
       if (!vProfile) continue;
       var timeAgo = getTimeAgo(new Date(v.visited_at));
       var badge = getBadgeHTML(vProfile.subscription_tier);
-      var html = '<div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:var(--gray-light);margin-bottom:6px">'
-        + '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="' + (vProfile.photo_url || '') + '" style="width:100%;height:100%;object-fit:cover"></div>'
-        + '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">' + escHtml(vProfile.name || 'PairdUps User') + (vProfile.age ? ', ' + vProfile.age : '') + ' ' + badge + '</div>'
-        + '<div style="font-size:11px;color:var(--gray)">' + escHtml(vProfile.location || '') + ' · ' + timeAgo + '</div></div></div>';
+      var vName = escHtml(vProfile.name || 'PairdUps User');
+      var vAge = vProfile.age || '';
+      var vLoc = escHtml(vProfile.location || '');
+      var vBio = escHtml(vProfile.bio || '');
+      var vPhoto = vProfile.photo_url || '';
+      var vEmail = escHtml(vProfile.email || '');
+      var vInterests = JSON.stringify(vProfile.interests || []);
+      var html = '<div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:var(--gray-light);margin-bottom:6px;cursor:pointer" onclick="closeModal(\'modal-visitors\');showMiniProfile(\'' + esc(vProfile.name||'') + '\',\'' + vAge + '\',\'' + esc(vProfile.location||'') + '\',\'' + esc(vProfile.bio||'') + '\',' + vInterests + ',\'' + esc(vPhoto) + '\',\'' + esc(vProfile.email||'') + '\')">'
+        + '<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--pink-pale)"><img src="' + (vPhoto || '') + '" style="width:100%;height:100%;object-fit:cover"></div>'
+        + '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">' + vName + (vAge ? ', ' + vAge : '') + ' ' + badge + '</div>'
+        + '<div style="font-size:11px;color:var(--gray)">' + vLoc + ' · ' + timeAgo + '</div></div>'
+        + '<div style="font-size:11px;color:var(--pink);font-weight:600">View Profile →</div></div>';
       list.insertAdjacentHTML('beforeend', html);
     }
   } catch(e) {
@@ -3541,9 +3557,26 @@ function getTimeAgo(date) {
 }
 
 function getBadgeHTML(tier) {
-  if (tier === 'gold') return '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px">👑 Gold</span>';
-  if (tier === 'premium') return '<span style="font-size:10px;background:var(--pink);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px">✅ Verified</span>';
+  if (tier === 'gold') return '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px" title="Gold Member — PairdUps Gold subscriber">👑 Gold</span>';
+  if (tier === 'premium') return '<span style="font-size:10px;background:var(--pink);color:#fff;padding:1px 6px;border-radius:50px;font-weight:800;margin-left:4px;cursor:help" title="Verified — This user has a PairdUps Premium subscription, confirming they are a committed, real member of the community." onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
   return '';
+}
+
+function showVerifiedTooltip() {
+  var existing = document.getElementById('verified-tooltip-modal');
+  if (existing) { existing.classList.add('open'); return; }
+  var modal = document.createElement('div');
+  modal.id = 'verified-tooltip-modal';
+  modal.className = 'modal-bg open';
+  modal.style.cssText = 'align-items:center;justify-content:center';
+  modal.onclick = function(e) { if (e.target === modal) modal.classList.remove('open'); };
+  modal.innerHTML = '<div class="modal-sheet" style="max-width:320px;padding:24px;border-radius:24px;text-align:center">'
+    + '<div style="font-size:44px;margin-bottom:8px">✅</div>'
+    + '<div style="font-size:18px;font-weight:900;color:var(--dark);margin-bottom:8px">Verified Member</div>'
+    + '<div style="font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:16px">This user has a <strong style="color:var(--pink)">PairdUps Premium</strong> subscription, confirming they are a committed, real member of the community.<br><br>Verified members have invested in their PairdUps experience, making them more likely to follow through on plans and be genuine connections.</div>'
+    + '<button onclick="document.getElementById(\'verified-tooltip-modal\').classList.remove(\'open\')" style="width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">Got it!</button>'
+    + '</div>';
+  document.body.appendChild(modal);
 }
 
 function setProfileTheme(color) {
@@ -3598,29 +3631,59 @@ async function openPairdUpAnalytics() {
 
   try {
     // Get user's listings
-    var { data: myListings } = await _supabase.from('listings').select('id, title').eq('owner_id', currentUser.supabaseId);
+    var { data: myListings } = await _supabase.from('listings').select('id, title, created_at, is_active').eq('owner_id', currentUser.supabaseId);
+    // Get conversation stats
+    var { count: totalApplied } = await _supabase.from('conversations').select('id', { count: 'exact', head: true }).eq('requester_id', currentUser.supabaseId);
+    var { count: totalAccepted } = await _supabase.from('conversations').select('id', { count: 'exact', head: true }).eq('status', 'accepted').or('requester_id.eq.' + currentUser.supabaseId + ',poster_id.eq.' + currentUser.supabaseId);
+    // Profile views
+    var { count: profileViews } = await _supabase.from('profile_visitors').select('id', { count: 'exact', head: true }).eq('profile_id', currentUser.supabaseId);
+
     if (loading) loading.style.display = 'none';
+    if (list) list.style.display = '';
+
+    // Overview stats
+    var overviewHtml = '<div style="margin-bottom:16px">'
+      + '<div style="font-size:14px;font-weight:800;color:var(--dark);margin-bottom:10px">📊 Your Overview</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px">'
+      + '<div style="text-align:center;padding:12px;background:#fff;border-radius:12px;border:1px solid var(--gray-border)"><div style="font-size:24px;font-weight:900;color:var(--pink)">' + (myListings ? myListings.length : 0) + '</div><div style="font-size:10px;color:var(--gray);font-weight:600">PairdUps Created</div></div>'
+      + '<div style="text-align:center;padding:12px;background:#fff;border-radius:12px;border:1px solid var(--gray-border)"><div style="font-size:24px;font-weight:900;color:#7C3AED">' + (totalApplied || 0) + '</div><div style="font-size:10px;color:var(--gray);font-weight:600">Applied To</div></div>'
+      + '<div style="text-align:center;padding:12px;background:#fff;border-radius:12px;border:1px solid var(--gray-border)"><div style="font-size:24px;font-weight:900;color:#16A34A">' + (totalAccepted || 0) + '</div><div style="font-size:10px;color:var(--gray);font-weight:600">Accepted</div></div>'
+      + '<div style="text-align:center;padding:12px;background:#fff;border-radius:12px;border:1px solid var(--gray-border)"><div style="font-size:24px;font-weight:900;color:#D97706">' + (profileViews || 0) + '</div><div style="font-size:10px;color:var(--gray);font-weight:600">Profile Views</div></div>'
+      + '</div>';
+
+    // Priority Placement explanation
+    overviewHtml += '<div style="background:linear-gradient(135deg,#FFF5F7,#FFFBEB);border:1.5px solid var(--pink);border-radius:12px;padding:12px 14px;margin-bottom:14px">'
+      + '<div style="font-size:12px;font-weight:800;color:var(--pink);margin-bottom:4px">⭐ Priority Placement Active</div>'
+      + '<div style="font-size:11px;color:var(--gray);line-height:1.5">Your PairdUps are shown higher in the Discover feed than Free users. '
+      + (isGold() ? 'As a Gold member, your listings appear at the very top!' : 'Upgrade to Gold for the highest placement.')
+      + '</div></div>';
+
+    list.insertAdjacentHTML('beforeend', overviewHtml);
+
+    // Per-listing stats
     if (!myListings || myListings.length === 0) {
-      if (list) { list.style.display = ''; list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--gray);font-size:13px">No PairdUps posted yet.</div>'; }
+      list.insertAdjacentHTML('beforeend', '<div style="text-align:center;padding:16px;color:var(--gray);font-size:13px">No PairdUps posted yet. Create one to start tracking!</div>');
       return;
     }
 
-    if (list) list.style.display = '';
+    list.insertAdjacentHTML('beforeend', '<div style="font-size:14px;font-weight:800;color:var(--dark);margin-bottom:10px">📋 Per-PairdUp Stats</div>');
+
     for (var i = 0; i < myListings.length; i++) {
       var listing = myListings[i];
-      // Count views
       var { count: viewCount } = await _supabase.from('listing_analytics').select('id', { count: 'exact', head: true }).eq('listing_id', listing.id).eq('event_type', 'view');
-      // Count bookmarks
       var { count: bookmarkCount } = await _supabase.from('listing_analytics').select('id', { count: 'exact', head: true }).eq('listing_id', listing.id).eq('event_type', 'bookmark');
-      // Count join requests
       var { count: requestCount } = await _supabase.from('conversations').select('id', { count: 'exact', head: true }).eq('listing_id', listing.id);
+      var { count: acceptedCount } = await _supabase.from('conversations').select('id', { count: 'exact', head: true }).eq('listing_id', listing.id).eq('status', 'accepted');
+
+      var statusBadge = listing.is_active !== false ? '<span style="font-size:9px;background:#DCFCE7;color:#16A34A;padding:2px 6px;border-radius:50px;font-weight:700;margin-left:6px">Active</span>' : '<span style="font-size:9px;background:#FEE2E2;color:#DC2626;padding:2px 6px;border-radius:50px;font-weight:700;margin-left:6px">Expired</span>';
 
       var html = '<div style="padding:12px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:8px">'
-        + '<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:8px">' + escHtml(listing.title) + '</div>'
-        + '<div style="display:flex;gap:12px">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:8px">' + escHtml(listing.title) + statusBadge + '</div>'
+        + '<div style="display:flex;gap:8px">'
         + '<div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:10px"><div style="font-size:20px;font-weight:900;color:var(--pink)">' + (viewCount || 0) + '</div><div style="font-size:10px;color:var(--gray)">Views</div></div>'
-        + '<div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:10px"><div style="font-size:20px;font-weight:900;color:#F59E0B">' + (bookmarkCount || 0) + '</div><div style="font-size:10px;color:var(--gray)">Bookmarks</div></div>'
-        + '<div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:10px"><div style="font-size:20px;font-weight:900;color:#16A34A">' + (requestCount || 0) + '</div><div style="font-size:10px;color:var(--gray)">Requests</div></div>'
+        + '<div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:10px"><div style="font-size:20px;font-weight:900;color:#F59E0B">' + (bookmarkCount || 0) + '</div><div style="font-size:10px;color:var(--gray)">Saves</div></div>'
+        + '<div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:10px"><div style="font-size:20px;font-weight:900;color:#7C3AED">' + (requestCount || 0) + '</div><div style="font-size:10px;color:var(--gray)">Requests</div></div>'
+        + '<div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:10px"><div style="font-size:20px;font-weight:900;color:#16A34A">' + (acceptedCount || 0) + '</div><div style="font-size:10px;color:var(--gray)">Accepted</div></div>'
         + '</div></div>';
       list.insertAdjacentHTML('beforeend', html);
     }
@@ -8430,6 +8493,19 @@ function clearFilter() {
   document.getElementById('filter-prov').value='';
   document.getElementById('filter-city').innerHTML='<option value="">— All Cities —</option>';
   document.getElementById('loc-tag').innerHTML='<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>All Locations';
+  // Also clear advanced filters
+  clearAdvancedFilters();
+}
+function clearAdvancedFilters() {
+  var ageMin = document.getElementById('filter-age-min');
+  var ageMax = document.getElementById('filter-age-max');
+  var distance = document.getElementById('filter-distance');
+  if (ageMin) ageMin.value = '';
+  if (ageMax) ageMax.value = '';
+  if (distance) distance.value = '';
+  // Clear any active pills in advanced filter section
+  document.querySelectorAll('#modal-filter .advanced-filter-pill.active').forEach(function(p) { p.classList.remove('active'); });
+  showToast('Advanced filters cleared');
 }
 function applyFilter() {
   // Determine which country tab is active
