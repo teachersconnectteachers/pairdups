@@ -3078,22 +3078,32 @@ window.setTestTier = function(tier) {
       btn.style.display = 'none'; // Gold users don't need upgrade
     } else if (tier === 'premium') {
       btn.style.display = ''; // Show for Premium users
-      var icon = btn.querySelector('.nav-icon svg');
-      if (icon) {
-        icon.setAttribute('fill', '#F59E0B');
-        icon.setAttribute('stroke', '#D97706');
-        icon.style.filter = 'drop-shadow(0 0 4px rgba(245,158,11,0.5))';
+      var svgEl = btn.querySelector('.nav-icon svg');
+      var polyEl = btn.querySelector('.nav-icon svg polygon');
+      if (svgEl) {
+        svgEl.setAttribute('fill', '#F59E0B');
+        svgEl.setAttribute('stroke', '#D97706');
+        svgEl.style.filter = 'drop-shadow(0 0 4px rgba(245,158,11,0.5))';
+      }
+      if (polyEl) {
+        polyEl.setAttribute('fill', '#F59E0B');
+        polyEl.setAttribute('stroke', '#D97706');
       }
       var label = btn.querySelector('.nav-label');
       if (label) { label.textContent = 'Go Gold'; label.style.color = '#D97706'; label.style.fontWeight = '800'; }
       btn.onclick = function() { showPremiumModal(); };
     } else {
       btn.style.display = ''; // Show for Free users
-      var icon = btn.querySelector('.nav-icon svg');
-      if (icon) {
-        icon.setAttribute('fill', 'none');
-        icon.setAttribute('stroke', 'currentColor');
-        icon.style.filter = '';
+      var svgEl = btn.querySelector('.nav-icon svg');
+      var polyEl = btn.querySelector('.nav-icon svg polygon');
+      if (svgEl) {
+        svgEl.setAttribute('fill', 'none');
+        svgEl.setAttribute('stroke', 'currentColor');
+        svgEl.style.filter = '';
+      }
+      if (polyEl) {
+        polyEl.setAttribute('fill', 'none');
+        polyEl.setAttribute('stroke', 'currentColor');
       }
       var label = btn.querySelector('.nav-label');
       if (label) { label.textContent = 'Upgrade'; label.style.color = 'var(--pink)'; label.style.fontWeight = ''; }
