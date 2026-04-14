@@ -6828,8 +6828,10 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   } else {
     // Own listing or no Supabase — try own gallery
     if (isSignedIn && ownerEmail === currentUser.email && _galleryPhotos.length > 1) {
+      var ownLimit = getPhotoLimit();
+      var limitedPhotos = _galleryPhotos.slice(0, ownLimit).map(function(p) { return { url: p.url, facePos: p.facePos }; });
       setTimeout(function() {
-        initCarousel('detail-carousel', _galleryPhotos.map(function(p) { return { url: p.url, facePos: p.facePos }; }));
+        initCarousel('detail-carousel', limitedPhotos);
       }, 100);
     }
   }
@@ -10112,6 +10114,7 @@ window.addEventListener('load', async function() {
           document.getElementById('screen-discover').classList.add('active');
           syncProfileForm();
           showTopbarAvatar();
+          updateAllTierBadges();
           setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus(); loadGamificationData(); }, 500);
         }
       }
