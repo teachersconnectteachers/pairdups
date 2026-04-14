@@ -3074,26 +3074,18 @@ window.setTestTier = function(tier) {
     if (tierSub) tierSub.textContent = tier === 'free' ? 'Unlock photos, badges, analytics & more' : 'Manage your subscription';
   }
   // Show/hide upgrade buttons
-  document.querySelectorAll('.nav-upgrade-btn').forEach(function(btn) {
+  var upgradeBtns = document.querySelectorAll('.nav-upgrade-btn');
+  console.log('[PairdUps] Found ' + upgradeBtns.length + ' upgrade buttons, tier=' + tier);
+  upgradeBtns.forEach(function(btn) {
     if (tier === 'gold') {
       btn.style.display = 'none';
     } else if (tier === 'premium') {
       btn.style.display = '';
-      var iconWrap = btn.querySelector('.nav-icon');
-      if (iconWrap) {
-        iconWrap.innerHTML = '<svg class="gold-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
-      }
-      var label = btn.querySelector('.nav-label');
-      if (label) { label.textContent = 'Go Gold'; label.style.color = '#D97706'; label.style.fontWeight = '800'; }
+      btn.innerHTML = '<div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" width="22" height="22" style="fill:#F59E0B !important;stroke:#D97706 !important;filter:drop-shadow(0 0 4px rgba(245,158,11,0.6))"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" style="fill:#F59E0B;stroke:#D97706"/></svg></div><span class="nav-label" style="color:#D97706;font-weight:800">Go Gold</span>';
       btn.onclick = function() { showPremiumModal(); };
     } else {
       btn.style.display = '';
-      var iconWrap = btn.querySelector('.nav-icon');
-      if (iconWrap) {
-        iconWrap.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
-      }
-      var label = btn.querySelector('.nav-label');
-      if (label) { label.textContent = 'Upgrade'; label.style.color = 'var(--pink)'; label.style.fontWeight = ''; }
+      btn.innerHTML = '<div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><span class="nav-label" style="color:var(--pink)">Upgrade</span>';
     }
   });
   var profileUpgrade = document.getElementById('profile-upgrade-action');
