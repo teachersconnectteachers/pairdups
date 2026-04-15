@@ -8436,26 +8436,30 @@ async function undoDecline(convoId, card) {
       }
 
       // Send push + email to both parties
-      var { data: convoData } = await _supabase.from('conversations').select('requester_id, listing_title, requester:profiles!conversations_requester_id_fkey(email, name)').eq('id', convoId).maybeSingle();
+      var { data: convoData } = await _supabase.from('conversations').select('requester_id, listing_title, requester:profiles!conversations_requester_id_fkey(email, name, photo_url, age, location)').eq('id', convoId).maybeSingle();
       if (convoData && convoData.requester_id) {
         sendPush(convoData.requester_id, 'request_reconsidered', { to_name: convoData.requester?.name || 'PairdUps User', listing_title: convoData.listing_title || '' });
         try {
           var token = (await _supabase.auth.getSession()).data?.session?.access_token;
-          // Email to applicant
-          if (convoData.requester && convoData.requester.email) {
+          var req = convoData.requester || {};
+          // Email to applicant — include poster (current user) profile
+          if (req.email) {
             await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
               body: JSON.stringify({
                 type: 'request_reconsidered',
-                to_email: convoData.requester.email,
-                to_name: convoData.requester.name || 'PairdUps User',
+                to_email: req.email,
+                to_name: req.name || 'PairdUps User',
                 listing_title: convoData.listing_title || 'a PairdUp',
-                poster_name: currentUser.name || 'The poster'
+                poster_name: currentUser.name || 'The poster',
+                poster_photo: currentUser.photo || '',
+                poster_age: currentUser.age || '',
+                poster_loc: currentUser.loc || ''
               })
             });
           }
-          // Confirmation email to poster (Premium member)
+          // Confirmation email to poster — include requester profile
           if (currentUser.email) {
             await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
               method: 'POST',
@@ -8465,7 +8469,10 @@ async function undoDecline(convoId, card) {
                 to_email: currentUser.email,
                 to_name: currentUser.name || 'PairdUps User',
                 listing_title: convoData.listing_title || 'a PairdUp',
-                requester_name: convoData.requester?.name || 'The applicant'
+                requester_name: req.name || 'The applicant',
+                requester_photo: req.photo_url || '',
+                requester_age: req.age || '',
+                requester_loc: req.location || ''
               })
             });
           }
@@ -8544,28 +8551,32 @@ async function undoDeclineFromRender(convoId, btn) {
       }
 
       // Send push notification to the requester
-      var { data: convoData } = await _supabase.from('conversations').select('requester_id, listing_title, requester:profiles!conversations_requester_id_fkey(email, name)').eq('id', convoId).maybeSingle();
+      var { data: convoData } = await _supabase.from('conversations').select('requester_id, listing_title, requester:profiles!conversations_requester_id_fkey(email, name, photo_url, age, location)').eq('id', convoId).maybeSingle();
       if (convoData && convoData.requester_id) {
         sendPush(convoData.requester_id, 'request_reconsidered', { to_name: convoData.requester?.name || 'PairdUps User', listing_title: convoData.listing_title || '' });
 
         // Send email notifications to BOTH the requester and the poster
         try {
           var token = (await _supabase.auth.getSession()).data?.session?.access_token;
-          // Email to the applicant (requester) — their request is being reconsidered
-          if (convoData.requester && convoData.requester.email) {
+          var req = convoData.requester || {};
+          // Email to the applicant — include poster profile
+          if (req.email) {
             await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
               body: JSON.stringify({
                 type: 'request_reconsidered',
-                to_email: convoData.requester.email,
-                to_name: convoData.requester.name || 'PairdUps User',
+                to_email: req.email,
+                to_name: req.name || 'PairdUps User',
                 listing_title: convoData.listing_title || 'a PairdUp',
-                poster_name: currentUser.name || 'The poster'
+                poster_name: currentUser.name || 'The poster',
+                poster_photo: currentUser.photo || '',
+                poster_age: currentUser.age || '',
+                poster_loc: currentUser.loc || ''
               })
             });
           }
-          // Email to the poster (Premium member) — confirmation that they undid the decline
+          // Confirmation email to poster — include requester profile
           if (currentUser.email) {
             await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
               method: 'POST',
@@ -8575,7 +8586,10 @@ async function undoDeclineFromRender(convoId, btn) {
                 to_email: currentUser.email,
                 to_name: currentUser.name || 'PairdUps User',
                 listing_title: convoData.listing_title || 'a PairdUp',
-                requester_name: convoData.requester?.name || 'The applicant'
+                requester_name: req.name || 'The applicant',
+                requester_photo: req.photo_url || '',
+                requester_age: req.age || '',
+                requester_loc: req.location || ''
               })
             });
           }
