@@ -5426,8 +5426,22 @@ function renderRequestCards() {
       var statusClass = c.status === 'accepted' ? 'status-accepted' : 'status-declined';
       var statusLabel = c.status === 'accepted' ? '✓ Accepted' : '✗ Declined';
       html += '<div style="padding:6px 16px 10px"><span class="status-badge '+statusClass+'">'+statusLabel+'</span>';
+      html += ' <button class="req-profile" onclick="openMiniFromConvo(\''+c.id+'\')" style="background:#F3F4F6;color:#6B7280;border:none;border-radius:50px;padding:6px 14px;font-weight:700;font-size:12px;cursor:pointer">👤 Profile</button>';
       if (c.status === 'declined' && c.declineReason) {
         html += '<div style="font-size:11px;color:var(--gray);font-style:italic;margin-top:4px">💛 "'+c.declineReason+'"</div>';
+      }
+      // Undo Decline button for Premium/Gold users on declined requests
+      if (c.status === 'declined' && isPremium()) {
+        var canUndo = true;
+        if (!isGold() && c.lastUpdated) {
+          var hoursSince = (Date.now() - c.lastUpdated) / (1000 * 60 * 60);
+          if (hoursSince > 24) canUndo = false;
+        }
+        if (canUndo) {
+          html += '<div><button onclick="undoDeclineFromRender(\''+c.id+'\',this)" style="margin:8px 0 4px;padding:6px 16px;border-radius:50px;border:1.5px solid var(--pink);background:#FFF5F7;color:var(--pink);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">↩️ Undo Decline</button></div>';
+        } else {
+          html += '<div style="font-size:10px;color:var(--gray);margin-top:6px">⏰ Undo window expired (24 hours)</div>';
+        }
       }
       html += '</div>';
     }
@@ -8397,6 +8411,41 @@ async function undoDecline(convoId, card) {
   }
   showToast('Request restored to pending! ↩️');
   updateReqBadge();
+}
+
+// Undo decline triggered from a rendered request card (on page load)
+async function undoDeclineFromRender(convoId, btn) {
+  if (!convoId) return;
+  var card = btn.closest('.req-card');
+  // Check time limit for Premium (not Gold)
+  var convo = conversations.find(function(c) { return c.id === convoId; });
+  if (convo && !isGold() && convo.lastUpdated) {
+    var hoursSince = (Date.now() - convo.lastUpdated) / (1000 * 60 * 60);
+    if (hoursSince > 24) {
+      showToast('Undo window expired (24 hours). Upgrade to Gold for unlimited undo.');
+      return;
+    }
+  }
+  // Restore to pending in Supabase
+  if (_supabase) {
+    try {
+      await _supabase.from('conversations').update({
+        status: 'pending',
+        decline_reason: null,
+        requester_unread: false,
+        last_message_text: '📋 Request restored to pending'
+      }).eq('id', convoId);
+    } catch(e) { console.log('[PairdUps] Undo decline error:', e); }
+  }
+  // Restore locally
+  if (convo) {
+    convo.status = 'pending';
+    convo.declineReason = '';
+    _saveConvos(conversations);
+  }
+  // Re-render request cards to reflect the change
+  renderRequestCards();
+  showToast('Request restored to pending! ↩️');
 }
   var cards = document.querySelectorAll('.req-card');
   var pending = 0;
