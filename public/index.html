@@ -2574,9 +2574,10 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <div class="photo-carousel-dots" id="mini-carousel-dots"></div>
       </div>
     </div>
-    <div class="mini-profile-header">
+    <div class="mini-profile-header" style="position:relative">
       <div class="mini-avatar-lg" id="mini-avatar-wrap"><img id="mini-photo" src="" alt=""></div>
-      <div style="flex:1"><div class="mini-name" id="mini-name"></div><div style="display:flex;align-items:center;gap:6px;width:100%"><div class="mini-loc" id="mini-loc" style="flex:1"></div><span id="mini-badge" style="flex-shrink:0;margin-left:auto"></span></div><div id="mini-active" style="font-size:10px;font-weight:600;margin-top:2px;display:none"></div></div>
+      <div style="flex:1"><div class="mini-name" id="mini-name"></div><div class="mini-loc" id="mini-loc"></div><div id="mini-active" style="font-size:10px;font-weight:600;margin-top:2px;display:none"></div></div>
+      <span id="mini-badge" style="position:absolute;top:8px;right:0"></span>
     </div>
     <p class="mini-bio" id="mini-bio"></p>
     <div class="mini-interests" id="mini-interests"></div>
