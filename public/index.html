@@ -3545,12 +3545,14 @@ function checkSubscriptionReturn() {
 async function logProfileVisit(profileUserId) {
   if (!_supabase || !currentUser.supabaseId || profileUserId === currentUser.supabaseId) return;
   try {
-    await _supabase.from('profile_visitors').upsert({
+    var { error } = await _supabase.from('profile_visitors').upsert({
       profile_id: profileUserId,
       visitor_id: currentUser.supabaseId,
       visited_at: new Date().toISOString()
     }, { onConflict: 'profile_id,visitor_id' });
-  } catch(e) {}
+    if (error) console.log('[PairdUps] logProfileVisit error:', error.message || error);
+    else console.log('[PairdUps] Profile visit logged for', profileUserId);
+  } catch(e) { console.log('[PairdUps] logProfileVisit exception:', e); }
 }
 
 // Log listing analytics
@@ -3582,6 +3584,31 @@ async function openProfileVisitors() {
     return;
   }
 
+  // Force-refresh auth token from Supabase server (not cached)
+  // This fixes stale JWT issues that cause empty query results with RLS
+  try {
+    var { data: authData, error: authError } = await _supabase.auth.getUser();
+    if (authError || !authData || !authData.user) {
+      console.log('[PairdUps] Auth getUser failed:', authError);
+      // Try refreshSession as fallback
+      await _supabase.auth.refreshSession();
+    } else if (authData.user.id !== currentUser.supabaseId) {
+      // Cross-tab auth conflict: another tab signed in as a different user
+      console.log('[PairdUps] Auth mismatch detected — attempting session restore');
+      // Try to sign back in using the stored session token
+      await _supabase.auth.refreshSession();
+      var { data: recheck } = await _supabase.auth.getUser();
+      if (!recheck || !recheck.user || recheck.user.id !== currentUser.supabaseId) {
+        if (loading) loading.style.display = 'none';
+        if (empty) {
+          empty.textContent = 'Your session has changed. Please sign out and sign back in to see your visitors.';
+          empty.style.display = '';
+        }
+        return;
+      }
+    }
+  } catch(e) { console.log('[PairdUps] Session check note:', e); }
+
   // Always refresh tier from DB before checking — ensures Premium features
   // work even if the user hasn't refreshed the tab in a while
   await loadSubscriptionStatus();
@@ -3598,14 +3625,22 @@ async function openProfileVisitors() {
   }
 
   try {
+    console.log('[PairdUps] Querying profile_visitors for profile_id:', currentUser.supabaseId);
     var { data: visitors, error } = await _supabase.from('profile_visitors')
       .select('visitor_id, visited_at')
       .eq('profile_id', currentUser.supabaseId)
       .order('visited_at', { ascending: false })
       .limit(50);
 
+    console.log('[PairdUps] Visitors query result:', visitors ? visitors.length + ' rows' : 'null', 'error:', error);
+
     if (loading) loading.style.display = 'none';
-    if (error || !visitors || visitors.length === 0) {
+    if (error) {
+      console.log('[PairdUps] Visitors query error detail:', JSON.stringify(error));
+      if (empty) { empty.style.display = ''; empty.textContent = 'Could not load visitors. Please try again.'; }
+      return;
+    }
+    if (!visitors || visitors.length === 0) {
       if (empty) empty.style.display = '';
       return;
     }
@@ -10238,7 +10273,7 @@ window.addEventListener('load', async function() {
   loadProfileTheme();
   checkSubscriptionReturn();
 
-  // Refresh subscription status + card badges when user switches back to this tab
+  // Refresh auth session, subscription status + card badges when user switches back to this tab
   // This ensures Premium/Gold features stay current without requiring a hard refresh
   var _lastVisibilityRefresh = 0;
   document.addEventListener('visibilitychange', function() {
@@ -10246,12 +10281,15 @@ window.addEventListener('load', async function() {
     var now = Date.now();
     if (now - _lastVisibilityRefresh < 30000) return; // Throttle: max once per 30s
     _lastVisibilityRefresh = now;
-    console.log('[PairdUps] Tab visible — refreshing subscription status & badges');
-    loadSubscriptionStatus().then(function() {
+    console.log('[PairdUps] Tab visible — refreshing auth session & subscription status');
+    // Refresh auth token first so subsequent queries use a fresh JWT
+    _supabase.auth.refreshSession().then(function() {
+      return loadSubscriptionStatus();
+    }).then(function() {
       updateAllTierBadges();
       renderPhotoGallery();
       loadCardBadges();
-    });
+    }).catch(function(e) { console.log('[PairdUps] Visibility refresh error:', e); });
   });
 
   // Handle URL parameters from email links
