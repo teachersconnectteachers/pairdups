@@ -3949,7 +3949,9 @@ async function signIn() {
       photo: profile?.photo_url || '', facePos: profile?.face_pos || 'center 20%',
       birthday: profile?.birthday || '',
       memberSince: profile?.member_since || new Date().toISOString().slice(0,10),
-      supabaseId: data.user.id, isNewUser: false
+      supabaseId: data.user.id, isNewUser: false,
+      subscriptionTier: profile?.subscription_tier || 'free',
+      subscriptionExpires: profile?.subscription_expires_at || null
     };
     // Also save to localStorage as cache
     USER_DB[email] = Object.assign({}, currentUser); _saveDB(USER_DB);
