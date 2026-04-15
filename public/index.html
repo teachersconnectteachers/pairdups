@@ -3572,7 +3572,7 @@ async function openProfileVisitors() {
   var list = document.getElementById('visitors-list');
   var empty = document.getElementById('visitors-empty');
   var upsell = document.getElementById('visitors-upsell');
-  if (loading) loading.style.display = '';
+  if (loading) { loading.style.display = ''; loading.textContent = 'Loading visitors...'; }
   if (list) { list.style.display = 'none'; list.innerHTML = ''; }
   if (empty) empty.style.display = 'none';
   if (upsell) upsell.style.display = 'none';
@@ -3581,6 +3581,10 @@ async function openProfileVisitors() {
     if (loading) loading.textContent = 'Please sign in to see visitors.';
     return;
   }
+
+  // Always refresh tier from DB before checking — ensures Premium features
+  // work even if the user hasn't refreshed the tab in a while
+  await loadSubscriptionStatus();
 
   // Free users always see the upsell — don't even query
   if (!isPremium()) {
@@ -3973,8 +3977,14 @@ async function signIn() {
   screenHistory = [];
   syncProfileForm();
   showTopbarAvatar();
+  updateAllTierBadges();
   showToast('Welcome back, ' + currentUser.name + '! 👋');
   tagOneSignalUser();
+  // Load subscription status from DB and refresh all tier UI
+  if (_supabase && currentUser.supabaseId) {
+    loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); });
+    loadGamificationData();
+  }
   // Clear stale data from previous user session, then reload for this user
   conversations = [];
   _saveConvos(conversations);
@@ -10227,6 +10237,22 @@ window.addEventListener('load', async function() {
   if (isSignedIn) setTimeout(checkInstantAlerts, 5000);
   loadProfileTheme();
   checkSubscriptionReturn();
+
+  // Refresh subscription status + card badges when user switches back to this tab
+  // This ensures Premium/Gold features stay current without requiring a hard refresh
+  var _lastVisibilityRefresh = 0;
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden || !isSignedIn || !_supabase || !currentUser.supabaseId) return;
+    var now = Date.now();
+    if (now - _lastVisibilityRefresh < 30000) return; // Throttle: max once per 30s
+    _lastVisibilityRefresh = now;
+    console.log('[PairdUps] Tab visible — refreshing subscription status & badges');
+    loadSubscriptionStatus().then(function() {
+      updateAllTierBadges();
+      renderPhotoGallery();
+      loadCardBadges();
+    });
+  });
 
   // Handle URL parameters from email links
   var urlParams = new URLSearchParams(window.location.search);
