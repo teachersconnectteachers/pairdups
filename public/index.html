@@ -6016,7 +6016,7 @@ function renderUserListing(d) {
   var tagStyle = d.pairType === 'Date' ? 'background:#FCE4EC;color:#C2185B' : '';
   var shortDesc = d.desc.length > 80 ? d.desc.substring(0,80)+'...' : d.desc;
 
-  var cardHTML = '<div class="listing-card" data-category="'+d.catName+'" data-city="'+d.city+'" data-user-id="'+d.id+'" data-supabase-id="'+(d.supabaseId||'')+'" data-owner-email="'+(d.ownerEmail||'')+'" data-date-val="'+(d.dateVal||'')+'"'
+  var cardHTML = '<div class="listing-card" data-category="'+d.catName+'" data-city="'+d.city+'" data-user-id="'+d.id+'" data-supabase-id="'+(d.supabaseId||'')+'" data-owner-email="'+(d.ownerEmail||'')+'" data-date-val="'+(d.dateVal||'')+'" data-owner-tier="'+(d.ownerTier||'free')+'"'
     +' onclick="showDetail(\''+esc(d.title)+'\',\''+esc(d.userName)+'\',\''+d.userAge+'\',\''+esc(d.userLoc)
     +'\',\''+d.catName+'\',\''+d.pairType+'\',\''+esc(d.dateStr)+'\',\''+esc(d.venue)
     +'\',\''+esc(d.desc)+'\',\''+d.emoji+'\',\''+esc(d.userPhoto)
@@ -6197,7 +6197,7 @@ async function loadSupabaseListings() {
       .order('created_at', { ascending: false });
     if (error || !rows) { console.log('Listings load error:', error); return; }
     
-    // Sort: Pinned first, then Featured, then Gold, Premium, Free
+    // Sort: Pinned first, then Featured, then paid tiers (Premium+Gold by date), then Free (by date)
     rows.sort(function(a, b) {
       // Pinned listings always first
       if (a.is_pinned && !b.is_pinned) return -1;
@@ -6205,13 +6205,16 @@ async function loadSupabaseListings() {
       // Featured listings next
       if (a.is_featured && !b.is_featured) return -1;
       if (!a.is_featured && b.is_featured) return 1;
-      // Then tier-based priority
-      var tierOrder = { gold: 0, premium: 1, free: 2 };
+      // Tier-based priority: paid (premium+gold) above free
       var aTier = (a.profiles && a.profiles.subscription_tier) || 'free';
       var bTier = (b.profiles && b.profiles.subscription_tier) || 'free';
-      var aOrd = tierOrder[aTier] !== undefined ? tierOrder[aTier] : 2;
-      var bOrd = tierOrder[bTier] !== undefined ? tierOrder[bTier] : 2;
-      if (aOrd !== bOrd) return aOrd - bOrd;
+      var aIsPaid = (aTier === 'premium' || aTier === 'gold') ? 1 : 0;
+      var bIsPaid = (bTier === 'premium' || bTier === 'gold') ? 1 : 0;
+      if (aIsPaid !== bIsPaid) return bIsPaid - aIsPaid; // paid first
+      // Within same tier group, sort by date (soonest first)
+      var aDate = a.date_val || '9999-12-31';
+      var bDate = b.date_val || '9999-12-31';
+      if (aDate !== bDate) return aDate.localeCompare(bDate);
       return 0;
     });
     
@@ -9232,6 +9235,13 @@ function sortDiscover(by) {
   var cards = Array.from(container.querySelectorAll('.listing-card'));
   var monthMap = {Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
   function parseDateFromCard(card) {
+    // Primary: use data-date-val attribute (YYYY-MM-DD)
+    var dateVal = card.getAttribute('data-date-val');
+    if (dateVal && dateVal.length >= 8) {
+      var parts = dateVal.split('-');
+      if (parts.length === 3) return parseInt(parts[0])*10000 + parseInt(parts[1])*100 + parseInt(parts[2]);
+    }
+    // Fallback: parse from card text
     var rows = card.querySelectorAll('.card-meta-row');
     if (!rows[0]) return 99999999;
     var text = rows[0].textContent;
@@ -9239,12 +9249,40 @@ function sortDiscover(by) {
     if (match) return parseInt(match[3])*10000 + (monthMap[match[1]]||0)*100 + parseInt(match[2]);
     return 99999999;
   }
+  function getCardTierPriority(card) {
+    var tier = card.getAttribute('data-owner-tier') || 'free';
+    return (tier === 'premium' || tier === 'gold') ? 0 : 1; // paid=0, free=1
+  }
+  function isPinnedOrFeatured(card) {
+    // Check for pinned/featured badges in the card
+    var html = card.innerHTML;
+    return html.indexOf('📌 Pinned') !== -1 ? 2 : html.indexOf('⭐ Featured') !== -1 ? 1 : 0;
+  }
   if (by === 'newest') {
-    cards.reverse();
+    cards.sort(function(a,b) {
+      // Pinned/Featured always first
+      var aP = isPinnedOrFeatured(a), bP = isPinnedOrFeatured(b);
+      if (aP !== bP) return bP - aP;
+      // Tier priority
+      var aTier = getCardTierPriority(a), bTier = getCardTierPriority(b);
+      if (aTier !== bTier) return aTier - bTier;
+      // Within same group: newest first (reverse of date order)
+      return parseDateFromCard(b) - parseDateFromCard(a);
+    });
   } else if (by === 'soonest') {
-    cards.sort(function(a,b) { return parseDateFromCard(a) - parseDateFromCard(b); });
+    cards.sort(function(a,b) {
+      var aP = isPinnedOrFeatured(a), bP = isPinnedOrFeatured(b);
+      if (aP !== bP) return bP - aP;
+      var aTier = getCardTierPriority(a), bTier = getCardTierPriority(b);
+      if (aTier !== bTier) return aTier - bTier;
+      return parseDateFromCard(a) - parseDateFromCard(b);
+    });
   } else if (by === 'alpha') {
     cards.sort(function(a,b) {
+      var aP = isPinnedOrFeatured(a), bP = isPinnedOrFeatured(b);
+      if (aP !== bP) return bP - aP;
+      var aTier = getCardTierPriority(a), bTier = getCardTierPriority(b);
+      if (aTier !== bTier) return aTier - bTier;
       var ta = (a.querySelector('.card-title')?.textContent||'').toLowerCase();
       var tb = (b.querySelector('.card-title')?.textContent||'').toLowerCase();
       return ta.localeCompare(tb);
@@ -10048,7 +10086,22 @@ function filterExpiredFromDiscover() {
     }
   });
 
-  // Re-order: active first, then divider, then expired
+  // Re-order: active first (with tier priority), then divider, then expired
+  // Sort active cards: pinned/featured first, then paid tiers, then free — by date within each group
+  activeCards.sort(function(a, b) {
+    var aHtml = a.innerHTML, bHtml = b.innerHTML;
+    var aPin = aHtml.indexOf('📌 Pinned') !== -1 ? 2 : aHtml.indexOf('⭐ Featured') !== -1 ? 1 : 0;
+    var bPin = bHtml.indexOf('📌 Pinned') !== -1 ? 2 : bHtml.indexOf('⭐ Featured') !== -1 ? 1 : 0;
+    if (aPin !== bPin) return bPin - aPin;
+    var aTier = a.getAttribute('data-owner-tier') || 'free';
+    var bTier = b.getAttribute('data-owner-tier') || 'free';
+    var aIsPaid = (aTier === 'premium' || aTier === 'gold') ? 0 : 1;
+    var bIsPaid = (bTier === 'premium' || bTier === 'gold') ? 0 : 1;
+    if (aIsPaid !== bIsPaid) return aIsPaid - bIsPaid;
+    var aDate = a.getAttribute('data-date-val') || '9999-12-31';
+    var bDate = b.getAttribute('data-date-val') || '9999-12-31';
+    return aDate.localeCompare(bDate);
+  });
   activeCards.forEach(function(c) { container.appendChild(c); });
 
   if (expiredCards.length > 0) {
