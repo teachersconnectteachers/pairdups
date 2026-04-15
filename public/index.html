@@ -8358,8 +8358,14 @@ function doDeclineWithReason() {
   _declineTargetBtn = null;
 }
 function updateReqBadge() {
+  var cards = document.querySelectorAll('.req-card');
+  var pending = 0;
+  cards.forEach(function(c) { if (c.dataset.status === 'pending' || !c.dataset.status) pending++; });
+  var badge = document.getElementById('req-badge');
+  if (badge) { badge.textContent = pending; badge.style.display = pending > 0 ? 'inline-flex' : 'none'; }
+}
 
-// Undo a previously declined request
+// Undo a previously declined request (from live decline in current session)
 async function undoDecline(convoId, card) {
   if (!convoId) return;
   // Check time limit: Premium = 24hrs, Gold = anytime
@@ -8371,15 +8377,48 @@ async function undoDecline(convoId, card) {
       return;
     }
   }
-  // Restore to pending in Supabase
+  // Restore to pending in Supabase with notifications
   if (_supabase) {
     try {
       await _supabase.from('conversations').update({
         status: 'pending',
         decline_reason: null,
-        requester_unread: false,
-        last_message_text: '📋 Request restored to pending'
+        requester_unread: true,
+        last_message_text: '↩️ Decline undone — your request is being reconsidered!',
+        last_message_at: new Date().toISOString()
       }).eq('id', convoId);
+
+      // Add system message
+      if (currentUser.supabaseId) {
+        var convo = conversations.find(function(c) { return c.id === convoId; });
+        await _supabase.from('messages').insert({
+          conversation_id: convoId,
+          sender_id: currentUser.supabaseId,
+          text: '↩️ Good news! The decline has been undone — your request for "' + (convo ? convo.title : 'this PairdUp') + '" is being reconsidered. Stay tuned! 🤞'
+        });
+      }
+
+      // Send push + email to requester
+      var { data: convoData } = await _supabase.from('conversations').select('requester_id, listing_title, requester:profiles!conversations_requester_id_fkey(email, name)').eq('id', convoId).maybeSingle();
+      if (convoData && convoData.requester_id) {
+        sendPush(convoData.requester_id, 'request_reconsidered', { to_name: convoData.requester?.name || 'PairdUps User', listing_title: convoData.listing_title || '' });
+        if (convoData.requester && convoData.requester.email) {
+          try {
+            var token = (await _supabase.auth.getSession()).data?.session?.access_token;
+            await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({
+                type: 'request_reconsidered',
+                to_email: convoData.requester.email,
+                to_name: convoData.requester.name || 'PairdUps User',
+                listing_title: convoData.listing_title || 'a PairdUp',
+                poster_name: currentUser.name || 'The poster'
+              })
+            });
+          } catch(e) { console.log('[PairdUps] Undo decline email error:', e); }
+        }
+      }
     } catch(e) { console.log('[PairdUps] Undo decline error:', e); }
   }
   // Restore locally
@@ -8387,29 +8426,30 @@ async function undoDecline(convoId, card) {
   if (convo) {
     convo.status = 'pending';
     convo.declineReason = '';
+    var timeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    convo.messages.push({ from:'system', text: '↩️ Decline undone — request is being reconsidered! 🤞', time: timeStr });
+    convo.lastUpdated = Date.now();
     _saveConvos(conversations);
+    renderConversations();
+    renderAppliedCards();
   }
   // Restore the card UI
   if (card) {
     card.dataset.status = 'pending';
     card.style.opacity = '1';
-    // Remove the undo button and decline badge/reason
     card.querySelectorAll('button').forEach(function(b) { if (b.textContent.includes('Undo')) b.remove(); });
     var actions = card.querySelector('.req-actions');
     if (actions) {
-      // Remove old badge
       var oldBadge = actions.querySelector('span');
       if (oldBadge) oldBadge.remove();
-      // Re-add accept/decline buttons
       actions.innerHTML = '<button class="req-accept" onclick="acceptReq(this)" style="flex:1;background:#16A34A;color:#fff;border:none;border-radius:50px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer">✓ Accept</button>'
         + '<button class="req-decline" onclick="openDeclineModal(this)" style="flex:1;background:#F3F4F6;color:#6B7280;border:none;border-radius:50px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer">✗ Decline</button>'
         + actions.innerHTML;
     }
-    // Remove decline reason text
     var reasonDivs = card.querySelectorAll('div[style*="font-style:italic"]');
     reasonDivs.forEach(function(r) { r.remove(); });
   }
-  showToast('Request restored to pending! ↩️');
+  showToast('Request restored to pending! The applicant has been notified. ↩️');
   updateReqBadge();
 }
 
@@ -8426,32 +8466,72 @@ async function undoDeclineFromRender(convoId, btn) {
       return;
     }
   }
-  // Restore to pending in Supabase
+  // Disable button to prevent double-clicks
+  btn.disabled = true;
+  btn.textContent = '↩️ Restoring...';
+
+  // Restore to pending in Supabase + send notification to requester
   if (_supabase) {
     try {
+      // Update conversation status back to pending and mark requester as unread
       await _supabase.from('conversations').update({
         status: 'pending',
         decline_reason: null,
-        requester_unread: false,
-        last_message_text: '📋 Request restored to pending'
+        requester_unread: true,
+        last_message_text: '↩️ Decline undone — your request is being reconsidered!',
+        last_message_at: new Date().toISOString()
       }).eq('id', convoId);
+
+      // Add system message so both users can see what happened
+      if (currentUser.supabaseId) {
+        await _supabase.from('messages').insert({
+          conversation_id: convoId,
+          sender_id: currentUser.supabaseId,
+          text: '↩️ Good news! The decline has been undone — your request for "' + (convo ? convo.title : 'this PairdUp') + '" is being reconsidered. Stay tuned! 🤞'
+        });
+      }
+
+      // Send push notification to the requester
+      var { data: convoData } = await _supabase.from('conversations').select('requester_id, listing_title, requester:profiles!conversations_requester_id_fkey(email, name)').eq('id', convoId).maybeSingle();
+      if (convoData && convoData.requester_id) {
+        sendPush(convoData.requester_id, 'request_reconsidered', { to_name: convoData.requester?.name || 'PairdUps User', listing_title: convoData.listing_title || '' });
+
+        // Send email notification to the requester
+        if (convoData.requester && convoData.requester.email) {
+          try {
+            var token = (await _supabase.auth.getSession()).data?.session?.access_token;
+            await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({
+                type: 'request_reconsidered',
+                to_email: convoData.requester.email,
+                to_name: convoData.requester.name || 'PairdUps User',
+                listing_title: convoData.listing_title || 'a PairdUp',
+                poster_name: currentUser.name || 'The poster'
+              })
+            });
+          } catch(e) { console.log('[PairdUps] Undo decline email error:', e); }
+        }
+      }
+      console.log('[PairdUps] Decline undone for conversation:', convoId);
     } catch(e) { console.log('[PairdUps] Undo decline error:', e); }
   }
   // Restore locally
   if (convo) {
     convo.status = 'pending';
     convo.declineReason = '';
+    var timeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    convo.messages.push({ from:'system', text: '↩️ Decline undone — request is being reconsidered! 🤞', time: timeStr });
+    convo.lastUpdated = Date.now();
     _saveConvos(conversations);
+    renderConversations();
+    renderAppliedCards();
   }
-  // Re-render request cards to reflect the change
+  // Re-render request cards to show Accept/Decline buttons again
   renderRequestCards();
-  showToast('Request restored to pending! ↩️');
-}
-  var cards = document.querySelectorAll('.req-card');
-  var pending = 0;
-  cards.forEach(function(c) { if (c.dataset.status === 'pending' || !c.dataset.status) pending++; });
-  var badge = document.getElementById('req-badge');
-  if (badge) { badge.textContent = pending; badge.style.display = pending > 0 ? 'inline-flex' : 'none'; }
+  updateReqBadge();
+  showToast('Request restored to pending! The applicant has been notified. ↩️');
 }
 
 // ── Mini profile ───────────────────────────────────────────
