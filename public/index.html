@@ -5952,7 +5952,7 @@ function renderUserListing(d) {
     +'<div class="card-title">'+d.title+'</div>'
     +'<div class="card-desc">'+escHtml(shortDesc)+'</div>'
     +'<div class="card-meta">'
-    +'<div style="display:flex;align-items:center"><div class="card-meta-row" style="flex:1"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> '+d.dateStr+'</div><span class="poster-badge" data-email="'+esc(d.ownerEmail||'')+'"></span></div>'
+    +'<div style="display:flex;align-items:center"><div class="card-meta-row" style="flex:1"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> '+d.dateStr+'</div><span class="poster-badge" data-email="'+esc(d.ownerEmail||'')+'"'+(d.ownerTier && d.ownerTier !== 'free' ? ' data-loaded="1"' : '')+'>'+getBadgeHTML(d.ownerTier||'free')+'</span></div>'
     +'<div class="card-meta-row"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'+d.city+'</div>'
     +'<div class="card-meta-row"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
     +'<a onclick="event.stopPropagation();openMap(\''+esc(d.venue)+'\',\''+esc(d.city||'')+'\')">' +d.venue+'</a></div>'
@@ -6172,6 +6172,8 @@ async function loadSupabaseListings() {
     setTimeout(autoRenewRecurringListings, 600);
     // Sync bookmark icons so saved PairdUps show checkmarks
     setTimeout(syncBookmarkIcons, 700);
+    // Re-run badge loading as safety net (cards now exist in DOM)
+    setTimeout(loadCardBadges, 800);
     console.log('[PairdUps] Loaded ' + rows.length + ' listings from Supabase');
   } catch(e) { console.log('Supabase listings error:', e); }
 }
