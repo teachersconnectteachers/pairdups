@@ -1404,7 +1404,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 </div>
 
 <!-- PREMIUM UPGRADE MODAL -->
-<div class="modal-bg" id="modal-premium" onclick="if(event.target===this)closeModal('modal-premium')" style="align-items:center;justify-content:center">
+<div class="modal-bg" id="modal-premium" onclick="if(event.target===this){if(_premiumModalOpenedFromSettings){closePremiumModalToSettings()}else{closeModal('modal-premium')}}" style="align-items:center;justify-content:center">
   <div class="modal-sheet" style="max-height:88vh;overflow-y:auto;padding:0;border-radius:24px">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#FF3B7F,#FF6FA3,#FFB347);padding:28px 20px 20px;text-align:center;position:relative;overflow:hidden">
@@ -1479,6 +1479,19 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div style="padding:12px 20px 20px;text-align:center">
       <div style="font-size:10px;color:var(--gray);line-height:1.6;margin-bottom:12px">Cancel anytime. Subscriptions are billed monthly through Stripe.<br>Your subscription helps us keep PairdUps running and improving!</div>
       <button onclick="closeModal('modal-premium')" style="background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:10px 28px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Maybe Later</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOLD THEME CONFIRMATION MODAL -->
+<div class="modal-bg" id="modal-gold-theme" onclick="if(event.target===this)closeModal('modal-gold-theme')" style="align-items:center;justify-content:center">
+  <div class="modal-sheet" style="max-width:320px;padding:28px 24px;border-radius:24px;text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">🤔</div>
+    <div style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:10px;line-height:1.4">This theme color is for Gold Members only!</div>
+    <div style="font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:20px">Would you like to see what else is included in the Gold subscription and then decide if you want to upgrade?</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="closeModal('modal-gold-theme');showPremiumModalFromSettings()" style="width:100%;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(245,158,11,0.35)">🤩 Yes, show me Gold benefits!</button>
+      <button onclick="closeModal('modal-gold-theme')" style="width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
     </div>
   </div>
 </div>
@@ -2293,11 +2306,11 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
           <div onclick="setProfileTheme('#FF3B7F')" style="width:32px;height:32px;border-radius:50%;background:#FF3B7F;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#FF3B7F"></div>
           <div onclick="setProfileTheme('#2196F3')" style="width:32px;height:32px;border-radius:50%;background:#2196F3;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#2196F3"></div>
           <div onclick="setProfileTheme('#4CAF50')" style="width:32px;height:32px;border-radius:50%;background:#4CAF50;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#4CAF50"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#9C27B0')}" style="width:32px;height:32px;border-radius:50%;background:#9C27B0;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#9C27B0"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#FF9800')}" style="width:32px;height:32px;border-radius:50%;background:#FF9800;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#FF9800"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#E91E63')}" style="width:32px;height:32px;border-radius:50%;background:#E91E63;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#E91E63"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#00BCD4')}" style="width:32px;height:32px;border-radius:50%;background:#00BCD4;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#00BCD4"></div>
-          <div onclick="if(!isGold()){closeModal('modal-settings');showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');}else{setProfileTheme('#795548')}" style="width:32px;height:32px;border-radius:50%;background:#795548;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#795548"></div>
+          <div onclick="if(!isGold()){openModal('modal-gold-theme')}else{setProfileTheme('#9C27B0')}" style="width:32px;height:32px;border-radius:50%;background:#9C27B0;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#9C27B0"></div>
+          <div onclick="if(!isGold()){openModal('modal-gold-theme')}else{setProfileTheme('#FF9800')}" style="width:32px;height:32px;border-radius:50%;background:#FF9800;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#FF9800"></div>
+          <div onclick="if(!isGold()){openModal('modal-gold-theme')}else{setProfileTheme('#E91E63')}" style="width:32px;height:32px;border-radius:50%;background:#E91E63;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#E91E63"></div>
+          <div onclick="if(!isGold()){openModal('modal-gold-theme')}else{setProfileTheme('#00BCD4')}" style="width:32px;height:32px;border-radius:50%;background:#00BCD4;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#00BCD4"></div>
+          <div onclick="if(!isGold()){openModal('modal-gold-theme')}else{setProfileTheme('#795548')}" style="width:32px;height:32px;border-radius:50%;background:#795548;cursor:pointer;border:3px solid transparent;opacity:0.4" class="theme-dot theme-gold-only" data-color="#795548"></div>
           <div style="font-size:10px;color:var(--gray);width:100%;margin-top:4px" id="theme-gold-hint">🔒 More colors available with Gold</div>
         </div>
       </div>
@@ -3105,11 +3118,22 @@ window.setTestTier = function(tier) {
   renderPhotoGallery();
 };
 
+var _premiumModalOpenedFromSettings = false;
+
 function showPremiumModal(upsellMsg) {
   var msgEl = document.getElementById('premium-upsell-msg');
   if (msgEl) {
     if (upsellMsg) { msgEl.textContent = upsellMsg; msgEl.style.display = ''; }
     else { msgEl.style.display = 'none'; }
+  }
+  // Update Maybe Later button behavior based on context
+  var maybeLaterBtn = document.querySelector('#modal-premium .modal-sheet > div:last-child > button:last-child');
+  if (maybeLaterBtn) {
+    if (_premiumModalOpenedFromSettings) {
+      maybeLaterBtn.onclick = function() { closePremiumModalToSettings(); };
+    } else {
+      maybeLaterBtn.onclick = function() { closeModal('modal-premium'); };
+    }
   }
   // Highlight current tier
   var tier = getUserTier();
@@ -3122,6 +3146,26 @@ function showPremiumModal(upsellMsg) {
   if (goldCard) goldCard.querySelector('button').textContent = tier === 'gold' ? '✅ Current Plan' : 'Upgrade to Gold — $9.99/mo';
   if (goldCard) goldCard.querySelector('button').disabled = tier === 'gold';
   openModal('modal-premium');
+}
+
+// Opens premium modal from the settings theme section — tracks context so
+// "Maybe Later" returns the user to settings instead of closing to Discover
+function showPremiumModalFromSettings() {
+  _premiumModalOpenedFromSettings = true;
+  closeModal('modal-settings');
+  showPremiumModal('🎨 Upgrade to Gold for unlimited theme colors!');
+}
+
+// Close premium modal and return to settings scrolled to the theme section
+function closePremiumModalToSettings() {
+  _premiumModalOpenedFromSettings = false;
+  closeModal('modal-premium');
+  openModal('modal-settings');
+  // Scroll settings to the theme section after the modal opens
+  setTimeout(function() {
+    var themeSection = document.getElementById('theme-section');
+    if (themeSection) themeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 150);
 }
 
 function showOwnGallery() {
