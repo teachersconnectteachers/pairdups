@@ -2690,13 +2690,50 @@ function sendPush(toUserId, type, extraData) {
   if (!toUserId || !type) return;
   try {
     var payload = Object.assign({ type: type, to_user_id: toUserId, push_only: true }, extraData || {});
+    console.log('[PairdUps] Sending push:', type, 'to user:', toUserId);
     fetch(SUPABASE_URL + '/functions/v1/send-pairdups-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
+    }).then(function(res) {
+      console.log('[PairdUps] Push response:', res.status, res.statusText);
+      return res.text();
+    }).then(function(body) {
+      console.log('[PairdUps] Push response body:', body);
     }).catch(function(e) { console.log('[PairdUps] Push send error:', e); });
   } catch(e) { console.log('[PairdUps] Push error:', e); }
 }
+
+// Debug: check OneSignal push status from browser console
+// Usage: debugPush()
+window.debugPush = function() {
+  console.log('=== PairdUps Push Debug ===');
+  console.log('Domain:', location.hostname);
+  console.log('Signed in:', isSignedIn);
+  console.log('Supabase ID:', currentUser.supabaseId);
+  console.log('OneSignal SDK loaded:', typeof OneSignal !== 'undefined');
+  if (typeof OneSignal === 'undefined') {
+    console.log('⚠️ OneSignal SDK not loaded — check if on pairdups.com');
+    return;
+  }
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OS) {
+    try {
+      var subId = OS.User.PushSubscription.id;
+      var optedIn = OS.User.PushSubscription.optedIn;
+      var token = OS.User.PushSubscription.token;
+      var permission = Notification.permission;
+      console.log('Subscription ID:', subId);
+      console.log('Opted in:', optedIn);
+      console.log('Has token:', !!token);
+      console.log('Browser permission:', permission);
+      if (!subId) console.log('⚠️ No subscription ID — user may not be subscribed');
+      if (!optedIn) console.log('⚠️ Not opted in — user needs to enable push');
+      if (permission !== 'granted') console.log('⚠️ Browser permission not granted:', permission);
+      if (subId && optedIn && permission === 'granted') console.log('✅ Push should be working!');
+    } catch(e) { console.log('Debug error:', e); }
+  });
+};
 
 // ── Push Notification UI Helpers ─────────────────────────
 function checkPushStatus() {
@@ -8398,13 +8435,14 @@ async function undoDecline(convoId, card) {
         });
       }
 
-      // Send push + email to requester
+      // Send push + email to both parties
       var { data: convoData } = await _supabase.from('conversations').select('requester_id, listing_title, requester:profiles!conversations_requester_id_fkey(email, name)').eq('id', convoId).maybeSingle();
       if (convoData && convoData.requester_id) {
         sendPush(convoData.requester_id, 'request_reconsidered', { to_name: convoData.requester?.name || 'PairdUps User', listing_title: convoData.listing_title || '' });
-        if (convoData.requester && convoData.requester.email) {
-          try {
-            var token = (await _supabase.auth.getSession()).data?.session?.access_token;
+        try {
+          var token = (await _supabase.auth.getSession()).data?.session?.access_token;
+          // Email to applicant
+          if (convoData.requester && convoData.requester.email) {
             await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -8416,8 +8454,22 @@ async function undoDecline(convoId, card) {
                 poster_name: currentUser.name || 'The poster'
               })
             });
-          } catch(e) { console.log('[PairdUps] Undo decline email error:', e); }
-        }
+          }
+          // Confirmation email to poster (Premium member)
+          if (currentUser.email) {
+            await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({
+                type: 'undo_decline_confirmation',
+                to_email: currentUser.email,
+                to_name: currentUser.name || 'PairdUps User',
+                listing_title: convoData.listing_title || 'a PairdUp',
+                requester_name: convoData.requester?.name || 'The applicant'
+              })
+            });
+          }
+        } catch(e) { console.log('[PairdUps] Undo decline email error:', e); }
       }
     } catch(e) { console.log('[PairdUps] Undo decline error:', e); }
   }
@@ -8496,10 +8548,11 @@ async function undoDeclineFromRender(convoId, btn) {
       if (convoData && convoData.requester_id) {
         sendPush(convoData.requester_id, 'request_reconsidered', { to_name: convoData.requester?.name || 'PairdUps User', listing_title: convoData.listing_title || '' });
 
-        // Send email notification to the requester
-        if (convoData.requester && convoData.requester.email) {
-          try {
-            var token = (await _supabase.auth.getSession()).data?.session?.access_token;
+        // Send email notifications to BOTH the requester and the poster
+        try {
+          var token = (await _supabase.auth.getSession()).data?.session?.access_token;
+          // Email to the applicant (requester) — their request is being reconsidered
+          if (convoData.requester && convoData.requester.email) {
             await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -8511,8 +8564,22 @@ async function undoDeclineFromRender(convoId, btn) {
                 poster_name: currentUser.name || 'The poster'
               })
             });
-          } catch(e) { console.log('[PairdUps] Undo decline email error:', e); }
-        }
+          }
+          // Email to the poster (Premium member) — confirmation that they undid the decline
+          if (currentUser.email) {
+            await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({
+                type: 'undo_decline_confirmation',
+                to_email: currentUser.email,
+                to_name: currentUser.name || 'PairdUps User',
+                listing_title: convoData.listing_title || 'a PairdUp',
+                requester_name: convoData.requester?.name || 'The applicant'
+              })
+            });
+          }
+        } catch(e) { console.log('[PairdUps] Undo decline email error:', e); }
       }
       console.log('[PairdUps] Decline undone for conversation:', convoId);
     } catch(e) { console.log('[PairdUps] Undo decline error:', e); }
