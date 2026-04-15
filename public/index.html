@@ -2576,7 +2576,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     </div>
     <div class="mini-profile-header">
       <div class="mini-avatar-lg" id="mini-avatar-wrap"><img id="mini-photo" src="" alt=""></div>
-      <div><div class="mini-name" id="mini-name"><span id="mini-badge"></span></div><div class="mini-loc" id="mini-loc"></div><div id="mini-active" style="font-size:10px;font-weight:600;margin-top:2px;display:none"></div></div>
+      <div><div class="mini-name" id="mini-name"></div><div style="display:flex;align-items:center;gap:6px"><div class="mini-loc" id="mini-loc" style="flex:1"></div><span id="mini-badge"></span></div><div id="mini-active" style="font-size:10px;font-weight:600;margin-top:2px;display:none"></div></div>
     </div>
     <p class="mini-bio" id="mini-bio"></p>
     <div class="mini-interests" id="mini-interests"></div>
@@ -5951,7 +5951,7 @@ function renderUserListing(d) {
     +'<div class="card-title">'+d.title+'</div>'
     +'<div class="card-desc">'+escHtml(shortDesc)+'</div>'
     +'<div class="card-meta">'
-    +'<div class="card-meta-row"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> '+d.dateStr+'</div>'
+    +'<div style="display:flex;align-items:center"><div class="card-meta-row" style="flex:1"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> '+d.dateStr+'</div><span class="poster-badge" data-email="'+esc(d.ownerEmail||'')+'"></span></div>'
     +'<div class="card-meta-row"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'+d.city+'</div>'
     +'<div class="card-meta-row"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
     +'<a onclick="event.stopPropagation();openMap(\''+esc(d.venue)+'\',\''+esc(d.city||'')+'\')">' +d.venue+'</a></div>'
@@ -5959,7 +5959,7 @@ function renderUserListing(d) {
     +'<div class="card-footer">'
     +'<div class="card-poster" onclick="event.stopPropagation();showMiniProfile(\''+esc(d.userName)+'\',\''+d.userAge+'\',\''+esc(d.userLoc)+'\',\''+esc(d.userBio)+'\','+ JSON.stringify(d.userInterests||[]) +',\''+esc(d.userPhoto)+'\',\''+esc(d.ownerEmail||'')+'\')">'
     +'<div class="poster-avatar"><img src="'+d.userPhoto+'" alt="'+esc(d.userName)+'" style="object-position:'+d.userFacePos+'"></div>'
-    +'<div><div class="poster-name">'+d.userName+(d.userAge?', '+d.userAge:'')+'<span class="poster-badge" data-email="'+esc(d.ownerEmail||'')+'"></span></div>'
+    +'<div><div class="poster-name">'+d.userName+(d.userAge?', '+d.userAge:'')+'</div>'
     +'<div class="poster-loc">'+d.userLoc+'</div></div></div>'
     +'<button class="btn-sm" onclick="event.stopPropagation();joinListing(this)">Send Request</button>'
     +'<button onclick="event.stopPropagation();toggleSavePairdUp(this,\''+esc(d.title)+'\',\''+esc(d.dateStr)+'\',\''+esc(d.venue)+'\',\''+esc(d.userName)+'\',\''+esc(d.userPhoto)+'\',\''+d.emoji+'\')" style="background:none;border:none;font-size:24px;cursor:pointer;padding:6px;line-height:1" title="Save for later">🔖</button>'
@@ -8338,6 +8338,15 @@ function showMiniProfile(name, age, loc, bio, interests, photo, ownerEmail) {
   document.getElementById('mini-photo').src = photo || '';
   document.getElementById('mini-name').textContent = name + (age ? ', ' + age : '');
   document.getElementById('mini-loc').textContent = loc ? '📍 ' + loc : '';
+  // Add verified badge next to location, right-justified
+  var miniBadge = document.getElementById('mini-badge');
+  if (miniBadge) miniBadge.innerHTML = '';
+  if (_supabase && ownerEmail) {
+    _supabase.from('profiles').select('subscription_tier').eq('email', ownerEmail).maybeSingle()
+      .then(function(res) {
+        if (res.data && miniBadge) miniBadge.innerHTML = getBadgeHTML(res.data.subscription_tier);
+      });
+  }
   var activeLabel = getLastActiveLabel(ownerEmail);
   var activeEl = document.getElementById('mini-active');
   if (activeEl) { activeEl.textContent = activeLabel; activeEl.style.display = activeLabel ? '' : 'none'; }
