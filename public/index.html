@@ -5109,8 +5109,28 @@ async function sendJoinRequest() {
             var { error: userMsgErr } = await _supabase.from('messages').insert({ conversation_id: newConvo.id, sender_id: currentUser.supabaseId, text: msg });
             if (userMsgErr) console.log('[PairdUps] User msg error:', userMsgErr);
           }
-          // Send push to the poster about the join request
+          // Send push + email to the poster about the join request
           sendPush(posterProfile.id, 'join_request', { to_name: poster.name, other_name: currentUser.name || 'Someone', listing_title: poster.title });
+          // Also send email with requester profile details
+          if (poster.ownerEmail) {
+            try {
+              var jrToken = (await _supabase.auth.getSession()).data?.session?.access_token;
+              await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jrToken },
+                body: JSON.stringify({
+                  type: 'join_request',
+                  to_email: poster.ownerEmail,
+                  to_name: poster.name || 'PairdUps User',
+                  listing_title: poster.title || 'a PairdUp',
+                  requester_name: currentUser.name || 'Someone',
+                  requester_photo: currentUser.photo || '',
+                  requester_age: currentUser.age || '',
+                  requester_loc: currentUser.loc || ''
+                })
+              });
+            } catch(e) { console.log('[PairdUps] Join request email error:', e); }
+          }
         }
       }
     } catch(e) { console.log('[PairdUps] Join request Supabase error:', e); }
