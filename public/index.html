@@ -7114,14 +7114,37 @@ function sendMsg() {
                 window._lastMsgXP = Date.now();
                 awardXP(1, 'Sent message');
               }
-              // Send push to the other user
+              // Send push + email to the other user
               var otherUserId = convo.iAmRequester ? convo._posterId : convo._requesterId;
-              if (!otherUserId) {
-                var { data: pushConvo } = await _supabase.from('conversations').select('requester_id, poster_id').eq('id', convoSupabaseId).maybeSingle();
-                if (pushConvo) otherUserId = convo.iAmRequester ? pushConvo.poster_id : pushConvo.requester_id;
-              }
-              if (otherUserId) {
-                sendPush(otherUserId, 'new_message', { other_name: currentUser.name || 'Someone', message_text: text.substring(0, 80) });
+              // Query other user's email/profile for the notification
+              var { data: pushConvo } = await _supabase.from('conversations').select('requester_id, poster_id, listing_title, requester:profiles!conversations_requester_id_fkey(email, name, photo_url, age, location), poster:profiles!conversations_poster_id_fkey(email, name, photo_url, age, location)').eq('id', convoSupabaseId).maybeSingle();
+              if (pushConvo) {
+                if (!otherUserId) otherUserId = convo.iAmRequester ? pushConvo.poster_id : pushConvo.requester_id;
+                var otherProfile = convo.iAmRequester ? pushConvo.poster : pushConvo.requester;
+                if (otherUserId) {
+                  sendPush(otherUserId, 'new_message', { to_name: otherProfile?.name || 'PairdUps User', other_name: currentUser.name || 'Someone', message_text: text.substring(0, 80) });
+                }
+                // Send email to the other user so they're notified even if offline
+                if (otherProfile && otherProfile.email) {
+                  try {
+                    var msgToken = (await _supabase.auth.getSession()).data?.session?.access_token;
+                    await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + msgToken },
+                      body: JSON.stringify({
+                        type: 'new_message',
+                        to_email: otherProfile.email,
+                        to_name: otherProfile.name || 'PairdUps User',
+                        other_name: currentUser.name || 'Someone',
+                        other_photo: currentUser.photo || '',
+                        other_age: currentUser.age || '',
+                        other_loc: currentUser.loc || '',
+                        message_text: text,
+                        listing_title: pushConvo.listing_title || 'a PairdUp'
+                      })
+                    });
+                  } catch(e) { console.log('[PairdUps] New message email error:', e); }
+                }
               }
             }
           } catch(e) { console.log('[PairdUps] Message send error:', e); }
@@ -8315,11 +8338,31 @@ function acceptReq(btn) {
           if (msgErr) { console.log('[PairdUps] Accept message insert error:', msgErr); }
           else { console.log('[PairdUps] Accept system message sent OK'); }
         }
-        // Send push to the requester
+        // Send push + email to the requester
         if (convo) {
-          var { data: convoData } = await _supabase.from('conversations').select('requester_id').eq('id', convoId).maybeSingle();
+          var { data: convoData } = await _supabase.from('conversations').select('requester_id, requester:profiles!conversations_requester_id_fkey(email, name, photo_url, age, location)').eq('id', convoId).maybeSingle();
           if (convoData && convoData.requester_id) {
-            sendPush(convoData.requester_id, 'accepted', { to_name: 'PairdUps User', listing_title: convo.title || '' });
+            sendPush(convoData.requester_id, 'accepted', { to_name: convoData.requester?.name || 'PairdUps User', listing_title: convo.title || '' });
+            // Email to requester with poster (current user) profile details
+            if (convoData.requester && convoData.requester.email) {
+              try {
+                var acceptToken = (await _supabase.auth.getSession()).data?.session?.access_token;
+                await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + acceptToken },
+                  body: JSON.stringify({
+                    type: 'accepted',
+                    to_email: convoData.requester.email,
+                    to_name: convoData.requester.name || 'PairdUps User',
+                    listing_title: convo.title || 'a PairdUp',
+                    poster_name: currentUser.name || 'The poster',
+                    poster_photo: currentUser.photo || '',
+                    poster_age: currentUser.age || '',
+                    poster_loc: currentUser.loc || ''
+                  })
+                });
+              } catch(e) { console.log('[PairdUps] Accept email error:', e); }
+            }
           }
         }
       } catch(e) { console.log('[PairdUps] Accept error:', e); }
@@ -8404,10 +8447,31 @@ function doDeclineWithReason() {
           });
         }
         console.log('[PairdUps] Declined conversation:', convoId);
-        // Send push to the requester
-        var { data: dConvo } = await _supabase.from('conversations').select('requester_id, listing_title').eq('id', convoId).maybeSingle();
+        // Send push + email to the requester
+        var { data: dConvo } = await _supabase.from('conversations').select('requester_id, listing_title, requester:profiles!conversations_requester_id_fkey(email, name, photo_url, age, location)').eq('id', convoId).maybeSingle();
         if (dConvo && dConvo.requester_id) {
-          sendPush(dConvo.requester_id, 'declined', { to_name: 'PairdUps User', listing_title: dConvo.listing_title || '' });
+          sendPush(dConvo.requester_id, 'declined', { to_name: dConvo.requester?.name || 'PairdUps User', listing_title: dConvo.listing_title || '' });
+          // Email to requester with poster (current user) profile + decline reason
+          if (dConvo.requester && dConvo.requester.email) {
+            try {
+              var declineToken = (await _supabase.auth.getSession()).data?.session?.access_token;
+              await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + declineToken },
+                body: JSON.stringify({
+                  type: 'declined',
+                  to_email: dConvo.requester.email,
+                  to_name: dConvo.requester.name || 'PairdUps User',
+                  listing_title: dConvo.listing_title || 'a PairdUp',
+                  poster_name: currentUser.name || 'The poster',
+                  poster_photo: currentUser.photo || '',
+                  poster_age: currentUser.age || '',
+                  poster_loc: currentUser.loc || '',
+                  decline_reason: reason
+                })
+              });
+            } catch(e) { console.log('[PairdUps] Decline email error:', e); }
+          }
         }
       } catch(e) { console.log('[PairdUps] Decline error:', e); }
     })();
