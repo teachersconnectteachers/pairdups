@@ -6893,8 +6893,10 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   // Reset carousel to single photo state
   var dTrack = document.getElementById('detail-carousel-track');
   var dDots = document.getElementById('detail-carousel-dots');
+  var dCarousel = document.getElementById('detail-carousel');
+  if (dCarousel) { dCarousel._inlineCarouselSetup = false; dCarousel._carouselLoading = false; }
   if (dTrack) dTrack.innerHTML = '<div class="photo-carousel-slide"><img id="d-photo" class="detail-hero-img" src="'+photo+'" alt=""></div>';
-  if (dTrack) dTrack.style.transform = 'translateX(0)';
+  if (dTrack) dTrack.style.cssText = 'display:flex;flex-direction:row;height:100%;transition:transform 0.3s ease;transform:translateX(0)';
   if (dDots) { dDots.innerHTML = ''; dDots.style.display = 'none'; }
   const dv = document.getElementById('d-venue');
   dv.textContent = venue; dv.dataset.v = venue;
@@ -7053,16 +7055,18 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
           showMiniProfile(freshName, freshAge, freshLoc, freshBio, freshInterests, freshPhoto, ownerEmail);
         };
       });
-    // Load poster's photo gallery for carousel
-    _supabase.from('profiles').select('id').eq('email', ownerEmail).maybeSingle()
-      .then(function(res2) {
-        if (!res2.data) return;
-        loadUserGallery(res2.data.id).then(function(photos) {
-          if (photos && photos.length > 1) {
-            initCarousel('detail-carousel', photos);
-          }
+    // Load poster's photo gallery for carousel (only for OTHER users, not own listing)
+    if (!isSignedIn || ownerEmail !== currentUser.email) {
+      _supabase.from('profiles').select('id').eq('email', ownerEmail).maybeSingle()
+        .then(function(res2) {
+          if (!res2.data) return;
+          loadUserGallery(res2.data.id).then(function(photos) {
+            if (photos && photos.length > 1) {
+              initCarousel('detail-carousel', photos);
+            }
+          });
         });
-      });
+    }
   } else {
     console.log('[PairdUps] Detail: taking OWN LISTING branch');
     if (isSignedIn && ownerEmail === currentUser.email && _supabase && currentUser.supabaseId) {
@@ -7095,6 +7099,7 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
             var cIdx = 0;
             var cLen = photos.length;
             var dContainer = document.getElementById('detail-carousel');
+            if (dContainer) dContainer._inlineCarouselSetup = true;
             
             function dGoTo(idx) {
               if (idx < 0) idx = cLen - 1;
@@ -8231,6 +8236,12 @@ function syncProfileImages() {
 
 // ── Photo Carousel Engine ─────────────────────────────────
 function initCarousel(containerId, photos) {
+  // Skip if this carousel was already set up by inline code
+  var existingContainer = document.getElementById(containerId);
+  if (existingContainer && existingContainer._inlineCarouselSetup) {
+    console.log('[PairdUps] initCarousel skipped for', containerId, '— already set up inline');
+    return;
+  }
   var container = document.getElementById(containerId);
   if (!container) return;
   var trackId = containerId + '-track';
