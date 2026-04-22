@@ -836,7 +836,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
       <div style="flex:1">
         <div class="detail-poster-name" id="d-poster-name"></div>
         <div class="detail-poster-loc" id="d-poster-loc"></div>
-        <div class="detail-poster-tap">Tap to view full profile →</div>
+        <div class="detail-poster-tap" id="d-poster-tap" style="display:flex;align-items:center">Tap to view full profile →</div>
       </div>
     </div>
     <p class="detail-note">Sending a request notifies the poster — they'll accept or decline.</p>
@@ -2590,7 +2590,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div class="mini-profile-header" style="position:relative">
       <div class="mini-avatar-lg" id="mini-avatar-wrap"><img id="mini-photo" src="" alt=""></div>
       <div style="flex:1"><div class="mini-name" id="mini-name"></div><div class="mini-loc" id="mini-loc"></div><div id="mini-active" style="font-size:10px;font-weight:600;margin-top:2px;display:none"></div></div>
-      <span id="mini-badge" style="position:absolute;top:8px;right:0"></span>
+      <span id="mini-badge" style="position:absolute;top:8px;right:0;display:flex;flex-direction:column;gap:3px;align-items:flex-end"></span>
     </div>
     <p class="mini-bio" id="mini-bio"></p>
     <div class="mini-interests" id="mini-interests"></div>
@@ -6953,14 +6953,13 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
         var tier = res.data.subscription_tier;
         if (tier === 'gold') {
           if (dPosterBadge) dPosterBadge.innerHTML = '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(245,158,11,0.3)">👑 Gold</span>';
-          // Add Verified badge inline with location text
-          var locEl = document.getElementById('d-poster-loc');
-          if (locEl && !document.getElementById('d-poster-loc-badge')) {
-            locEl.style.cssText = 'font-size:12px;color:var(--gray);display:flex;align-items:center;gap:6px';
-            var locBadge = document.createElement('span');
-            locBadge.id = 'd-poster-loc-badge'; locBadge.style.marginLeft = 'auto';
-            locBadge.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
-            locEl.appendChild(locBadge);
+          var tapEl = document.getElementById('d-poster-tap');
+          if (tapEl && !document.getElementById('d-poster-loc-badge')) {
+            var tapBadge = document.createElement('span');
+            tapBadge.id = 'd-poster-loc-badge';
+            tapBadge.style.marginLeft = 'auto';
+            tapBadge.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
+            tapEl.appendChild(tapBadge);
           }
         } else if (tier === 'premium') {
           if (dPosterBadge) dPosterBadge.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
@@ -7023,13 +7022,13 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
               var tier2 = res.data.subscription_tier;
               if (tier2 === 'gold') {
                 if (dPosterBadge2) dPosterBadge2.innerHTML = '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(245,158,11,0.3)">👑 Gold</span>';
-                var locEl2 = document.getElementById('d-poster-loc');
-                if (locEl2 && !document.getElementById('d-poster-loc-badge')) {
-                  locEl2.style.cssText = 'font-size:12px;color:var(--gray);display:flex;align-items:center;gap:6px';
-                  var locBadge2 = document.createElement('span');
-                  locBadge2.id = 'd-poster-loc-badge'; locBadge2.style.marginLeft = 'auto';
-                  locBadge2.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
-                  locEl2.appendChild(locBadge2);
+                var tapEl2 = document.getElementById('d-poster-tap');
+                if (tapEl2 && !document.getElementById('d-poster-loc-badge')) {
+                  var tapBadge2 = document.createElement('span');
+                  tapBadge2.id = 'd-poster-loc-badge';
+                  tapBadge2.style.marginLeft = 'auto';
+                  tapBadge2.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
+                  tapEl2.appendChild(tapBadge2);
                 }
               } else if (tier2 === 'premium') {
                 if (dPosterBadge2) dPosterBadge2.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
