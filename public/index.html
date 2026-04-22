@@ -380,7 +380,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 .profile-avatar{width:76px;height:76px;border-radius:50%;overflow:hidden;border:4px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,0.15)}
 .profile-avatar img{width:100%;height:100%;object-fit:cover;object-position:center 15%;transition:object-position 0.3s}
 .profile-info{padding:24px 18px 18px}
-.profile-name{font-size:21px;font-weight:900;color:var(--dark);display:flex;align-items:center;gap:6px}
+.profile-name{font-size:21px;font-weight:900;color:var(--dark);display:flex;align-items:flex-start;gap:6px}
 .profile-loc{font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;margin-bottom:3px}
 .profile-loc svg{width:12px;height:12px;stroke:var(--pink);fill:none;stroke-width:2}
 .profile-bio{font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:14px}
@@ -3280,16 +3280,11 @@ function updateAllTierBadges() {
     else if (tier === 'premium') el.innerHTML = '⭐ Premium';
     else el.innerHTML = '🆓 Free';
   });
-  // Update profile photo plan badge
+  // Profile photo plan badge — hidden since badges are shown next to name
   var profilePlanBadge = document.getElementById('profile-plan-badge');
   if (profilePlanBadge) {
-    if (tier === 'gold') {
-      profilePlanBadge.innerHTML = '<span style="font-size:10px;font-weight:800;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:3px 10px;border-radius:50px;border:2px solid #fff;cursor:pointer;box-shadow:0 2px 8px rgba(245,158,11,0.4)">👑 Gold</span>';
-    } else if (tier === 'premium') {
-      profilePlanBadge.innerHTML = '<span style="font-size:10px;font-weight:800;background:var(--pink);color:#fff;padding:3px 10px;border-radius:50px;border:2px solid #fff;cursor:pointer;box-shadow:0 2px 8px rgba(255,59,127,0.4)">⭐ Premium</span>';
-    } else {
-      profilePlanBadge.innerHTML = '';
-    }
+    profilePlanBadge.innerHTML = '';
+    profilePlanBadge.style.display = 'none';
   }
   // Update avatar menu upgrade text
   var upgradeText = document.getElementById('avatar-menu-upgrade-text');
@@ -3963,7 +3958,9 @@ let userListings = _getListings();
 function goTo(id) {
   const cur = document.querySelector('.screen.active');
   if (cur) { cur.classList.remove('active'); screenHistory.push(cur.id); }
-  document.getElementById(id).classList.add('active');
+  var target = document.getElementById(id);
+  target.classList.add('active');
+  target.scrollTop = 0;
   closeChatMenu();
 }
 function goBack() {
@@ -5926,13 +5923,8 @@ function stopBackgroundPolling() {
   if (_bgPollInterval) { clearInterval(_bgPollInterval); _bgPollInterval = null; }
 }
 function openEditProfile() {
-  syncProfileForm();   // always refresh form with latest currentUser data
+  syncProfileForm();
   goTo('screen-editprofile');
-  // Scroll to top so user sees photos first
-  setTimeout(function() {
-    var ep = document.getElementById('screen-editprofile');
-    if (ep) ep.scrollTop = 0;
-  }, 50);
 }
 
 function pickIdea(el) {
@@ -7406,15 +7398,19 @@ function syncProfileForm() {
   }
   // Sync profile display
   const nameAge = currentUser.name + (currentUser.age ? ', '+currentUser.age : '');
-  document.getElementById('my-profile-name').textContent = nameAge;
-  // Add own subscription badge
-  var myBadgeEl = document.getElementById('my-profile-badge');
-  if (!myBadgeEl) {
-    myBadgeEl = document.createElement('span');
-    myBadgeEl.id = 'my-profile-badge';
-    document.getElementById('my-profile-name').appendChild(myBadgeEl);
-  }
-  myBadgeEl.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + getBadgeHTML(getUserTier()) + getLevelBadgeHTML(getUserXP()) + '</div>';
+  var profileNameEl = document.getElementById('my-profile-name');
+  profileNameEl.innerHTML = '';
+  profileNameEl.style.cssText = 'display:flex;align-items:flex-start;gap:8px;flex-wrap:nowrap';
+  var nameSpan = document.createElement('span');
+  nameSpan.textContent = nameAge;
+  nameSpan.style.cssText = 'flex-shrink:1;min-width:0';
+  profileNameEl.appendChild(nameSpan);
+  // Add own subscription badges — right justified, stacked vertically
+  var myBadgeEl = document.createElement('span');
+  myBadgeEl.id = 'my-profile-badge';
+  myBadgeEl.style.cssText = 'margin-left:auto;display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0';
+  myBadgeEl.innerHTML = getBadgeHTML(getUserTier()) + getLevelBadgeHTML(getUserXP());
+  profileNameEl.appendChild(myBadgeEl);
   document.getElementById('my-profile-loc').textContent = currentUser.loc || '';
   var profileEmailText = document.getElementById('my-profile-email-text');
   var profileEmailWrap = document.getElementById('my-profile-email');
@@ -7603,6 +7599,14 @@ function saveProfile() {
 
   // Sync profile changes into user's listing cards
   updateUserListingsProfile();
+  // Reload gallery and Supabase listings to refresh carousels with updated photos/order
+  if (_supabase && currentUser.supabaseId) {
+    loadGalleryPhotos().then(function() {
+      if (typeof loadSupabaseListings === 'function') loadSupabaseListings();
+    });
+  } else if (typeof loadSupabaseListings === 'function') {
+    loadSupabaseListings();
+  }
 
   if (isSignedIn) showTopbarAvatar();
   showToast('Profile saved! ✓');
@@ -7950,7 +7954,7 @@ function initGalleryDragDrop(grid) {
   });
 }
 
-function reorderGalleryPhotos(fromIdx, toIdx) {
+async function reorderGalleryPhotos(fromIdx, toIdx) {
   if (fromIdx === toIdx) return;
   var movedPhoto = _galleryPhotos.splice(fromIdx, 1)[0];
   _galleryPhotos.splice(toIdx, 0, movedPhoto);
@@ -7964,13 +7968,14 @@ function reorderGalleryPhotos(fromIdx, toIdx) {
   updateUserListingsProfile();
 
   if (_supabase && currentUser.supabaseId) {
-    _supabase.from('profiles').update({ photo_url: primary.url, face_pos: primary.facePos }).eq('id', currentUser.supabaseId);
-    _supabase.from('profile_photos').update({ is_primary: false }).eq('user_id', currentUser.supabaseId);
-    _galleryPhotos.forEach(function(p, i) {
+    await _supabase.from('profiles').update({ photo_url: primary.url, face_pos: primary.facePos }).eq('id', currentUser.supabaseId);
+    await _supabase.from('profile_photos').update({ is_primary: false }).eq('user_id', currentUser.supabaseId);
+    for (var ri = 0; ri < _galleryPhotos.length; ri++) {
+      var p = _galleryPhotos[ri];
       if (!String(p.id).startsWith('temp_') && !String(p.id).startsWith('legacy_') && !String(p.id).startsWith('local_')) {
-        _supabase.from('profile_photos').update({ display_order: i, is_primary: i === 0 }).eq('id', p.id);
+        await _supabase.from('profile_photos').update({ display_order: ri, is_primary: ri === 0 }).eq('id', p.id);
       }
-    });
+    }
   }
   renderPhotoGallery();
   showToast('Photos reordered ✓');
