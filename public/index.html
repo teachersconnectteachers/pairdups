@@ -6958,7 +6958,7 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
           if (locEl && !document.getElementById('d-poster-loc-badge')) {
             locEl.style.cssText = 'font-size:12px;color:var(--gray);display:flex;align-items:center;gap:6px';
             var locBadge = document.createElement('span');
-            locBadge.id = 'd-poster-loc-badge';
+            locBadge.id = 'd-poster-loc-badge'; locBadge.style.marginLeft = 'auto';
             locBadge.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
             locEl.appendChild(locBadge);
           }
@@ -7027,7 +7027,7 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
                 if (locEl2 && !document.getElementById('d-poster-loc-badge')) {
                   locEl2.style.cssText = 'font-size:12px;color:var(--gray);display:flex;align-items:center;gap:6px';
                   var locBadge2 = document.createElement('span');
-                  locBadge2.id = 'd-poster-loc-badge';
+                  locBadge2.id = 'd-poster-loc-badge'; locBadge2.style.marginLeft = 'auto';
                   locBadge2.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
                   locEl2.appendChild(locBadge2);
                 }
