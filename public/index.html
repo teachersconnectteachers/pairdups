@@ -7062,13 +7062,17 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
         });
       });
   } else {
-    // Own listing or no Supabase — try own gallery
-    if (isSignedIn && ownerEmail === currentUser.email && _galleryPhotos.length > 1) {
+    // Own listing — load gallery fresh from Supabase for accurate carousel order
+    if (isSignedIn && ownerEmail === currentUser.email && _supabase && currentUser.supabaseId) {
+      loadUserGallery(currentUser.supabaseId).then(function(photos) {
+        if (photos && photos.length > 1) {
+          setTimeout(function() { initCarousel('detail-carousel', photos); }, 100);
+        }
+      });
+    } else if (isSignedIn && ownerEmail === currentUser.email && _galleryPhotos.length > 1) {
       var ownLimit = getPhotoLimit();
       var limitedPhotos = _galleryPhotos.slice(0, ownLimit).map(function(p) { return { url: p.url, facePos: p.facePos }; });
-      setTimeout(function() {
-        initCarousel('detail-carousel', limitedPhotos);
-      }, 100);
+      setTimeout(function() { initCarousel('detail-carousel', limitedPhotos); }, 100);
     }
   }
   // Log listing view for analytics
@@ -7403,22 +7407,56 @@ function syncProfileForm() {
   const nameAge = currentUser.name + (currentUser.age ? ', '+currentUser.age : '');
   var profileNameEl = document.getElementById('my-profile-name');
   profileNameEl.innerHTML = '';
-  profileNameEl.style.cssText = 'display:flex;align-items:flex-start;gap:8px;flex-wrap:nowrap';
+  profileNameEl.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:nowrap';
   var nameSpan = document.createElement('span');
   nameSpan.textContent = nameAge;
   nameSpan.style.cssText = 'flex-shrink:1;min-width:0';
   profileNameEl.appendChild(nameSpan);
-  // Add own subscription badges — right justified, stacked vertically
-  var myBadgeEl = document.createElement('span');
-  myBadgeEl.id = 'my-profile-badge';
-  myBadgeEl.style.cssText = 'margin-left:auto;display:flex;flex-direction:column;gap:1px;align-items:flex-end;flex-shrink:0';
-  myBadgeEl.innerHTML = getBadgeHTML(getUserTier()) + getLevelBadgeHTML(getUserXP());
-  profileNameEl.appendChild(myBadgeEl);
+  // Gold badge on name line (or Verified for Premium)
+  var myTier = getUserTier();
+  if (myTier === 'gold') {
+    var goldBadge = document.createElement('span');
+    goldBadge.style.cssText = 'margin-left:auto;flex-shrink:0';
+    goldBadge.innerHTML = '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(245,158,11,0.3)">👑 Gold</span>';
+    profileNameEl.appendChild(goldBadge);
+  } else if (myTier === 'premium') {
+    var verBadge = document.createElement('span');
+    verBadge.style.cssText = 'margin-left:auto;flex-shrink:0';
+    verBadge.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3)">✅ Verified</span>';
+    profileNameEl.appendChild(verBadge);
+  }
+
+  // Location line — add Verified badge for Gold users
   document.getElementById('my-profile-loc').textContent = currentUser.loc || '';
+  var locLine = document.getElementById('my-profile-loc').parentElement;
+  // Remove old loc badge if present
+  var oldProfileLocBadge = document.getElementById('profile-loc-badge');
+  if (oldProfileLocBadge) oldProfileLocBadge.remove();
+  if (myTier === 'gold') {
+    locLine.style.cssText = (locLine.getAttribute('style') || '') + ';display:flex;align-items:center';
+    var locBadge = document.createElement('span');
+    locBadge.id = 'profile-loc-badge';
+    locBadge.style.cssText = 'margin-left:auto;flex-shrink:0';
+    locBadge.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3)">✅ Verified</span>';
+    locLine.appendChild(locBadge);
+  }
+
+  // Email line — add Level badge
   var profileEmailText = document.getElementById('my-profile-email-text');
   var profileEmailWrap = document.getElementById('my-profile-email');
   if (profileEmailText) profileEmailText.textContent = currentUser.email || '';
   if (profileEmailWrap) profileEmailWrap.style.display = currentUser.email ? 'flex' : 'none';
+  // Remove old email badge if present
+  var oldProfileEmailBadge = document.getElementById('profile-email-badge');
+  if (oldProfileEmailBadge) oldProfileEmailBadge.remove();
+  var levelHtml = getLevelBadgeHTML(getUserXP());
+  if (levelHtml && profileEmailWrap) {
+    var emailBadge = document.createElement('span');
+    emailBadge.id = 'profile-email-badge';
+    emailBadge.style.cssText = 'margin-left:auto;flex-shrink:0';
+    emailBadge.innerHTML = levelHtml;
+    profileEmailWrap.appendChild(emailBadge);
+  }
   document.getElementById('my-profile-bio').textContent = currentUser.bio || '';
   var photo   = currentUser.photo   || '';
   var defaultAvatar = _DEFAULT_AVATAR_SQ;
