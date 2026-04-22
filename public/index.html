@@ -443,7 +443,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 .card-carousel-slide{min-width:100%;height:100%;flex-shrink:0}
 .card-carousel-slide img{width:100%;height:100%;object-fit:cover;display:block}
 .card-carousel-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:4;padding:4px 8px;background:rgba(0,0,0,0.25);border-radius:50px}
-.card-carousel-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;border:none}
+.card-carousel-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;border:none;padding:0}
 .card-carousel-dot.active{background:#fff;transform:scale(1.3)}
 .photo-add-slot{aspect-ratio:1;border:2px dashed var(--gray-border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;gap:4px;background:var(--gray-light)}
 .photo-add-slot:hover{border-color:var(--pink);background:var(--pink-pale)}
@@ -461,7 +461,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 .photo-carousel-slide{min-width:100%;height:100%;flex-shrink:0}
 .photo-carousel-slide img{width:100%;height:100%;object-fit:cover;display:block}
 .photo-carousel-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:3;padding:4px 10px;background:rgba(0,0,0,0.3);border-radius:50px}
-.photo-carousel-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;border:none}
+.photo-carousel-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;border:none;padding:0}
 .photo-carousel-dot.active{background:#fff;transform:scale(1.2)}
 .photo-carousel-nav{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;background:rgba(255,255,255,0.7);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;opacity:0;transition:opacity 0.2s}
 .photo-carousel:hover .photo-carousel-nav{opacity:1}
@@ -5928,6 +5928,11 @@ function stopBackgroundPolling() {
 function openEditProfile() {
   syncProfileForm();   // always refresh form with latest currentUser data
   goTo('screen-editprofile');
+  // Scroll to top so user sees photos first
+  setTimeout(function() {
+    var ep = document.getElementById('screen-editprofile');
+    if (ep) ep.scrollTop = 0;
+  }, 50);
 }
 
 function pickIdea(el) {
@@ -7739,7 +7744,7 @@ function handleGalleryUpload(e) {
   reader.readAsDataURL(file);
 }
 
-function deleteGalleryPhoto(photoId) {
+async function deleteGalleryPhoto(photoId) {
   var idx = _galleryPhotos.findIndex(function(p) { return p.id === photoId; });
   if (idx === -1) return;
   var photo = _galleryPhotos[idx];
@@ -7755,9 +7760,9 @@ function deleteGalleryPhoto(photoId) {
     currentUser.photo = newPrimary.url;
     currentUser.facePos = newPrimary.facePos;
     if (_supabase && currentUser.supabaseId) {
-      _supabase.from('profiles').update({ photo_url: newPrimary.url, face_pos: newPrimary.facePos }).eq('id', currentUser.supabaseId);
+      await _supabase.from('profiles').update({ photo_url: newPrimary.url, face_pos: newPrimary.facePos }).eq('id', currentUser.supabaseId);
       if (!String(newPrimary.id).startsWith('temp_')) {
-        _supabase.from('profile_photos').update({ is_primary: true, display_order: 0 }).eq('id', newPrimary.id);
+        await _supabase.from('profile_photos').update({ is_primary: true, display_order: 0 }).eq('id', newPrimary.id);
       }
     }
     syncProfileImages();
@@ -7766,7 +7771,7 @@ function deleteGalleryPhoto(photoId) {
     currentUser.photo = '';
     currentUser.facePos = 'center 20%';
     if (_supabase && currentUser.supabaseId) {
-      _supabase.from('profiles').update({ photo_url: null, face_pos: 'center 20%' }).eq('id', currentUser.supabaseId);
+      await _supabase.from('profiles').update({ photo_url: null, face_pos: 'center 20%' }).eq('id', currentUser.supabaseId);
     }
     syncProfileImages();
     updateUserListingsProfile();
@@ -7776,9 +7781,15 @@ function deleteGalleryPhoto(photoId) {
   // Reorder remaining
   _galleryPhotos.forEach(function(p, i) { p.displayOrder = i; });
 
-  // Delete from Supabase
+  // Delete from Supabase — await so it completes before any re-fetch
   if (_supabase && !String(photoId).startsWith('temp_')) {
-    _supabase.from('profile_photos').delete().eq('id', photoId);
+    await _supabase.from('profile_photos').delete().eq('id', photoId);
+    // Update display_order for remaining photos
+    for (var ri = 0; ri < _galleryPhotos.length; ri++) {
+      if (!String(_galleryPhotos[ri].id).startsWith('temp_')) {
+        await _supabase.from('profile_photos').update({ display_order: ri, is_primary: ri === 0 }).eq('id', _galleryPhotos[ri].id);
+      }
+    }
   }
   renderPhotoGallery();
   showToast('Photo removed.');
@@ -7839,38 +7850,29 @@ function renderPhotoGallery() {
   if (photoUpgradeBtn) photoUpgradeBtn.style.display = isGold() ? 'none' : 'inline';
 
   var html = '';
-  _galleryPhotos.forEach(function(p, i) {
-    if (i < limit) {
-      // Visible photos within tier limit
-      html += '<div class="photo-gallery-item" data-photo-id="'+p.id+'" data-photo-idx="'+i+'" draggable="true">';
-      html += '<img src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+'">';
-      if (p.isPrimary) html += '<div class="photo-primary-badge">★ Main</div>';
-      else html += '<div class="photo-set-main-btn" onclick="event.stopPropagation();setGalleryPrimary(\''+p.id+'\')">Set as Main</div>';
-      html += '<div class="photo-order-badge">'+(i+1)+'</div>';
-      html += '<button class="photo-delete-btn" onclick="event.stopPropagation();confirmDeletePhoto(\''+p.id+'\')" title="Remove photo"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
-      html += '</div>';
-    } else {
-      // Photos beyond limit — show locked with thumbnail
-      html += '<div class="photo-gallery-item" style="opacity:0.4;position:relative;cursor:pointer" onclick="showPhotoUpsell()">';
-      html += '<img src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+';filter:blur(2px)">';
-      html += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:24px;background:rgba(0,0,0,0.5);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center">🔒</div>';
-      html += '<div class="photo-order-badge" style="background:rgba(0,0,0,0.5)">'+(i+1)+'</div>';
-      html += '</div>';
-    }
+  var visiblePhotos = _galleryPhotos.slice(0, limit);
+  visiblePhotos.forEach(function(p, i) {
+    html += '<div class="photo-gallery-item" data-photo-id="'+p.id+'" data-photo-idx="'+i+'" draggable="true">';
+    html += '<img src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+'">';
+    if (p.isPrimary) html += '<div class="photo-primary-badge">★ Main</div>';
+    else html += '<div class="photo-set-main-btn" onclick="event.stopPropagation();setGalleryPrimary(\''+p.id+'\')">Set as Main</div>';
+    html += '<div class="photo-order-badge">'+(i+1)+'</div>';
+    html += '<button class="photo-delete-btn" onclick="event.stopPropagation();confirmDeletePhoto(\''+p.id+'\')" title="Remove photo"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+    html += '</div>';
   });
 
-  // Add slot(s) if under limit and visible photos under limit
-  var visibleCount = Math.min(_galleryPhotos.length, limit);
+  // Add upload slot if under limit
+  var visibleCount = visiblePhotos.length;
   if (visibleCount < limit) {
     html += '<div class="photo-add-slot" onclick="triggerPhotoUpload()">';
     html += '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
     html += '<span>Add Photo</span></div>';
   }
 
-  // Show locked slots to tease upgrade (fill remaining grid to next tier's limit)
+  // Show locked upgrade slots only for non-Gold users
   if (!isGold()) {
     var nextLimit = isPremium() ? 12 : 5;
-    var totalSlots = _galleryPhotos.length + (_galleryPhotos.length < limit ? 1 : 0);
+    var totalSlots = visibleCount + (visibleCount < limit ? 1 : 0);
     var lockedCount = nextLimit - totalSlots;
     if (lockedCount < 0) lockedCount = 0;
     for (var li = 0; li < lockedCount; li++) {
