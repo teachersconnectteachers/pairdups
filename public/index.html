@@ -8198,14 +8198,22 @@ function initCarousel(containerId, photos) {
     slidesHtml += '<div class="photo-carousel-slide"><img class="detail-hero-img" src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+(p.facePos||'center 20%')+'"></div>';
   });
   track.innerHTML = slidesHtml;
+  track.style.direction = 'ltr';
 
-  // Build dots
-  var dotsHtml = '';
+  // Build dots — clear and rebuild
+  dotsWrap.innerHTML = '';
   photos.forEach(function(p, i) {
-    dotsHtml += '<div class="photo-carousel-dot'+(i===0?' active':'')+'" data-idx="'+i+'"></div>';
+    var dot = document.createElement('div');
+    dot.className = 'photo-carousel-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('data-idx', String(i));
+    dotsWrap.appendChild(dot);
   });
-  dotsWrap.innerHTML = dotsHtml;
   dotsWrap.style.display = 'flex';
+  dotsWrap.style.direction = 'ltr';
+  
+  console.log('[PairdUps] initCarousel:', containerId, 'photos:', photos.length, 'dots:', dotsWrap.children.length);
+  // Log first and last photo URLs for debugging
+  if (photos.length > 0) console.log('[PairdUps] First photo:', photos[0].url.substring(0,60), 'Last photo:', photos[photos.length-1].url.substring(0,60));
 
   // Carousel state
   var currentIdx = 0;
@@ -8250,10 +8258,13 @@ function initCarousel(containerId, photos) {
     diffX = 0;
   });
 
-  // Click dots
+  // Click dots — use sibling index to avoid data-idx issues
   dotsWrap.addEventListener('click', function(e) {
     var dot = e.target.closest('.photo-carousel-dot');
-    if (dot) goToSlide(parseInt(dot.dataset.idx));
+    if (!dot) return;
+    var allDots = Array.prototype.slice.call(dotsWrap.querySelectorAll('.photo-carousel-dot'));
+    var clickedIdx = allDots.indexOf(dot);
+    if (clickedIdx >= 0) goToSlide(clickedIdx);
   });
 
   // Mouse drag for desktop
