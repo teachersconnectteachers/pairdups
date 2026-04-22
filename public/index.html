@@ -3960,7 +3960,10 @@ function goTo(id) {
   if (cur) { cur.classList.remove('active'); screenHistory.push(cur.id); }
   var target = document.getElementById(id);
   target.classList.add('active');
+  // Scroll to top — both the screen and any inner scroll-area
   target.scrollTop = 0;
+  var scrollArea = target.querySelector('.scroll-area');
+  if (scrollArea) scrollArea.scrollTop = 0;
   closeChatMenu();
 }
 function goBack() {
@@ -7408,7 +7411,7 @@ function syncProfileForm() {
   // Add own subscription badges — right justified, stacked vertically
   var myBadgeEl = document.createElement('span');
   myBadgeEl.id = 'my-profile-badge';
-  myBadgeEl.style.cssText = 'margin-left:auto;display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0';
+  myBadgeEl.style.cssText = 'margin-left:auto;display:flex;flex-direction:column;gap:1px;align-items:flex-end;flex-shrink:0';
   myBadgeEl.innerHTML = getBadgeHTML(getUserTier()) + getLevelBadgeHTML(getUserXP());
   profileNameEl.appendChild(myBadgeEl);
   document.getElementById('my-profile-loc').textContent = currentUser.loc || '';
@@ -8023,7 +8026,8 @@ async function loadGalleryPhotos() {
     var { data, error } = await _supabase.from('profile_photos')
       .select('*')
       .eq('user_id', currentUser.supabaseId)
-      .order('display_order', { ascending: true });
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true });
 
     if (error) {
       console.log('Gallery load error (table may not exist yet):', error.message);
@@ -8042,6 +8046,21 @@ async function loadGalleryPhotos() {
       });
       // Ensure at least one is primary
       if (!_galleryPhotos.some(function(p) { return p.isPrimary; })) _galleryPhotos[0].isPrimary = true;
+      // Normalize display_order if any duplicates or gaps exist
+      var needsFix = false;
+      for (var gi = 0; gi < _galleryPhotos.length; gi++) {
+        if (_galleryPhotos[gi].displayOrder !== gi) { needsFix = true; break; }
+      }
+      if (needsFix) {
+        _galleryPhotos.forEach(function(p, i) { p.displayOrder = i; });
+        // Persist corrected order to Supabase
+        _galleryPhotos.forEach(function(p, i) {
+          if (!String(p.id).startsWith('temp_') && !String(p.id).startsWith('legacy_') && !String(p.id).startsWith('local_')) {
+            _supabase.from('profile_photos').update({ display_order: i }).eq('id', p.id);
+          }
+        });
+        console.log('[PairdUps] Fixed display_order for', _galleryPhotos.length, 'photos');
+      }
       // Set currentUser.photo to primary
       var primary = _galleryPhotos.find(function(p) { return p.isPrimary; });
       if (primary) {
@@ -8076,9 +8095,10 @@ async function loadUserGallery(userId) {
     var photoLimit = tier === 'gold' ? 12 : (tier === 'premium' ? 5 : 1);
 
     var { data, error } = await _supabase.from('profile_photos')
-      .select('photo_url, face_pos, display_order, is_primary')
+      .select('photo_url, face_pos, display_order, is_primary, created_at')
       .eq('user_id', userId)
       .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true })
       .limit(photoLimit);
     if (error || !data || data.length === 0) return [];
     return data.map(function(row) {
