@@ -7067,17 +7067,20 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
     console.log('[PairdUps] Detail: taking OWN LISTING branch');
     if (isSignedIn && ownerEmail === currentUser.email && _supabase && currentUser.supabaseId) {
       // Guard against double initialization
-      if (container && container._carouselLoading) return;
       var dCarouselContainer = document.getElementById('detail-carousel');
-      if (dCarouselContainer) dCarouselContainer._carouselLoading = true;
-      console.log('[PairdUps] Detail: loading own gallery for carousel, userId:', currentUser.supabaseId);
-      loadUserGallery(currentUser.supabaseId).then(function(photos) {
-        console.log('[PairdUps] Detail: own gallery loaded, photos:', photos ? photos.length : 0);
-        if (photos && photos.length > 1) {
-          initCarousel('detail-carousel', photos);
-        }
-        if (dCarouselContainer) dCarouselContainer._carouselLoading = false;
-      });
+      if (dCarouselContainer && dCarouselContainer._carouselLoading) {
+        console.log('[PairdUps] Detail: skipping — carousel already loading');
+      } else {
+        if (dCarouselContainer) dCarouselContainer._carouselLoading = true;
+        console.log('[PairdUps] Detail: loading own gallery for carousel, userId:', currentUser.supabaseId);
+        loadUserGallery(currentUser.supabaseId).then(function(photos) {
+          console.log('[PairdUps] Detail: own gallery loaded, photos:', photos ? photos.length : 0);
+          if (photos && photos.length > 1) {
+            initCarousel('detail-carousel', photos);
+          }
+          if (dCarouselContainer) dCarouselContainer._carouselLoading = false;
+        });
+      }
     } else if (isSignedIn && ownerEmail === currentUser.email && _galleryPhotos.length > 1) {
       var ownLimit = getPhotoLimit();
       var limitedPhotos = _galleryPhotos.slice(0, ownLimit).map(function(p) { return { url: p.url, facePos: p.facePos }; });
