@@ -8173,6 +8173,16 @@ function initCarousel(containerId, photos) {
   var dotsWrap = document.getElementById(dotsId);
   if (!track || !dotsWrap) return;
 
+  // Remove old event listeners by replacing container with a clean clone
+  var newContainer = container.cloneNode(false);
+  // Move children (track, dots) to new container
+  while (container.firstChild) newContainer.appendChild(container.firstChild);
+  container.parentNode.replaceChild(newContainer, container);
+  container = newContainer;
+  container.id = containerId;
+  track = document.getElementById(trackId);
+  dotsWrap = document.getElementById(dotsId);
+
   if (!photos || photos.length <= 1) {
     dotsWrap.innerHTML = '';
     dotsWrap.style.display = 'none';
