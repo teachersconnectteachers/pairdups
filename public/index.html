@@ -6112,8 +6112,9 @@ function renderUserListing(d) {
     +'<div class="card-title">'+d.title+'</div>'
     +'<div class="card-desc">'+escHtml(shortDesc)+'</div>'
     +'<div class="card-meta">'
-    +'<div style="display:flex;align-items:center"><div class="card-meta-row" style="flex:1"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> '+d.dateStr+'</div><div class="poster-badge" data-email="'+esc(d.ownerEmail||'')+'" style="display:flex;gap:3px;align-items:center;flex-shrink:0"'+(d.ownerTier && d.ownerTier !== 'free' ? ' data-loaded="1"' : '')+'>'+getBadgeHTML(d.ownerTier||'free')+'</div></div>'
-    +'<div class="card-meta-row"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'+d.city+'</div>'
+    +'<div style="display:flex;align-items:center"><div class="card-meta-row" style="flex:1"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> '+d.dateStr+'</div>'+(d.ownerTier==='gold'?'<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(245,158,11,0.3);flex-shrink:0">👑 Gold</span>':'')+(d.ownerTier==='premium'?'<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);flex-shrink:0;cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>':'')+'</div>'
+    +'<div style="display:flex;align-items:center"><div class="card-meta-row" style="flex:1"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'+d.city+'</div>'+(d.ownerTier==='gold'?'<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);flex-shrink:0;cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>':'')+'</div>'
+    +'<div class="poster-badge" data-email="'+esc(d.ownerEmail||'')+'" style="display:none"'+(d.ownerTier && d.ownerTier !== 'free' ? ' data-loaded="1"' : '')+'></div>'
     +'<div class="card-meta-row"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
     +'<a onclick="event.stopPropagation();openMap(\''+esc(d.venue)+'\',\''+esc(d.city||'')+'\')">' +d.venue+'</a></div>'
     +'</div>'
@@ -6929,19 +6930,41 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
     gtEl.style.padding = '3px 10px';
   }
   document.getElementById('d-poster-name').textContent = fname+', '+age;
-  // Add subscription badge next to poster name in detail view
+  // Add subscription badges — Gold on name line, Verified on location line
   var dPosterBadge = document.getElementById('d-poster-badge');
   if (!dPosterBadge) {
-    dPosterBadge = document.createElement('div');
+    dPosterBadge = document.createElement('span');
     dPosterBadge.id = 'd-poster-badge';
-    dPosterBadge.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-items:flex-end;margin-left:auto';
+    dPosterBadge.style.cssText = 'margin-left:auto;flex-shrink:0';
     document.getElementById('d-poster-name').appendChild(dPosterBadge);
   }
   dPosterBadge.innerHTML = '';
+  // Remove any previous verified badge from location line
+  var oldLocBadge = document.getElementById('d-poster-loc-badge');
+  if (oldLocBadge) oldLocBadge.remove();
   var ownerEmail2 = posterKey.split('~')[5] || '';
   if (_supabase && ownerEmail2) {
     _supabase.from('profiles').select('subscription_tier').eq('email', ownerEmail2).maybeSingle()
-      .then(function(res) { if (res.data && dPosterBadge) dPosterBadge.innerHTML = getBadgeHTML(res.data.subscription_tier); });
+      .then(function(res) {
+        if (!res.data) return;
+        var tier = res.data.subscription_tier;
+        if (tier === 'gold') {
+          if (dPosterBadge) dPosterBadge.innerHTML = '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(245,158,11,0.3)">👑 Gold</span>';
+          // Add Verified to location line
+          var locEl = document.getElementById('d-poster-loc');
+          if (locEl && !document.getElementById('d-poster-loc-badge')) {
+            var locBadge = document.createElement('span');
+            locBadge.id = 'd-poster-loc-badge';
+            locBadge.style.cssText = 'margin-left:auto;flex-shrink:0';
+            locBadge.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
+            // Make the loc parent a flex container
+            locEl.parentElement.style.cssText = (locEl.parentElement.style.cssText || '') + ';display:flex;align-items:center';
+            locEl.parentElement.appendChild(locBadge);
+          }
+        } else if (tier === 'premium') {
+          if (dPosterBadge) dPosterBadge.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
+        }
+      });
   }
   document.getElementById('d-poster-loc').textContent = loc;
   document.getElementById('d-poster-img').src = photo;
@@ -6982,14 +7005,35 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
         // Re-add badge after name update
         var dPosterBadge2 = document.getElementById('d-poster-badge');
         if (!dPosterBadge2) {
-          dPosterBadge2 = document.createElement('div');
+          dPosterBadge2 = document.createElement('span');
           dPosterBadge2.id = 'd-poster-badge';
-          dPosterBadge2.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-items:flex-end;margin-left:auto';
+          dPosterBadge2.style.cssText = 'margin-left:auto;flex-shrink:0';
         }
         document.getElementById('d-poster-name').appendChild(dPosterBadge2);
+        // Remove old loc badge
+        var oldLocBadge2 = document.getElementById('d-poster-loc-badge');
+        if (oldLocBadge2) oldLocBadge2.remove();
         if (_supabase && ownerEmail) {
           _supabase.from('profiles').select('subscription_tier').eq('email', ownerEmail).maybeSingle()
-            .then(function(res) { if (res.data && dPosterBadge2) dPosterBadge2.innerHTML = getBadgeHTML(res.data.subscription_tier); });
+            .then(function(res) {
+              if (!res.data) return;
+              var tier2 = res.data.subscription_tier;
+              if (tier2 === 'gold') {
+                if (dPosterBadge2) dPosterBadge2.innerHTML = '<span style="font-size:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(245,158,11,0.3)">👑 Gold</span>';
+                var locEl2 = document.getElementById('d-poster-loc');
+                if (locEl2 && !document.getElementById('d-poster-loc-badge')) {
+                  var locBadge2 = document.createElement('span');
+                  locBadge2.id = 'd-poster-loc-badge';
+                  locBadge2.style.cssText = 'margin-left:auto;flex-shrink:0';
+                  locBadge2.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
+                  locEl2.parentElement.style.cssText = (locEl2.parentElement.style.cssText || '') + ';display:flex;align-items:center';
+                  locEl2.parentElement.appendChild(locBadge2);
+                }
+              } else if (tier2 === 'premium') {
+                if (dPosterBadge2) dPosterBadge2.innerHTML = '<span style="font-size:10px;background:var(--pink);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(255,59,127,0.3);cursor:help" onclick="event.stopPropagation();showVerifiedTooltip()">✅ Verified</span>';
+              }
+            });
+        }
         }
         document.getElementById('d-poster-loc').textContent = freshLoc;
         document.getElementById('d-poster-img').src = freshPhoto;
