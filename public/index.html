@@ -7066,12 +7066,17 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   } else {
     console.log('[PairdUps] Detail: taking OWN LISTING branch');
     if (isSignedIn && ownerEmail === currentUser.email && _supabase && currentUser.supabaseId) {
+      // Guard against double initialization
+      if (container && container._carouselLoading) return;
+      var dCarouselContainer = document.getElementById('detail-carousel');
+      if (dCarouselContainer) dCarouselContainer._carouselLoading = true;
       console.log('[PairdUps] Detail: loading own gallery for carousel, userId:', currentUser.supabaseId);
       loadUserGallery(currentUser.supabaseId).then(function(photos) {
         console.log('[PairdUps] Detail: own gallery loaded, photos:', photos ? photos.length : 0);
         if (photos && photos.length > 1) {
           initCarousel('detail-carousel', photos);
         }
+        if (dCarouselContainer) dCarouselContainer._carouselLoading = false;
       });
     } else if (isSignedIn && ownerEmail === currentUser.email && _galleryPhotos.length > 1) {
       var ownLimit = getPhotoLimit();
@@ -8224,8 +8229,8 @@ function initCarousel(containerId, photos) {
     if (idx >= len) idx = 0;
     currentIdx = idx;
     // Use pixel-based transform calculated from container width
-    var w = container.offsetWidth || container.clientWidth || 300;
-    track.style.transform = 'translateX(' + (-idx * w) + 'px)';
+    
+    track.style.transform = 'translateX(' + (-idx * 100) + '%)';
     var allDots = dotsWrap.children;
     for (var k = 0; k < allDots.length; k++) {
       if (k === idx) allDots[k].classList.add('active');
@@ -8241,8 +8246,8 @@ function initCarousel(containerId, photos) {
   container.addEventListener('touchmove', function(e) {
     if (!isDragging) return;
     diffX = e.touches[0].clientX - startX;
-    var w = container.offsetWidth || 300;
-    track.style.transform = 'translateX(' + (-currentIdx * w + diffX) + 'px)';
+    
+    var pct = -(currentIdx * 100) + (diffX / (container.offsetWidth || 1) * 100); track.style.transform = 'translateX(' + pct + '%)';
   }, { passive: true, signal: ac.signal });
   container.addEventListener('touchend', function() {
     if (!isDragging) return;
@@ -8271,8 +8276,8 @@ function initCarousel(containerId, photos) {
   container.addEventListener('mousemove', function(e) {
     if (!isMouseDragging) return;
     mouseDiffX = e.clientX - mouseStartX;
-    var w = container.offsetWidth || 300;
-    track.style.transform = 'translateX(' + (-currentIdx * w + mouseDiffX) + 'px)';
+    
+    var mpct = -(currentIdx * 100) + (mouseDiffX / (container.offsetWidth || 1) * 100); track.style.transform = 'translateX(' + mpct + '%)';
   }, { signal: ac.signal });
   container.addEventListener('mouseup', function() {
     if (!isMouseDragging) return;
