@@ -6989,7 +6989,9 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   goTo('screen-detail');
 
   // Fetch fresh profile data from Supabase for the poster (in case they updated their profile)
+  console.log('[PairdUps] Detail: ownerEmail:', ownerEmail, 'currentUser.email:', currentUser.email, 'match:', ownerEmail === currentUser.email, 'isSignedIn:', isSignedIn);
   if (_supabase && ownerEmail && (!isSignedIn || ownerEmail !== currentUser.email)) {
+    console.log('[PairdUps] Detail: taking OTHER USER branch');
     _supabase.from('profiles').select('name, age, location, photo_url, bio, interests').eq('email', ownerEmail).maybeSingle()
       .then(function(res) {
         if (!res.data) return;
@@ -7062,11 +7064,13 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
         });
       });
   } else {
-    // Own listing — load gallery fresh from Supabase for accurate carousel order
+    console.log('[PairdUps] Detail: taking OWN LISTING branch');
     if (isSignedIn && ownerEmail === currentUser.email && _supabase && currentUser.supabaseId) {
+      console.log('[PairdUps] Detail: loading own gallery for carousel, userId:', currentUser.supabaseId);
       loadUserGallery(currentUser.supabaseId).then(function(photos) {
+        console.log('[PairdUps] Detail: own gallery loaded, photos:', photos ? photos.length : 0);
         if (photos && photos.length > 1) {
-          setTimeout(function() { initCarousel('detail-carousel', photos); }, 100);
+          initCarousel('detail-carousel', photos);
         }
       });
     } else if (isSignedIn && ownerEmail === currentUser.email && _galleryPhotos.length > 1) {
