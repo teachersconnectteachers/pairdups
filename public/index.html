@@ -1640,6 +1640,14 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     </div>
   </div>
 </div>
+<div class="modal-bg" id="modal-filter-active" onclick="if(event.target===this)closeModal('modal-filter-active')" style="align-items:center;justify-content:center;z-index:300">
+  <div class="modal-card" style="max-width:340px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:40px;margin-bottom:8px">🔍</div>
+    <div style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:10px">Saved Filter Active</div>
+    <p id="filter-active-msg" style="font-size:13px;color:var(--gray);line-height:1.6;margin:0 0 20px"></p>
+    <button onclick="closeModal('modal-filter-active')" style="width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35)">OK</button>
+  </div>
+</div>
 <div class="modal-bg" id="modal-rename-filter" onclick="if(event.target===this)closeModal('modal-rename-filter')" style="align-items:center;justify-content:center;z-index:300">
   <div class="modal-card" style="max-width:340px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="font-size:40px;margin-bottom:8px">✏️</div>
@@ -10639,15 +10647,8 @@ function openSaveFilterModal() {
   if (_activeSavedFilterIdx >= 0) {
     var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
     var activeName = savedFilters[_activeSavedFilterIdx] ? savedFilters[_activeSavedFilterIdx].name : 'a filter';
-    var iconEl = document.getElementById('plan-change-icon');
-    var titleEl = document.getElementById('plan-change-title');
-    var msgEl = document.getElementById('plan-change-msg');
-    var btnEl = document.getElementById('plan-change-confirm-btn');
-    if (iconEl) iconEl.textContent = '🔍';
-    if (titleEl) titleEl.textContent = 'Saved Filter Active';
-    if (msgEl) msgEl.innerHTML = 'You currently have <strong>"' + activeName + '"</strong> selected. Please deselect it first by tapping on it, before saving a new filter.';
-    if (btnEl) { btnEl.textContent = 'OK'; btnEl.style.background = 'var(--pink)'; btnEl.onclick = function() { closeModal('modal-confirm-plan'); }; }
-    openModal('modal-confirm-plan');
+    document.getElementById('filter-active-msg').innerHTML = 'You currently have <strong>"' + activeName + '"</strong> selected. Please deselect it first by tapping on it, before saving a new filter.';
+    openModal('modal-filter-active');
     return;
   }
   var nameInput = document.getElementById('save-filter-name');
