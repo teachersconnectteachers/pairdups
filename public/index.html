@@ -1551,6 +1551,17 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 </div>
 
 <!-- PLAN CHANGE CONFIRMATION MODAL -->
+<div class="modal-bg" id="modal-pin-switch" onclick="if(event.target===this)closeModal('modal-pin-switch')" style="align-items:center;justify-content:center">
+  <div class="modal-card" style="max-width:360px;text-align:center;padding:28px 24px">
+    <div style="font-size:40px;margin-bottom:10px">🤔</div>
+    <div style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:14px">Switch Your Pin?</div>
+    <p id="pin-switch-msg" style="font-size:13px;color:var(--gray);line-height:1.6;margin:0 0 20px"></p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="confirmPinSwitch()" style="width:100%;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(245,158,11,0.35)">📌 Yes, switch pin to this PairdUp</button>
+      <button onclick="closeModal('modal-pin-switch')" style="width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="modal-confirm-plan" onclick="if(event.target===this)closeModal('modal-confirm-plan')" style="align-items:center;justify-content:center">
   <div class="modal-sheet" style="max-width:340px;padding:28px 24px;border-radius:24px;text-align:center">
     <div id="plan-change-icon" style="font-size:52px;margin-bottom:10px">🔄</div>
@@ -6178,7 +6189,7 @@ function renderUserListing(d) {
     +'<div class="card-type-badge '+typeClass+'" style="top:36px;left:10px;font-size:10px;padding:3px 10px">'+(d.groupType==='Group'?'👥 Group':'👤 One-on-One')+'</div>'
     +(d.recurring ? '<div style="position:absolute;bottom:10px;left:10px;background:rgba(46,125,50,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;backdrop-filter:blur(4px)">🔄 Recurring</div>' : '')
     +(d.isFeatured ? '<div style="position:absolute;top:36px;right:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;pointer-events:none;box-shadow:0 2px 8px rgba(245,158,11,0.4);z-index:2">⭐ Featured</div>' : '')
-    +(d.isPinned ? '<div style="position:absolute;bottom:10px;left:10px;background:rgba(217,119,6,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;z-index:2">📌 Pinned</div>' : '')
+    +(d.isPinned ? '<div style="position:absolute;bottom:32px;left:10px;background:rgba(217,119,6,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;z-index:2">📌 Pinned</div>' : '')
     +'</div>'
     +'<div class="card-body">'
     +'<div style="margin-bottom:4px"><span class="card-tag"'+(tagStyle?' style="'+tagStyle+'"':'')+'>Activity Partner &middot; '+(d.lookingFor==='M/F'?'M/F':d.lookingFor)+'</span></div>'
@@ -6321,9 +6332,11 @@ function initCardCarousel(listingId, photos) {
     if (dot) goToSlide(parseInt(dot.dataset.idx));
   });
 
-  // Tap left/right thirds on desktop
+  // Tap left/right thirds on desktop (only if click didn't trigger navigation)
   container.addEventListener('click', function(e) {
     if (Math.abs(diffX) > 5) return;
+    // Don't advance if the click target is a button, link, or the card body (which opens detail)
+    if (e.target.closest('.card-body, .card-footer, .card-title, .card-desc, .card-meta-row, a, button, .send-req-btn')) return;
     var rect = container.getBoundingClientRect();
     var tapX = e.clientX - rect.left;
     if (tapX < rect.width * 0.3) goToSlide(currentIdx - 1);
@@ -10202,47 +10215,81 @@ async function checkReadReceipts(convoId) {
 async function pinPairdUp(btn, listingId) {
   if (!isGold()) { showPremiumModal('📌 Pin your PairdUp to the top of your city\'s Discover feed! Upgrade to Gold.'); return; }
   if (!listingId || !_supabase) { showToast('Cannot pin this listing.'); return; }
-  btn.disabled = true;
-  btn.textContent = '📌 Pinning...';
+  
   try {
-    // Check if already pinned
-    var { data: listing } = await _supabase.from('listings').select('is_pinned, pinned_at').eq('id', listingId).maybeSingle();
+    // Check if already pinned (toggle off)
+    var { data: listing } = await _supabase.from('listings').select('is_pinned').eq('id', listingId).maybeSingle();
     if (listing && listing.is_pinned) {
       // Unpin
+      btn.disabled = true;
       await _supabase.from('listings').update({ is_pinned: false, pinned_at: null }).eq('id', listingId);
       btn.textContent = '📌 Pin';
       btn.style.background = '#FEF3C7';
       btn.style.color = '#D97706';
-      // Update local data
+      btn.disabled = false;
       var ul = userListings.find(function(l) { return l.supabaseId === listingId; });
       if (ul) ul.isPinned = false;
       showToast('PairdUp unpinned.');
-    } else {
-      // Check limit: only 1 pin at a time (unpin any existing)
-      var { data: existingPins } = await _supabase.from('listings').select('id')
-        .eq('owner_id', currentUser.supabaseId).eq('is_pinned', true);
-      if (existingPins && existingPins.length > 0) {
-        // Unpin existing
-        for (var ep = 0; ep < existingPins.length; ep++) {
-          await _supabase.from('listings').update({ is_pinned: false, pinned_at: null }).eq('id', existingPins[ep].id);
-          var oldPinned = userListings.find(function(l) { return l.supabaseId === existingPins[ep].id; });
-          if (oldPinned) oldPinned.isPinned = false;
-        }
-      }
-      await _supabase.from('listings').update({ is_pinned: true, pinned_at: new Date().toISOString() }).eq('id', listingId);
-      btn.textContent = '📌 Pinned!';
-      btn.style.background = '#FF3B7F';
-      btn.style.color = '#fff';
-      // Update local data
-      var ul2 = userListings.find(function(l) { return l.supabaseId === listingId; });
-      if (ul2) ul2.isPinned = true;
-      showToast('PairdUp pinned to top of Discover! 📌');
-      awardXP(3, 'Pinned a PairdUp');
+      if (typeof loadSupabaseListings === 'function') loadSupabaseListings();
+      return;
     }
-    // Refresh Discover feed to reflect pin changes
-    if (typeof loadSupabaseListings === 'function') loadSupabaseListings();
+    
+    // Check if another listing is already pinned
+    var { data: existingPins } = await _supabase.from('listings').select('id, title')
+      .eq('owner_id', currentUser.supabaseId).eq('is_pinned', true);
+    
+    if (existingPins && existingPins.length > 0) {
+      // Show confirmation modal
+      _pendingPinListingId = listingId;
+      _pendingPinBtn = btn;
+      _pendingPinOldIds = existingPins.map(function(p) { return p.id; });
+      var existingTitle = existingPins[0].title || 'your other PairdUp';
+      var msgEl = document.getElementById('pin-switch-msg');
+      if (msgEl) msgEl.innerHTML = 'You already have <strong>"' + existingTitle + '"</strong> pinned. You can only pin 1 PairdUp at a time.<br><br>Would you like to switch your pin to this PairdUp?';
+      openModal('modal-pin-switch');
+      return;
+    }
+    
+    // No existing pin — just pin it
+    await doPin(btn, listingId);
   } catch(e) { console.log('[PairdUps] Pin error:', e); showToast('Could not pin. Try again.'); }
+}
+
+var _pendingPinListingId = null;
+var _pendingPinBtn = null;
+var _pendingPinOldIds = [];
+
+async function confirmPinSwitch() {
+  closeModal('modal-pin-switch');
+  if (!_pendingPinListingId || !_pendingPinBtn) return;
+  try {
+    // Unpin existing
+    for (var ep = 0; ep < _pendingPinOldIds.length; ep++) {
+      await _supabase.from('listings').update({ is_pinned: false, pinned_at: null }).eq('id', _pendingPinOldIds[ep]);
+      var oldPinned = userListings.find(function(l) { return l.supabaseId === _pendingPinOldIds[ep]; });
+      if (oldPinned) oldPinned.isPinned = false;
+    }
+    // Pin the new one
+    await doPin(_pendingPinBtn, _pendingPinListingId);
+  } catch(e) { console.log('[PairdUps] Pin switch error:', e); showToast('Could not switch pin. Try again.'); }
+  _pendingPinListingId = null;
+  _pendingPinBtn = null;
+  _pendingPinOldIds = [];
+}
+
+async function doPin(btn, listingId) {
+  btn.disabled = true;
+  btn.textContent = '📌 Pinning...';
+  await _supabase.from('listings').update({ is_pinned: true, pinned_at: new Date().toISOString() }).eq('id', listingId);
+  btn.textContent = '📌 Pinned!';
+  btn.style.background = '#FF3B7F';
+  btn.style.color = '#fff';
   btn.disabled = false;
+  var ul2 = userListings.find(function(l) { return l.supabaseId === listingId; });
+  if (ul2) ul2.isPinned = true;
+  showToast('PairdUp pinned to top of Discover! 📌');
+  awardXP(3, 'Pinned a PairdUp');
+  if (typeof loadSupabaseListings === 'function') loadSupabaseListings();
 }
 
 // ── Featured PairdUp (Gold) ──────────────────────────────
