@@ -814,7 +814,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <div class="screen" id="screen-detail">
   <div class="detail-hero">
     <button class="detail-back" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <div class="detail-hero-badges"><div class="card-cat-badge" id="d-cat" style="position:static"></div><div class="card-type-badge badge-fun" id="d-type" style="position:static"></div><div class="card-type-badge badge-fun" id="d-group-type" style="position:static;font-size:10px;padding:3px 10px"></div></div>
+    <div class="detail-hero-badges"><div class="card-cat-badge" id="d-cat" style="position:static"></div><div class="card-type-badge badge-fun" id="d-type" style="position:static"></div><div class="card-type-badge badge-fun" id="d-group-type" style="position:static;font-size:10px;padding:3px 10px"></div><div id="d-featured-badge" style="display:none;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;box-shadow:0 2px 8px rgba(245,158,11,0.4)">⭐ Featured</div></div>
     <div class="photo-carousel" id="detail-carousel">
       <div class="photo-carousel-track" id="detail-carousel-track">
         <div class="photo-carousel-slide"><img id="d-photo" class="detail-hero-img" src="" alt=""></div>
@@ -6176,7 +6176,7 @@ function renderUserListing(d) {
     +'<div class="card-type-badge '+typeClass+'">'+typeEmoji+' '+d.pairType+'</div>'
     +'<div class="card-type-badge '+typeClass+'" style="top:36px;left:10px;font-size:10px;padding:3px 10px">'+(d.groupType==='Group'?'👥 Group':'👤 One-on-One')+'</div>'
     +(d.recurring ? '<div style="position:absolute;bottom:10px;left:10px;background:rgba(46,125,50,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;backdrop-filter:blur(4px)">🔄 Recurring</div>' : '')
-    +(d.isFeatured ? '<div style="position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;pointer-events:none;box-shadow:0 2px 8px rgba(245,158,11,0.4);z-index:2">⭐ Featured</div>' : '')
+    +(d.isFeatured ? '<div style="position:absolute;top:36px;right:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;pointer-events:none;box-shadow:0 2px 8px rgba(245,158,11,0.4);z-index:2">⭐ Featured</div>' : '')
     +(d.isPinned ? '<div style="position:absolute;bottom:10px;left:10px;background:rgba(217,119,6,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;z-index:2">📌 Pinned</div>' : '')
     +'</div>'
     +'<div class="card-body">'
@@ -6216,8 +6216,8 @@ function renderUserListing(d) {
       +'<div class="my-actions">'
       +'<button class="act-btn edit">✏️ Edit</button>'
       +'<button class="act-btn delete" onclick="confirmDeleteListing(this)">🗑 Delete</button>'
-      +(isGold() ? '<button class="act-btn" style="background:#FEF3C7;color:#D97706" onclick="pinPairdUp(this,\''+esc(d.supabaseId||'')+'\')">📌 Pin</button>' : '')
-      +(isGold() ? '<button class="act-btn" style="background:#DBEAFE;color:#2563EB" onclick="featurePairdUp(this,\''+esc(d.supabaseId||'')+'\')">⭐ Feature</button>' : '')
+      +(isGold() ? '<button class="act-btn" style="background:'+(d.isPinned?'#FF3B7F':'#FEF3C7')+';color:'+(d.isPinned?'#fff':'#D97706')+'" onclick="pinPairdUp(this,\''+esc(d.supabaseId||'')+'\')">📌 '+(d.isPinned?'Pinned!':'Pin')+'</button>' : '')
+      +(isGold() ? '<button class="act-btn" style="background:'+(d.isFeatured?'#2563EB':'#DBEAFE')+';color:'+(d.isFeatured?'#fff':'#2563EB')+'" onclick="featurePairdUp(this,\''+esc(d.supabaseId||'')+'\')">⭐ '+(d.isFeatured?'Featured!':'Feature')+'</button>' : '')
       +'</div></div>'
       +'<div class="my-badge" style="background:#E0F7FA;color:#00796B">'+(d.pairType==='Date'?'Date':'Fun')+'</div>';
     // Attach edit handler with closure over current data including recurring
@@ -6962,6 +6962,18 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
   document.getElementById('d-date').textContent = date;
   document.getElementById('d-cat').textContent = cat;
   document.getElementById('d-emoji').textContent = emoji;
+  // Check if this listing is featured
+  var dFeaturedBadge = document.getElementById('d-featured-badge');
+  if (dFeaturedBadge) {
+    var isFeaturedDetail = false;
+    document.querySelectorAll('.listing-card').forEach(function(c) {
+      var ct = c.querySelector('.card-title');
+      if (ct && ct.textContent.trim() === title) {
+        if (c.innerHTML.indexOf('⭐ Featured') !== -1) isFeaturedDetail = true;
+      }
+    });
+    dFeaturedBadge.style.display = isFeaturedDetail ? '' : 'none';
+  }
   // Reset carousel to single photo state
   var dTrack = document.getElementById('detail-carousel-track');
   var dDots = document.getElementById('detail-carousel-dots');
