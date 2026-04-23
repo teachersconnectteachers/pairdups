@@ -1617,6 +1617,18 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     </div>
   </div>
 </div>
+<div class="modal-bg" id="modal-save-filter" onclick="if(event.target===this)closeModal('modal-save-filter')" style="align-items:center;justify-content:center">
+  <div class="modal-card" style="max-width:340px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:40px;margin-bottom:8px">🔍</div>
+    <div style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:6px">Save Filter Preset</div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:16px;line-height:1.5">Give your filter a name so you can quickly load it later.</div>
+    <input type="text" id="save-filter-name" placeholder="e.g. Sports nearby, Weekend dates..." style="width:100%;padding:12px 16px;border:2px solid var(--gray-border);border-radius:14px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:16px;transition:border-color 0.2s" onfocus="this.style.borderColor='var(--pink)'" onblur="this.style.borderColor='var(--gray-border)'">
+    <div style="display:flex;gap:10px">
+      <button onclick="closeModal('modal-save-filter')" style="flex:1;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
+      <button onclick="confirmSaveFilter()" style="flex:1;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35)">💾 Save Filter</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="modal-confirm-plan" onclick="if(event.target===this)closeModal('modal-confirm-plan')" style="align-items:center;justify-content:center">
   <div class="modal-sheet" style="max-width:340px;padding:28px 24px;border-radius:24px;text-align:center">
     <div id="plan-change-icon" style="font-size:52px;margin-bottom:10px">🔄</div>
@@ -1763,7 +1775,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div id="saved-filters-section" style="display:none;padding:0 14px 10px">
       <div style="font-size:11px;font-weight:800;color:var(--dark);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">🔍 Saved Filters</div>
       <div id="saved-filters-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
-      <button onclick="saveCurrentFilters()" style="width:100%;background:var(--gray-light);border:1.5px dashed var(--gray-border);border-radius:10px;padding:8px;font-size:11px;font-weight:700;color:var(--gray);cursor:pointer;font-family:inherit">+ Save Current Filters</button>
+      <button onclick="openSaveFilterModal()" style="width:100%;background:var(--gray-light);border:1.5px dashed var(--gray-border);border-radius:10px;padding:8px;font-size:11px;font-weight:700;color:var(--gray);cursor:pointer;font-family:inherit">+ Save Current Filters</button>
     </div>
     <div class="filter-footer">
       <button class="filter-clear" onclick="clearFilter()">Clear All</button>
@@ -10595,8 +10607,20 @@ async function featurePairdUp(btn, listingId) {
 }
 
 // ── Saved Search Filters (Gold) ──────────────────────────
-function saveCurrentFilters() {
+function openSaveFilterModal() {
   if (!isGold()) { showPremiumModal('🔍 Save your filter settings for quick access! Upgrade to Gold.'); return; }
+  var nameInput = document.getElementById('save-filter-name');
+  if (nameInput) nameInput.value = '';
+  openModal('modal-save-filter');
+  setTimeout(function() { if (nameInput) nameInput.focus(); }, 300);
+}
+
+function confirmSaveFilter() {
+  var nameInput = document.getElementById('save-filter-name');
+  var name = nameInput ? nameInput.value.trim() : '';
+  if (!name) { nameInput.style.borderColor = '#DC2626'; return; }
+  closeModal('modal-save-filter');
+  
   var filters = {
     category: document.querySelector('.cat-pill.active')?.textContent?.trim() || 'All',
     ageMin: document.getElementById('filter-age-min')?.value || '',
@@ -10606,12 +10630,15 @@ function saveCurrentFilters() {
     savedAt: Date.now()
   };
   var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
-  var name = prompt('Name this filter preset:');
-  if (!name) return;
   savedFilters.push({ name: name, filters: filters });
-  if (savedFilters.length > 5) savedFilters = savedFilters.slice(-5); // Keep last 5
+  if (savedFilters.length > 5) savedFilters = savedFilters.slice(-5);
   localStorage.setItem('pu_saved_filters', JSON.stringify(savedFilters));
+  renderSavedFilters();
   showToast('Filter saved as "' + name + '" ✓');
+}
+
+function saveCurrentFilters() {
+  openSaveFilterModal();
 }
 
 function loadSavedFilter(idx) {
