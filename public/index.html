@@ -3422,42 +3422,89 @@ async function executePlanChange() {
   closeModal('modal-confirm-plan');
   if (!_selectedPlanChange) return;
   var plan = _selectedPlanChange;
-  showToast('Plan change scheduled...');
+  var currentTier = getUserTier();
+  showToast('Processing plan change...');
+
   if (_supabase && currentUser.supabaseId) {
     try {
-      await _supabase.from('profiles').update({
-        subscription_tier: plan,
-        pending_downgrade: plan === 'free' ? true : null
-      }).eq('id', currentUser.supabaseId);
-
-      // Send downgrade email
-      var planName = plan === 'premium' ? 'Premium' : 'Free';
-      var session = await _supabase.auth.getSession();
-      var token = session.data?.session?.access_token;
-      if (token && currentUser.email) {
-        fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({
-            type: 'plan_downgraded',
-            to_email: currentUser.email,
-            to_user_id: currentUser.supabaseId,
-            to_name: currentUser.name || 'there',
-            plan_name: planName
-          })
-        }).then(function() {
-          console.log('[PairdUps] Downgrade email sent');
-        }).catch(function(e) {
-          console.log('[PairdUps] Downgrade email error:', e);
-        });
+      if (plan === 'free') {
+        // Cancelling subscription — tell Stripe to cancel at period end
+        // The user keeps current features until the period ends
+        var { data: profile } = await _supabase.from('profiles').select('stripe_subscription_id, subscription_expires_at').eq('id', currentUser.supabaseId).maybeSingle();
+        if (profile && profile.stripe_subscription_id) {
+          // Call Stripe to cancel at period end via our edge function
+          var session = await _supabase.auth.getSession();
+          var token = session.data?.session?.access_token;
+          // Use create-checkout edge function endpoint to cancel (or we call Stripe portal)
+          // For now, mark as pending and let user use Stripe portal
+          await _supabase.from('profiles').update({
+            pending_downgrade: 'free'
+          }).eq('id', currentUser.supabaseId);
+          
+          var renewalDate = profile.subscription_expires_at ? new Date(profile.subscription_expires_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'your next renewal date';
+          
+          // Send email with renewal date
+          if (token && currentUser.email) {
+            fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({
+                type: 'plan_cancelled',
+                to_email: currentUser.email,
+                to_user_id: currentUser.supabaseId,
+                to_name: currentUser.name || 'there',
+                current_plan: currentTier === 'gold' ? 'Gold' : 'Premium',
+                renewal_date: renewalDate
+              })
+            });
+          }
+          showToast('Subscription will be cancelled on ' + renewalDate + '. You keep all ' + (currentTier === 'gold' ? 'Gold' : 'Premium') + ' features until then! ✓');
+        } else {
+          // No Stripe subscription found — just update directly
+          await _supabase.from('profiles').update({ subscription_tier: 'free', pending_downgrade: null }).eq('id', currentUser.supabaseId);
+          currentUser.subscriptionTier = 'free';
+          showToast('Plan changed to Free. ✓');
+        }
+      } else if (plan === 'premium' && currentTier === 'gold') {
+        // Gold → Premium downgrade — schedule price swap at period end
+        var { data: profile2 } = await _supabase.from('profiles').select('stripe_subscription_id, subscription_expires_at').eq('id', currentUser.supabaseId).maybeSingle();
+        
+        if (profile2 && profile2.stripe_subscription_id) {
+          await _supabase.from('profiles').update({
+            pending_downgrade: 'premium'
+          }).eq('id', currentUser.supabaseId);
+          
+          var renewalDate2 = profile2.subscription_expires_at ? new Date(profile2.subscription_expires_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'your next renewal date';
+          
+          var session2 = await _supabase.auth.getSession();
+          var token2 = session2.data?.session?.access_token;
+          if (token2 && currentUser.email) {
+            fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token2 },
+              body: JSON.stringify({
+                type: 'plan_downgraded',
+                to_email: currentUser.email,
+                to_user_id: currentUser.supabaseId,
+                to_name: currentUser.name || 'there',
+                plan_name: 'Premium',
+                effective_date: renewalDate2
+              })
+            });
+          }
+          showToast('Plan will change to Premium on ' + renewalDate2 + '. You keep all Gold features until then! ✓');
+        } else {
+          await _supabase.from('profiles').update({ subscription_tier: 'premium', pending_downgrade: null }).eq('id', currentUser.supabaseId);
+          currentUser.subscriptionTier = 'premium';
+          showToast('Plan changed to Premium. ✓');
+        }
       }
-    } catch(e) { console.log('Plan change error:', e); }
+    } catch(e) { console.log('Plan change error:', e); showToast('Error processing plan change. Please try again.'); }
   }
-  currentUser.subscriptionTier = plan;
   syncProfileForm();
   updateAllTierBadges();
   renderPhotoGallery();
-  showToast('Plan change will take effect at end of billing period. ✓');
+  loadProfileTheme();
   _selectedPlanChange = null;
 }
 
@@ -3808,7 +3855,23 @@ function setProfileTheme(color) {
 
 function loadProfileTheme() {
   var s = _getSettings();
+  var goldOnlyColors = ['#9C27B0', '#FF9800', '#E91E63', '#00BCD4', '#795548'];
+  var premiumColors = ['#FF3B7F', '#2196F3', '#4CAF50'];
+  var defaultColor = '#FF3B7F';
+  
   if (s.themeColor) {
+    // Check if user still has access to their selected theme color
+    var tier = getUserTier();
+    if (goldOnlyColors.indexOf(s.themeColor) !== -1 && tier !== 'gold') {
+      // Gold-only color but user is no longer Gold — reset to default
+      s.themeColor = defaultColor;
+      _saveSettings(s);
+      // Also update Supabase
+      if (_supabase && currentUser.supabaseId) {
+        _supabase.from('profiles').update({ theme_color: defaultColor }).eq('id', currentUser.supabaseId);
+      }
+      showToast('Theme color reset — that color requires Gold membership');
+    }
     document.documentElement.style.setProperty('--pink', s.themeColor);
     document.querySelectorAll('.theme-dot').forEach(function(d) {
       d.style.borderColor = d.dataset.color === s.themeColor ? '#333' : 'transparent';
@@ -4098,7 +4161,7 @@ async function signIn() {
   tagOneSignalUser();
   // Load subscription status from DB and refresh all tier UI
   if (_supabase && currentUser.supabaseId) {
-    loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); });
+    loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); });
     loadGamificationData();
   }
   // Clear stale data from previous user session, then reload for this user
@@ -10806,7 +10869,7 @@ window.addEventListener('load', async function() {
           syncProfileForm();
           showTopbarAvatar();
           updateAllTierBadges();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); }); loadGamificationData(); }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); }); loadGamificationData(); }, 500);
         }
       }
     } catch(e) { console.log('Supabase session check:', e); }
@@ -10829,7 +10892,7 @@ window.addEventListener('load', async function() {
           syncProfileForm();
           showTopbarAvatar();
           updateAllTierBadges();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); if (_supabase && currentUser.supabaseId) { loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); }); loadGamificationData(); } }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); if (_supabase && currentUser.supabaseId) { loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); }); loadGamificationData(); } }, 500);
         }
       }
     } catch(e) {}
