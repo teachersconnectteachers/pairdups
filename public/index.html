@@ -1629,6 +1629,17 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     </div>
   </div>
 </div>
+<div class="modal-bg" id="modal-delete-filter" onclick="if(event.target===this)closeModal('modal-delete-filter')" style="align-items:center;justify-content:center;z-index:300">
+  <div class="modal-card" style="max-width:340px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:40px;margin-bottom:8px">🤔</div>
+    <div style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:10px">Delete Saved Filter?</div>
+    <p id="delete-filter-msg" style="font-size:13px;color:var(--gray);line-height:1.6;margin:0 0 20px"></p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button id="delete-filter-confirm-btn" onclick="confirmDeleteFilter()" style="width:100%;background:#DC2626;color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(220,38,38,0.3)">🗑 Yes, delete</button>
+      <button onclick="closeModal('modal-delete-filter')" style="width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="modal-confirm-plan" onclick="if(event.target===this)closeModal('modal-confirm-plan')" style="align-items:center;justify-content:center">
   <div class="modal-sheet" style="max-width:340px;padding:28px 24px;border-radius:24px;text-align:center">
     <div id="plan-change-icon" style="font-size:52px;margin-bottom:10px">🔄</div>
@@ -10686,10 +10697,29 @@ function renderSavedFilters() {
   }).join('');
 }
 
+var _pendingDeleteFilterIdx = -1;
+
 function deleteSavedFilter(idx) {
   var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
-  savedFilters.splice(idx, 1);
+  if (!savedFilters[idx]) return;
+  _pendingDeleteFilterIdx = idx;
+  var filterName = savedFilters[idx].name;
+  var msgEl = document.getElementById('delete-filter-msg');
+  var btnEl = document.getElementById('delete-filter-confirm-btn');
+  if (msgEl) msgEl.innerHTML = 'Are you sure you want to delete the <strong>"' + filterName + '"</strong> saved filter?';
+  if (btnEl) btnEl.textContent = '🗑 Yes, delete "' + filterName + '"';
+  openModal('modal-delete-filter');
+}
+
+function confirmDeleteFilter() {
+  closeModal('modal-delete-filter');
+  if (_pendingDeleteFilterIdx < 0) return;
+  var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
+  savedFilters.splice(_pendingDeleteFilterIdx, 1);
   localStorage.setItem('pu_saved_filters', JSON.stringify(savedFilters));
+  if (_activeSavedFilterIdx === _pendingDeleteFilterIdx) _activeSavedFilterIdx = -1;
+  else if (_activeSavedFilterIdx > _pendingDeleteFilterIdx) _activeSavedFilterIdx--;
+  _pendingDeleteFilterIdx = -1;
   renderSavedFilters();
   showToast('Filter deleted');
 }
