@@ -10334,60 +10334,46 @@ async function checkReadReceipts(convoId) {
   var settings = _getSettings();
   if (settings.showReadReceipts === false) return;
   try {
-    // Find the most recent message FROM ME that has been read
-    var { data: msgs } = await _supabase.from('messages')
-      .select('id, read_at')
+    // Count how many of MY messages are still unread
+    var { count: unreadCount, error: countErr } = await _supabase.from('messages')
+      .select('id', { count: 'exact', head: true })
       .eq('conversation_id', convoId)
       .eq('sender_id', currentUser.supabaseId)
-      .not('read_at', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    // Remove any existing "Seen" labels first (so it moves to the latest)
-    document.querySelectorAll('#chat-messages .read-seen').forEach(function(el) { el.remove(); });
-
-    if (msgs && msgs.length > 0) {
-      // Find the last sent message bubble in the DOM and add "Seen"
-      var bubbles = document.querySelectorAll('#chat-messages .bubble-wrap.me .bubble-time');
-      if (bubbles.length > 0) {
-        // Find the last "me" bubble that corresponds to a read message
-        // We show "Seen" on the last sent bubble since all previous ones are implicitly read too
-        var lastBubble = bubbles[bubbles.length - 1];
-        // But only if this bubble's message has been read
-        // Check if the most recent sent message is read by comparing counts
-        var { data: unreadMsgs } = await _supabase.from('messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('conversation_id', convoId)
-          .eq('sender_id', currentUser.supabaseId)
-          .is('read_at', null);
-        
-        if (!unreadMsgs || unreadMsgs === 0) {
-          // All messages are read — show Seen on the very last one
-          var seen = document.createElement('span');
-          seen.className = 'read-seen';
-          seen.style.cssText = 'margin-left:4px;color:var(--pink);font-size:10px;font-weight:600';
-          seen.textContent = '· Seen';
-          lastBubble.appendChild(seen);
-        } else {
-          // Some messages are unread — find the last READ message bubble
-          // Show Seen on the last bubble before the unread ones
-          var { count: unreadCount } = await _supabase.from('messages')
-            .select('id', { count: 'exact', head: true })
-            .eq('conversation_id', convoId)
-            .eq('sender_id', currentUser.supabaseId)
-            .is('read_at', null);
-          if (unreadCount !== undefined && bubbles.length > unreadCount) {
-            var readBubble = bubbles[bubbles.length - 1 - unreadCount];
-            var seen2 = document.createElement('span');
-            seen2.className = 'read-seen';
-            seen2.style.cssText = 'margin-left:4px;color:var(--pink);font-size:10px;font-weight:600';
-            seen2.textContent = '· Seen';
-            readBubble.appendChild(seen2);
-          }
-        }
-      }
+      .is('read_at', null);
+    
+    if (countErr) return;
+    
+    var bubbles = document.querySelectorAll('#chat-messages .bubble-wrap.me .bubble-time');
+    if (bubbles.length === 0) return;
+    
+    // Determine which bubble should have "Seen"
+    var seenBubbleIdx = -1;
+    if (unreadCount === 0) {
+      // All messages read — Seen goes on the last sent bubble
+      seenBubbleIdx = bubbles.length - 1;
+    } else if (bubbles.length > unreadCount) {
+      // Some unread — Seen goes on the last READ bubble
+      seenBubbleIdx = bubbles.length - 1 - unreadCount;
     }
-  } catch(e) { console.log('[PairdUps] checkReadReceipts error:', e); }
+    
+    // Check if Seen is already on the correct bubble
+    var existingSeen = document.querySelector('#chat-messages .read-seen');
+    if (existingSeen) {
+      var existingBubble = existingSeen.parentElement;
+      var existingIdx = Array.prototype.indexOf.call(bubbles, existingBubble);
+      if (existingIdx === seenBubbleIdx) return; // Already correct, no change needed
+      existingSeen.remove(); // Wrong bubble, remove it
+    }
+    
+    // Add Seen to the correct bubble
+    if (seenBubbleIdx >= 0 && seenBubbleIdx < bubbles.length) {
+      var seen = document.createElement('span');
+      seen.className = 'read-seen';
+      seen.style.cssText = 'margin-left:4px;color:var(--pink);font-size:10px;font-weight:600';
+      seen.textContent = '· Seen';
+      bubbles[seenBubbleIdx].appendChild(seen);
+    }
+  } catch(e) { /* silent */ }
 }
 
 // ── Pin PairdUp (Gold) ────────────────────────────────────
