@@ -10330,28 +10330,32 @@ async function markMessagesAsRead(convoId) {
 
 // Check if a message has been read and update receipts
 async function checkReadReceipts(convoId) {
-  if (!isGold() || !_supabase || !currentUser.supabaseId) {
-    console.log('[PairdUps] checkReadReceipts skipped — isGold:', isGold(), 'convoId:', convoId);
-    return;
-  }
+  if (!isGold() || !_supabase || !currentUser.supabaseId) return;
   var settings = _getSettings();
-  if (settings.showReadReceipts === false) {
-    console.log('[PairdUps] checkReadReceipts skipped — setting disabled');
-    return;
-  }
+  if (settings.showReadReceipts === false) return;
   try {
+    // First check: are there ANY messages from me in this convo with read_at set?
     var { data: msgs, error: rrErr } = await _supabase.from('messages')
-      .select('id, read_at, sender_id')
+      .select('id, read_at, sender_id, text')
       .eq('conversation_id', convoId)
       .eq('sender_id', currentUser.supabaseId)
       .not('read_at', 'is', null)
       .order('created_at', { ascending: false })
       .limit(20);
-    console.log('[PairdUps] checkReadReceipts query result — msgs:', msgs ? msgs.length : 0, 'error:', rrErr);
+    console.log('[PairdUps] checkReadReceipts — msgs with read_at:', msgs ? msgs.length : 0, 'error:', rrErr);
+    
+    // Also check: how many of MY messages exist at all in this convo?
+    var { data: allMyMsgs } = await _supabase.from('messages')
+      .select('id, read_at, text')
+      .eq('conversation_id', convoId)
+      .eq('sender_id', currentUser.supabaseId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    console.log('[PairdUps] checkReadReceipts — all my msgs:', allMyMsgs ? allMyMsgs.length : 0, 'sample read_at values:', allMyMsgs ? allMyMsgs.map(function(m) { return m.read_at; }) : []);
+
     if (msgs && msgs.length > 0) {
-      // Update the last sent message bubble to show "Seen"
       var bubbles = document.querySelectorAll('#chat-messages .bubble-wrap.me .bubble-time');
-      console.log('[PairdUps] checkReadReceipts — found', bubbles.length, 'sent message bubbles');
+      console.log('[PairdUps] checkReadReceipts — found', bubbles.length, 'sent bubbles in DOM');
       if (bubbles.length > 0) {
         var lastBubble = bubbles[bubbles.length - 1];
         if (!lastBubble.querySelector('.read-seen')) {
@@ -10360,7 +10364,7 @@ async function checkReadReceipts(convoId) {
           seen.style.cssText = 'margin-left:4px;color:var(--pink);font-size:10px;font-weight:600';
           seen.textContent = '· Seen';
           lastBubble.appendChild(seen);
-          console.log('[PairdUps] checkReadReceipts — added Seen label');
+          console.log('[PairdUps] checkReadReceipts — ADDED Seen label!');
         }
       }
     }
