@@ -5281,7 +5281,59 @@ async function sendJoinRequest() {
         if (matchedListing && matchedListing.supabaseId) listingId = matchedListing.supabaseId;
         console.log('[PairdUps] listingId:', listingId);
 
-        // Create conversation in Supabase
+        // Create conversation in Supabase — but first check if one already exists between these two users
+        var existingConvo = null;
+        var { data: existingConvos } = await _supabase.from('conversations')
+          .select('id')
+          .or('and(requester_id.eq.' + currentUser.supabaseId + ',poster_id.eq.' + posterProfile.id + '),and(requester_id.eq.' + posterProfile.id + ',poster_id.eq.' + currentUser.supabaseId + ')')
+          .limit(1);
+        if (existingConvos && existingConvos.length > 0) {
+          existingConvo = existingConvos[0];
+          console.log('[PairdUps] Found existing conversation:', existingConvo.id);
+        }
+
+        if (existingConvo) {
+          // Reuse existing conversation — add the join request as a new message
+          supabaseConvoId = existingConvo.id;
+          var { error: sysMsgErr } = await _supabase.from('messages').insert({ conversation_id: existingConvo.id, sender_id: currentUser.supabaseId, text: '📋 Join request sent for "' + poster.title + '"' });
+          if (sysMsgErr) console.log('[PairdUps] System msg error:', sysMsgErr);
+          if (msg) {
+            var { error: userMsgErr } = await _supabase.from('messages').insert({ conversation_id: existingConvo.id, sender_id: currentUser.supabaseId, text: msg });
+            if (userMsgErr) console.log('[PairdUps] User msg error:', userMsgErr);
+          }
+          // Update conversation metadata
+          await _supabase.from('conversations').update({
+            listing_title: poster.title || '',
+            listing_id: listingId,
+            status: 'pending',
+            last_message_text: msg || 'Join request sent',
+            last_message_at: new Date().toISOString(),
+            poster_unread: true
+          }).eq('id', existingConvo.id);
+          // Send push + email
+          sendPush(posterProfile.id, 'join_request', { to_name: poster.name, other_name: currentUser.name || 'Someone', listing_title: poster.title });
+          // Send email for existing conversation join request
+          if (poster.ownerEmail) {
+            try {
+              var jrToken2 = (await _supabase.auth.getSession()).data?.session?.access_token;
+              await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jrToken2 },
+                body: JSON.stringify({
+                  type: 'join_request',
+                  to_email: poster.ownerEmail,
+                  to_name: poster.name || 'PairdUps User',
+                  listing_title: poster.title || 'a PairdUp',
+                  requester_name: currentUser.name || 'Someone',
+                  requester_photo: currentUser.photo || '',
+                  requester_age: currentUser.age || '',
+                  requester_loc: currentUser.loc || ''
+                })
+              });
+            } catch(e) { console.log('[PairdUps] Join request email error:', e); }
+          }
+        } else {
+        // No existing conversation — create a new one
         var { data: newConvo, error: convoErr } = await _supabase.from('conversations').insert({
           listing_id: listingId,
           requester_id: currentUser.supabaseId,
@@ -5327,6 +5379,7 @@ async function sendJoinRequest() {
             } catch(e) { console.log('[PairdUps] Join request email error:', e); }
           }
         }
+        } // end if(existingConvo) else
       }
     } catch(e) { console.log('[PairdUps] Join request Supabase error:', e); }
   } else {
@@ -5934,7 +5987,10 @@ function openConvoChat(convoId) {
   });
   // Store active convo id for sendMsg
   chatArea.dataset.activeConvo = convoId;
-  chatArea.scrollTop = 9999;
+  chatArea.scrollTop = chatArea.scrollHeight;
+  // Also scroll after a short delay to ensure DOM has rendered
+  setTimeout(function() { chatArea.scrollTop = chatArea.scrollHeight; }, 100);
+  setTimeout(function() { chatArea.scrollTop = chatArea.scrollHeight; }, 300);
   // Mark as read in Supabase
   if (_supabase && currentUser.supabaseId && convo.supabaseId) {
     var readUpdate = convo.iAmRequester ? { requester_unread: false } : { poster_unread: false };
