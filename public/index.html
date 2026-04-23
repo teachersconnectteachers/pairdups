@@ -10211,25 +10211,36 @@ async function pinPairdUp(btn, listingId) {
       // Unpin
       await _supabase.from('listings').update({ is_pinned: false, pinned_at: null }).eq('id', listingId);
       btn.textContent = '📌 Pin';
+      btn.style.background = '#FEF3C7';
+      btn.style.color = '#D97706';
+      // Update local data
+      var ul = userListings.find(function(l) { return l.supabaseId === listingId; });
+      if (ul) ul.isPinned = false;
       showToast('PairdUp unpinned.');
     } else {
-      // Check weekly limit: 1 pin per week
-      var weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      var { count } = await _supabase.from('listings').select('id', { count: 'exact', head: true })
-        .eq('owner_id', currentUser.supabaseId).eq('is_pinned', true).gte('pinned_at', weekAgo);
-      if (count > 0) {
-        showToast('You can pin 1 PairdUp per week. Try again later!');
-        btn.textContent = '📌 Pin';
-        btn.disabled = false;
-        return;
+      // Check limit: only 1 pin at a time (unpin any existing)
+      var { data: existingPins } = await _supabase.from('listings').select('id')
+        .eq('owner_id', currentUser.supabaseId).eq('is_pinned', true);
+      if (existingPins && existingPins.length > 0) {
+        // Unpin existing
+        for (var ep = 0; ep < existingPins.length; ep++) {
+          await _supabase.from('listings').update({ is_pinned: false, pinned_at: null }).eq('id', existingPins[ep].id);
+          var oldPinned = userListings.find(function(l) { return l.supabaseId === existingPins[ep].id; });
+          if (oldPinned) oldPinned.isPinned = false;
+        }
       }
       await _supabase.from('listings').update({ is_pinned: true, pinned_at: new Date().toISOString() }).eq('id', listingId);
       btn.textContent = '📌 Pinned!';
-      btn.style.background = '#D97706';
+      btn.style.background = '#FF3B7F';
       btn.style.color = '#fff';
+      // Update local data
+      var ul2 = userListings.find(function(l) { return l.supabaseId === listingId; });
+      if (ul2) ul2.isPinned = true;
       showToast('PairdUp pinned to top of Discover! 📌');
       awardXP(3, 'Pinned a PairdUp');
     }
+    // Refresh Discover feed to reflect pin changes
+    if (typeof loadSupabaseListings === 'function') loadSupabaseListings();
   } catch(e) { console.log('[PairdUps] Pin error:', e); showToast('Could not pin. Try again.'); }
   btn.disabled = false;
 }
@@ -10245,6 +10256,10 @@ async function featurePairdUp(btn, listingId) {
     if (listing && listing.is_featured) {
       await _supabase.from('listings').update({ is_featured: false, featured_at: null }).eq('id', listingId);
       btn.textContent = '⭐ Feature';
+      btn.style.background = '#DBEAFE';
+      btn.style.color = '#2563EB';
+      var ulF = userListings.find(function(l) { return l.supabaseId === listingId; });
+      if (ulF) ulF.isFeatured = false;
       showToast('Feature removed.');
     } else {
       // Check weekly limit: 1 featured per week
@@ -10261,9 +10276,13 @@ async function featurePairdUp(btn, listingId) {
       btn.textContent = '⭐ Featured!';
       btn.style.background = '#2563EB';
       btn.style.color = '#fff';
+      var ulF2 = userListings.find(function(l) { return l.supabaseId === listingId; });
+      if (ulF2) ulF2.isFeatured = true;
       showToast('PairdUp featured with a special banner! ⭐');
       awardXP(3, 'Featured a PairdUp');
     }
+    // Refresh Discover feed
+    if (typeof loadSupabaseListings === 'function') loadSupabaseListings();
   } catch(e) { console.log('[PairdUps] Feature error:', e); showToast('Could not feature. Try again.'); }
   btn.disabled = false;
 }
