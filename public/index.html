@@ -6382,9 +6382,13 @@ async function loadSupabaseListings() {
     document.querySelectorAll('.listing-card[data-owner-email]').forEach(function(c) {
       if (c.dataset.ownerEmail) c.remove();
     });
-    // Clear my-listings container of dynamic cards (skip if only refreshing Discover)
-    if (!_skipMyListingsRebuild) {
-      document.querySelectorAll('#my-listings-container .my-card').forEach(function(c) { c.remove(); });
+    // Clear my-listings container of dynamic cards (skip if only refreshing Discover or cards already exist)
+    var myListingsContainer = document.getElementById('my-listings-container');
+    var existingMyCards = myListingsContainer ? myListingsContainer.querySelectorAll('.my-card').length : 0;
+    var shouldRebuildMyListings = !_skipMyListingsRebuild && (existingMyCards === 0 || _forceMyListingsRebuild);
+    _forceMyListingsRebuild = false;
+    if (shouldRebuildMyListings && myListingsContainer) {
+      myListingsContainer.querySelectorAll('.my-card').forEach(function(c) { c.remove(); });
     }
     
     // Build listing data and render
@@ -6414,9 +6418,9 @@ async function loadSupabaseListings() {
         isFeatured: !!row.is_featured
       };
       userListings.push(d);
-      if (!_skipMyListingsRebuild) renderUserListing(d);
+      if (shouldRebuildMyListings) renderUserListing(d);
     });
-    if (!_skipMyListingsRebuild) {
+    if (shouldRebuildMyListings) {
       _saveListings(userListings);
       toggleMyListingsEmpty();
     }
@@ -10220,6 +10224,7 @@ async function checkReadReceipts(convoId) {
 // ── Pin PairdUp (Gold) ────────────────────────────────────
 // Refresh only the Discover feed sort order (without rebuilding My Listings)
 var _skipMyListingsRebuild = false;
+var _forceMyListingsRebuild = false;
 function refreshDiscoverOnly() {
   _skipMyListingsRebuild = true;
   if (typeof loadSupabaseListings === 'function') {
@@ -10280,11 +10285,20 @@ async function confirmPinSwitch() {
   closeModal('modal-pin-switch');
   if (!_pendingPinListingId || !_pendingPinBtn) return;
   try {
-    // Unpin existing
+    // Unpin existing — update DB, local data, AND reset the old button visuals
     for (var ep = 0; ep < _pendingPinOldIds.length; ep++) {
       await _supabase.from('listings').update({ is_pinned: false, pinned_at: null }).eq('id', _pendingPinOldIds[ep]);
       var oldPinned = userListings.find(function(l) { return l.supabaseId === _pendingPinOldIds[ep]; });
       if (oldPinned) oldPinned.isPinned = false;
+      // Find and reset the old pin button in the DOM
+      var oldBtns = document.querySelectorAll('.act-btn');
+      oldBtns.forEach(function(b) {
+        if (b.textContent.trim() === '📌 Pinned!' && b !== _pendingPinBtn) {
+          b.textContent = '📌 Pin';
+          b.style.background = '#FEF3C7';
+          b.style.color = '#D97706';
+        }
+      });
     }
     // Pin the new one
     await doPin(_pendingPinBtn, _pendingPinListingId);
