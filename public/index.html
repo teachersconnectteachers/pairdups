@@ -6165,7 +6165,7 @@ function editListing(btn, title, desc, venue, dateVal, timeVal, city, catName, p
   if (limitSel) limitSel.value = String(recurLimit || 0);
   goTo('screen-create');
 }
-function renderUserListing(d) {
+function renderUserListing(d, skipMyListings) {
   var typeClass = d.pairType === 'Date' ? 'badge-date' : 'badge-fun';
   var typeEmoji = d.pairType === 'Date' ? '💕' : '🎉';
   var tagStyle = d.pairType === 'Date' ? 'background:#FCE4EC;color:#C2185B' : '';
@@ -6215,6 +6215,7 @@ function renderUserListing(d) {
   if (container) container.insertAdjacentHTML('afterbegin', cardHTML);
 
   // My Listings card — only for the currently signed-in user's own listings
+  if (!skipMyListings) {
   var isMyListing = isSignedIn && d.ownerEmail && d.ownerEmail === currentUser.email;
   var myContainer = document.getElementById('my-listings-container');
   if (myContainer && isMyListing) {
@@ -6239,6 +6240,7 @@ function renderUserListing(d) {
     };
     myContainer.insertBefore(myCard, myContainer.firstChild);
   }
+  } // end skipMyListings check
 
   // Load card carousel if user has multiple photos (checks gallery table)
   if (_supabase && d.ownerEmail) {
@@ -6418,7 +6420,7 @@ async function loadSupabaseListings() {
         isFeatured: !!row.is_featured
       };
       userListings.push(d);
-      if (shouldRebuildMyListings) renderUserListing(d);
+      renderUserListing(d, !shouldRebuildMyListings);
     });
     if (shouldRebuildMyListings) {
       _saveListings(userListings);
