@@ -693,6 +693,12 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
             <div onclick="sortDiscover('alpha')" style="padding:10px 14px;font-size:12px;font-weight:600;color:var(--dark);cursor:pointer;border-radius:8px" onmouseover="this.style.background='var(--gray-light)'" onmouseout="this.style.background=''">🔤 A-Z by Title</div>
           </div>
         </div>
+        <div style="position:relative;flex-shrink:0;display:none" id="alert-bell-wrap">
+          <button onclick="showAlertNotifications()" style="background:none;border:none;cursor:pointer;padding:6px;position:relative">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span id="alert-bell-badge" style="display:none;position:absolute;top:2px;right:2px;background:#DC2626;color:#fff;font-size:8px;font-weight:800;min-width:14px;height:14px;border-radius:50%;display:none;align-items:center;justify-content:center;border:2px solid #fff">0</span>
+          </button>
+        </div>
         <div style="position:relative;flex-shrink:0;display:none" id="topbar-avatar-wrap">
           <div class="user-avatar-topbar" id="topbar-avatar" onclick="toggleAvatarMenu(event)">
             <img id="topbar-avatar-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block">
@@ -3295,6 +3301,8 @@ window.setTestTier = function(tier) {
   var themeColors = document.getElementById('theme-colors');
   if (tier !== 'free') { if (themeLocked) themeLocked.style.display = 'none'; if (themeColors) themeColors.style.display = 'flex'; }
   else { if (themeLocked) themeLocked.style.display = ''; if (themeColors) themeColors.style.display = 'none'; }
+  // Show/hide alert bell for Gold users
+  showAlertBellForGold();
   console.log('[PairdUps] Test tier set to: ' + tier + ' | Photo limit: ' + getPhotoLimit() + ' | isPremium: ' + isPremium() + ' | isGold: ' + isGold());
   showToast('Test mode: ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' tier active (' + getPhotoLimit() + ' photos)');
   updateAllTierBadges();
@@ -6272,6 +6280,8 @@ function startBackgroundPolling() {
           console.log('[PairdUps] Background poll: new data detected, refreshing...');
           loadSupabaseConversations();
         }
+        // Check instant alerts for Gold users every poll cycle
+        checkInstantAlerts();
       });
   }, 5000); // Poll every 5 seconds
 }
@@ -10822,6 +10832,54 @@ function confirmRenameFilter() {
 // ── Instant Alerts for Matching PairdUps (Gold) ──────────
 // ── Instant Alerts System (Gold) ─────────────────────────
 var ALERT_CATEGORIES = ['Sports','Coffee','Dining','Outdoor','Bowling/Games','Cultural','Nightlife','Other'];
+var _alertNotifications = [];
+
+function updateAlertBadge(count) {
+  var badge = document.getElementById('alert-bell-badge');
+  if (!badge) return;
+  if (count > 0) {
+    _alertNotifications.push({ count: count, time: Date.now() });
+    if (_alertNotifications.length > 20) _alertNotifications = _alertNotifications.slice(-20);
+    badge.textContent = count;
+    badge.style.display = 'flex';
+  }
+}
+
+function showAlertNotifications() {
+  if (_alertNotifications.length === 0) {
+    showToast('No new alerts. Check your alert settings in Profile → Settings.');
+    return;
+  }
+  // Show a simple summary modal
+  var total = _alertNotifications.reduce(function(sum, n) { return sum + n.count; }, 0);
+  var iconEl = document.getElementById('plan-change-icon');
+  var titleEl = document.getElementById('plan-change-title');
+  var msgEl = document.getElementById('plan-change-msg');
+  var btnEl = document.getElementById('plan-change-confirm-btn');
+  if (iconEl) iconEl.textContent = '🔔';
+  if (titleEl) titleEl.textContent = 'New PairdUp Alerts';
+  if (msgEl) msgEl.innerHTML = 'You have <strong>' + total + '</strong> new PairdUp' + (total > 1 ? 's' : '') + ' matching your alert preferences!<br><br>Browse the Discover feed to check them out, or update your alert settings in Profile → Settings.';
+  if (btnEl) {
+    btnEl.textContent = 'Got it!';
+    btnEl.style.background = 'linear-gradient(135deg,#F59E0B,#FBBF24)';
+    btnEl.onclick = function() {
+      closeModal('modal-confirm-plan');
+      // Clear badge
+      var badge = document.getElementById('alert-bell-badge');
+      if (badge) badge.style.display = 'none';
+      _alertNotifications = [];
+    };
+  }
+  openModal('modal-confirm-plan');
+}
+
+function showAlertBellForGold() {
+  var bellWrap = document.getElementById('alert-bell-wrap');
+  if (bellWrap) {
+    var s = _getSettings();
+    bellWrap.style.display = (isGold() && s.instantAlerts) ? '' : 'none';
+  }
+}
 
 function toggleInstantAlerts(checkbox) {
   if (!isGold()) {
@@ -10933,6 +10991,7 @@ function saveAlertPreferences() {
     _supabase.from('profiles').update({ alert_preferences: prefs }).eq('id', currentUser.supabaseId);
   }
   showToast('Alert preferences saved! 🔔 You\'ll be notified of matching PairdUps.');
+  showAlertBellForGold();
 }
 
 function loadAlertSettingsUI() {
@@ -10992,20 +11051,43 @@ async function checkInstantAlerts() {
       alertedIds = alertedIds.concat(newMatches.map(function(l) { return l.id; }));
       if (alertedIds.length > 200) alertedIds = alertedIds.slice(-200);
       localStorage.setItem('pu_alerted_listings', JSON.stringify(alertedIds));
-      // Show in-app notification
+      // Show in-app toast
       var matchTitle = newMatches[0].title;
       var matchCount = newMatches.length;
+      var matchCity = newMatches[0].city || '';
       if (matchCount === 1) {
         showToast('🔔 New matching PairdUp: "' + matchTitle + '"');
       } else {
         showToast('🔔 ' + matchCount + ' new PairdUps matching your alerts!');
       }
-      // Send push notification to self
+      // Update alert badge on bell icon
+      updateAlertBadge(matchCount);
+      // Send push notification
       sendPush(currentUser.supabaseId, 'instant_alert', {
         to_name: currentUser.name || 'there',
         listing_title: matchTitle,
         match_count: matchCount
       });
+      // Send email notification
+      try {
+        var session = await _supabase.auth.getSession();
+        var token = session.data?.session?.access_token;
+        if (token && currentUser.email) {
+          fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({
+              type: 'instant_alert',
+              to_email: currentUser.email,
+              to_user_id: currentUser.supabaseId,
+              to_name: currentUser.name || 'there',
+              listing_title: matchTitle,
+              match_count: matchCount,
+              match_city: matchCity
+            })
+          });
+        }
+      } catch(emailErr) { console.log('[PairdUps] Alert email error:', emailErr); }
     }
   } catch(e) { console.log('[PairdUps] Instant alerts error:', e); }
 }
