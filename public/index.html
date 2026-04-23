@@ -10641,6 +10641,8 @@ function saveCurrentFilters() {
   openSaveFilterModal();
 }
 
+var _activeSavedFilterIdx = -1;
+
 function loadSavedFilter(idx) {
   var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
   if (!savedFilters[idx]) return;
@@ -10648,7 +10650,21 @@ function loadSavedFilter(idx) {
   if (f.ageMin) { var el = document.getElementById('filter-age-min'); if (el) el.value = f.ageMin; }
   if (f.ageMax) { var el = document.getElementById('filter-age-max'); if (el) el.value = f.ageMax; }
   if (f.distance) { var el = document.getElementById('filter-distance'); if (el) el.value = f.distance; }
-  showToast('Filter "' + savedFilters[idx].name + '" loaded');
+  // Highlight the selected filter
+  _activeSavedFilterIdx = idx;
+  var items = document.querySelectorAll('#saved-filters-list .saved-filter-item');
+  items.forEach(function(item, i) {
+    if (i === idx) {
+      item.style.background = 'var(--pink)';
+      item.style.border = '2px solid var(--pink)';
+      item.querySelector('.sf-name').style.color = '#fff';
+    } else {
+      item.style.background = 'var(--gray-light)';
+      item.style.border = '2px solid transparent';
+      item.querySelector('.sf-name').style.color = 'var(--dark)';
+    }
+  });
+  showToast('Filter "' + savedFilters[idx].name + '" selected — tap Apply Filters');
 }
 
 function renderSavedFilters() {
@@ -10656,11 +10672,12 @@ function renderSavedFilters() {
   if (!container) return;
   if (!isGold()) { container.innerHTML = ''; return; }
   var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
+  _activeSavedFilterIdx = -1;
   if (savedFilters.length === 0) { container.innerHTML = '<div style="font-size:11px;color:var(--gray);text-align:center;padding:8px">No saved filters yet</div>'; return; }
   container.innerHTML = savedFilters.map(function(sf, i) {
-    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--gray-light);border-radius:8px;cursor:pointer" onclick="loadSavedFilter('+i+')">'
-      + '<span style="font-size:12px;font-weight:600;color:var(--dark);flex:1">🔍 ' + sf.name + '</span>'
-      + '<button onclick="event.stopPropagation();deleteSavedFilter('+i+')" style="background:none;border:none;color:#DC2626;font-size:14px;cursor:pointer">✕</button></div>';
+    return '<div class="saved-filter-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-light);border:2px solid transparent;border-radius:10px;cursor:pointer;transition:all 0.2s" onclick="loadSavedFilter('+i+')">'
+      + '<span class="sf-name" style="font-size:12px;font-weight:700;color:var(--dark);flex:1">🔍 ' + sf.name + '</span>'
+      + '<button onclick="event.stopPropagation();deleteSavedFilter('+i+')" style="background:none;border:none;color:#DC2626;font-size:14px;cursor:pointer;padding:2px 4px">✕</button></div>';
   }).join('');
 }
 
