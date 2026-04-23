@@ -2274,8 +2274,8 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" id="set-show-last-active" checked onchange="saveSetting('showLastActive',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span><span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--gray-light);border-radius:12px">
-        <div><div style="font-size:13px;font-weight:700;color:var(--dark)">Show Read Receipts</div><div style="font-size:10px;color:var(--gray)">Show ✓✓ on messages you've sent</div></div>
-        <label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" id="set-read-receipts" checked onchange="saveSetting('showReadReceipts',this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span><span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        <div><div style="font-size:13px;font-weight:700;color:var(--dark)">Show Read Receipts</div><div style="font-size:10px;color:var(--gray)" id="read-receipts-hint">Show ✓✓ on messages you've sent</div></div>
+        <label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" id="set-read-receipts" onchange="toggleReadReceipts(this)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span><span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--gray-light);border-radius:12px">
         <div><div style="font-size:13px;font-weight:700;color:var(--dark)">Auto-Delete Expired PairdUps</div><div style="font-size:10px;color:var(--gray)">Automatically remove your expired listings after 30 days</div></div>
@@ -4585,6 +4585,31 @@ function saveSetting(key, val) {
   s[key] = val;
   _saveSettings(s);
 }
+
+function toggleReadReceipts(checkbox) {
+  if (!isGold()) {
+    // Revert toggle to off
+    checkbox.checked = false;
+    // Show upgrade modal
+    var iconEl = document.getElementById('plan-change-icon');
+    var titleEl = document.getElementById('plan-change-title');
+    var msgEl = document.getElementById('plan-change-msg');
+    var btnEl = document.getElementById('plan-change-confirm-btn');
+    if (iconEl) iconEl.textContent = '💬';
+    if (titleEl) titleEl.textContent = 'Read Receipts';
+    if (msgEl) msgEl.innerHTML = 'Read Receipts are a <strong>Gold-exclusive feature</strong>. See when your messages have been read by the other person with ✓✓ indicators.<br><br>Upgrade to Gold to unlock this and many more features!';
+    if (btnEl) {
+      btnEl.textContent = '👑 Upgrade to Gold — $9.99/mo';
+      btnEl.style.background = 'linear-gradient(135deg,#F59E0B,#FBBF24)';
+      btnEl.onclick = function() { closeModal('modal-confirm-plan'); subscribeToPlan('gold'); };
+    }
+    closeModal('modal-settings');
+    openModal('modal-confirm-plan');
+    return;
+  }
+  saveSetting('showReadReceipts', checkbox.checked);
+}
+
 function loadSettings() {
   var s = _getSettings();
   var el;
@@ -4594,7 +4619,18 @@ function loadSettings() {
   el = document.getElementById('set-dark-mode'); if (el) el.checked = !!s.darkMode;
   el = document.getElementById('set-profile-visible'); if (el) el.checked = s.profileVisible !== false;
   el = document.getElementById('set-show-last-active'); if (el) el.checked = s.showLastActive !== false;
-  el = document.getElementById('set-read-receipts'); if (el) el.checked = s.showReadReceipts !== false;
+  // Read receipts: only show as enabled for Gold users
+  el = document.getElementById('set-read-receipts');
+  var rrHint = document.getElementById('read-receipts-hint');
+  if (el) {
+    if (isGold()) {
+      el.checked = s.showReadReceipts !== false;
+      if (rrHint) rrHint.textContent = 'Show ✓✓ on messages you\'ve sent';
+    } else {
+      el.checked = false;
+      if (rrHint) rrHint.textContent = '👑 Gold feature — upgrade to unlock';
+    }
+  }
   el = document.getElementById('set-auto-delete'); if (el) el.checked = !!s.autoDeleteExpired;
   el = document.getElementById('set-pause-account'); if (el) el.checked = !!s.pauseAccount;
   // Preferred units
@@ -10276,7 +10312,8 @@ function addReadReceipt(bubbleWrap) {
 // ── Read Receipt Tracking (Gold) ──────────────────────────
 // Mark messages as read in Supabase when opening a chat
 async function markMessagesAsRead(convoId) {
-  if (!isGold() || !_supabase || !currentUser.supabaseId) return;
+  // All users mark messages as read — this is needed so Gold senders can see "Seen"
+  if (!_supabase || !currentUser.supabaseId) return;
   try {
     await _supabase.from('messages')
       .update({ read_at: new Date().toISOString() })
