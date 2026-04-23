@@ -4454,6 +4454,8 @@ function showTopbarAvatar() {
   const wrap = document.getElementById('topbar-avatar-wrap');
   if (el) el.style.display = 'block';
   if (wrap) wrap.style.display = 'block';
+  // Show alert bell for Gold users
+  showAlertBellForGold();
   const img = document.getElementById('topbar-avatar-img');
   var defaultAvatar = _DEFAULT_AVATAR_SQ;
   if (img) {
@@ -10893,8 +10895,10 @@ function showAlertNotifications() {
 
 function showAlertBellForGold() {
   var bellWrap = document.getElementById('alert-bell-wrap');
+  var gold = isGold();
+  console.log('[PairdUps] showAlertBellForGold — bellWrap:', !!bellWrap, 'isGold:', gold);
   if (bellWrap) {
-    bellWrap.style.display = isGold() ? '' : 'none';
+    bellWrap.style.display = gold ? 'block' : 'none';
   }
 }
 
