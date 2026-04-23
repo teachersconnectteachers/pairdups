@@ -7069,75 +7069,17 @@ function showDetail(title,fname,age,loc,cat,type,date,venue,desc,emoji,photo,pos
     }
   } else {
     console.log('[PairdUps] Detail: taking OWN LISTING branch');
-    if (isSignedIn && ownerEmail === currentUser.email && _supabase && currentUser.supabaseId) {
-      var dCarouselContainer = document.getElementById('detail-carousel');
-      if (dCarouselContainer && dCarouselContainer._carouselLoading) {
-        console.log('[PairdUps] Detail: skipping — carousel already loading');
+        if (isSignedIn && ownerEmail === currentUser.email && _supabase && currentUser.supabaseId) {
+      var dCC = document.getElementById('detail-carousel');
+      if (dCC && dCC._carouselLoading) {
+        // skip
       } else {
-        if (dCarouselContainer) dCarouselContainer._carouselLoading = true;
+        if (dCC) dCC._carouselLoading = true;
         loadUserGallery(currentUser.supabaseId).then(function(photos) {
-          if (photos && photos.length > 1) {
-            // Build slides and dots directly (same approach as working card carousel)
-            var dTrack2 = document.getElementById('detail-carousel-track');
-            var dDots2 = document.getElementById('detail-carousel-dots');
-            if (!dTrack2 || !dDots2) return;
-            var slidesH = '';
-            var dotsH = '';
-            for (var pi = 0; pi < photos.length; pi++) {
-              slidesH += '<div class="photo-carousel-slide"><img class="detail-hero-img" src="'+photos[pi].url+'" alt="Photo '+(pi+1)+'" style="object-position:'+(photos[pi].facePos||'center 20%')+'"></div>';
-              dotsH += '<div class="photo-carousel-dot'+(pi===0?' active':'')+'" data-idx="'+pi+'"></div>';
-            }
-            dTrack2.innerHTML = slidesH;
-            dTrack2.style.cssText = 'display:flex;flex-direction:row;height:100%;transition:transform 0.3s ease;transform:translateX(0%)';
-            dDots2.innerHTML = dotsH;
-            dDots2.style.cssText = 'display:flex;flex-direction:row;position:absolute;bottom:10px;left:50%;transform:translateX(-50%);gap:6px;z-index:3;padding:4px 10px;background:rgba(0,0,0,0.3);border-radius:50px';
-
-            // Debug: log first and last slide
-            var builtSlides = dTrack2.querySelectorAll('.photo-carousel-slide img');
-            console.log('[PairdUps] Detail carousel built:', builtSlides.length, 'slides. First src:', builtSlides[0]?.src?.slice(-30), 'Last src:', builtSlides[builtSlides.length-1]?.src?.slice(-30));
-
-            var cIdx = 0;
-            var cLen = photos.length;
-            var dContainer = document.getElementById('detail-carousel');
-            if (dContainer) dContainer._inlineCarouselSetup = true;
-            
-            function dGoTo(idx) {
-              if (idx < 0) idx = cLen - 1;
-              if (idx >= cLen) idx = 0;
-              cIdx = idx;
-              dTrack2.style.transform = 'translateX(-' + (idx * 100) + '%)';
-              dDots2.querySelectorAll('.photo-carousel-dot').forEach(function(d,i) {
-                d.classList.toggle('active', i === idx);
-              });
-            }
-
-            var dStartX = 0, dDiffX = 0, dDragging = false;
-            dContainer.ontouchstart = function(e) { dStartX = e.touches[0].clientX; dDragging = true; dDiffX = 0; dTrack2.classList.add('dragging'); };
-            dContainer.ontouchmove = function(e) { if (!dDragging) return; dDiffX = e.touches[0].clientX - dStartX; dTrack2.style.transform = 'translateX(' + (-(cIdx*100) + (dDiffX/(dContainer.offsetWidth||1)*100)) + '%)'; };
-            dContainer.ontouchend = function() { if (!dDragging) return; dDragging = false; dTrack2.classList.remove('dragging'); if (Math.abs(dDiffX)>40) { dDiffX<0 ? dGoTo(cIdx+1) : dGoTo(cIdx-1); } else { dGoTo(cIdx); } dDiffX = 0; };
-            
-            dDots2.onclick = function(e) {
-              var dot = e.target.closest('.photo-carousel-dot');
-              if (dot) dGoTo(parseInt(dot.dataset.idx));
-            };
-
-            // Mouse drag
-            var dMX = 0, dMD = 0, dMDragging = false;
-            dContainer.onmousedown = function(e) { dMX = e.clientX; dMDragging = true; dMD = 0; dTrack2.classList.add('dragging'); e.preventDefault(); };
-            dContainer.onmousemove = function(e) { if (!dMDragging) return; dMD = e.clientX - dMX; dTrack2.style.transform = 'translateX(' + (-(cIdx*100) + (dMD/(dContainer.offsetWidth||1)*100)) + '%)'; };
-            dContainer.onmouseup = function() { if (!dMDragging) return; dMDragging = false; dTrack2.classList.remove('dragging'); if (Math.abs(dMD)>40) { dMD<0 ? dGoTo(cIdx+1) : dGoTo(cIdx-1); } else { dGoTo(cIdx); } dMD = 0; };
-            dContainer.onmouseleave = function() { if (dMDragging) { dMDragging = false; dTrack2.classList.remove('dragging'); dGoTo(cIdx); dMD = 0; } };
-
-            // Tap left/right
-            dContainer.addEventListener('click', function(e) {
-              if (Math.abs(dDiffX)>5 || Math.abs(dMD)>5) return;
-              var rect = dContainer.getBoundingClientRect();
-              var tapX = e.clientX - rect.left;
-              if (tapX < rect.width * 0.3) dGoTo(cIdx - 1);
-              else if (tapX > rect.width * 0.7) dGoTo(cIdx + 1);
-            });
-          }
-          if (dCarouselContainer) dCarouselContainer._carouselLoading = false;
+          var dc = document.getElementById('detail-carousel');
+          if (dc) { dc._carouselLoading = false; dc._inlineCarouselSetup = true; }
+          if (!photos || photos.length <= 1) return;
+          initDetailCarousel(photos);
         });
       }
     } else if (isSignedIn && ownerEmail === currentUser.email && _galleryPhotos.length > 1) {
@@ -8232,6 +8174,88 @@ function syncProfileImages() {
       el.src = defaultAvatar;
     }
   });
+}
+
+// ── Detail Page Carousel (separate from initCarousel to avoid conflicts) ──
+function initDetailCarousel(photos) {
+  var track = document.getElementById('detail-carousel-track');
+  var dotsWrap = document.getElementById('detail-carousel-dots');
+  var container = document.getElementById('detail-carousel');
+  if (!track || !dotsWrap || !container) return;
+  if (!photos || photos.length <= 1) return;
+
+  // Build slides
+  var slidesHtml = '';
+  photos.forEach(function(p, i) {
+    slidesHtml += '<div class="photo-carousel-slide"><img class="detail-hero-img" src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+(p.facePos||'center 20%')+'"></div>';
+  });
+  track.innerHTML = slidesHtml;
+
+  // Build dots
+  var dotsHtml = '';
+  photos.forEach(function(p, i) {
+    dotsHtml += '<div class="photo-carousel-dot'+(i===0?' active':'')+'" data-idx="'+i+'"></div>';
+  });
+  dotsWrap.innerHTML = dotsHtml;
+  dotsWrap.style.display = 'flex';
+
+  var currentIdx = 0;
+  var startX = 0, diffX = 0, isDragging = false;
+  var len = photos.length;
+
+  function goToSlide(idx) {
+    if (idx < 0) idx = len - 1;
+    if (idx >= len) idx = 0;
+    currentIdx = idx;
+    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+    dotsWrap.querySelectorAll('.photo-carousel-dot').forEach(function(d, i) {
+      d.classList.toggle('active', i === idx);
+    });
+  }
+
+  container.ontouchstart = function(e) {
+    startX = e.touches[0].clientX; isDragging = true;
+    track.classList.add('dragging');
+  };
+  container.ontouchmove = function(e) {
+    if (!isDragging) return;
+    diffX = e.touches[0].clientX - startX;
+    track.style.transform = 'translateX(' + (-(currentIdx * 100) + (diffX / container.offsetWidth * 100)) + '%)';
+  };
+  container.ontouchend = function(e) {
+    if (!isDragging) return;
+    isDragging = false; track.classList.remove('dragging');
+    if (Math.abs(diffX) > 40) { if (diffX < 0) goToSlide(currentIdx + 1); else goToSlide(currentIdx - 1); }
+    else goToSlide(currentIdx);
+    diffX = 0;
+  };
+  dotsWrap.onclick = function(e) {
+    e.stopPropagation();
+    var dot = e.target.closest('.photo-carousel-dot');
+    if (dot) goToSlide(parseInt(dot.dataset.idx));
+  };
+  // Mouse drag
+  var mouseStartX = 0, mouseDiffX = 0, isMouseDragging = false;
+  container.onmousedown = function(e) {
+    mouseStartX = e.clientX; isMouseDragging = true; mouseDiffX = 0;
+    track.classList.add('dragging'); e.preventDefault();
+  };
+  container.onmousemove = function(e) {
+    if (!isMouseDragging) return;
+    mouseDiffX = e.clientX - mouseStartX;
+    track.style.transform = 'translateX(' + (-(currentIdx * 100) + (mouseDiffX / container.offsetWidth * 100)) + '%)';
+  };
+  container.onmouseup = function() {
+    if (!isMouseDragging) return;
+    isMouseDragging = false; track.classList.remove('dragging');
+    if (Math.abs(mouseDiffX) > 40) { if (mouseDiffX < 0) goToSlide(currentIdx + 1); else goToSlide(currentIdx - 1); }
+    else goToSlide(currentIdx);
+    mouseDiffX = 0;
+  };
+  container.onmouseleave = function() {
+    if (isMouseDragging) { isMouseDragging = false; track.classList.remove('dragging'); goToSlide(currentIdx); mouseDiffX = 0; }
+  };
+  goToSlide(0);
 }
 
 // ── Photo Carousel Engine ─────────────────────────────────
