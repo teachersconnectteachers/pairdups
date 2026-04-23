@@ -5760,7 +5760,7 @@ function renderRequestCards() {
           if (hoursSince > 24) canUndo = false;
         }
         if (canUndo) {
-          html += '<div><button onclick="undoDeclineFromRender(\''+c.id+'\',this)" style="margin:8px 0 4px;padding:6px 16px;border-radius:50px;border:none;background:var(--pink);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(255,59,127,0.3)">↩️ Undo Decline</button></div>';
+          html += '<div><button onclick="undoDeclineFromRender(\''+c.id+'\',this)" style="margin:8px 0 4px;padding:6px 16px;border-radius:50px;border:2px solid #333;background:#FF3B7F;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 3px 10px rgba(0,0,0,0.25)">↩️ Undo Decline</button></div>';
         } else {
           html += '<div style="font-size:10px;color:var(--gray);margin-top:6px">⏰ Undo window expired (24 hours)</div>';
         }
@@ -9028,7 +9028,7 @@ function doDeclineWithReason() {
   // Add Undo button for premium/gold users
   if (isPremium()) {
     var undoBtn = document.createElement('button');
-    undoBtn.style.cssText = 'margin:8px 14px 4px;padding:6px 16px;border-radius:50px;border:none;background:var(--pink);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(255,59,127,0.3)';
+    undoBtn.style.cssText = 'margin:8px 14px 4px;padding:6px 16px;border-radius:50px;border:2px solid #333;background:#FF3B7F;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 3px 10px rgba(0,0,0,0.25)';
     undoBtn.textContent = '↩️ Undo Decline';
     undoBtn.onclick = function() { undoDecline(convoId, card); };
     card.appendChild(undoBtn);
