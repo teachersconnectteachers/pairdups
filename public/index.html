@@ -2425,6 +2425,40 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         </div>
       </div>
 
+      <!-- INSTANT ALERTS (Gold) -->
+      <div id="instant-alerts-section" style="display:none">
+        <div style="font-size:11px;font-weight:800;color:#D97706;text-transform:uppercase;letter-spacing:0.5px;padding:12px 0 6px">🔔 Instant Alerts <span style="background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;padding:1px 6px;border-radius:50px;font-size:9px;font-weight:700;margin-left:4px">Gold</span></div>
+        <div style="font-size:10px;color:var(--gray);margin-bottom:8px;line-height:1.5">Get notified when new PairdUps matching your preferences are posted!</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:6px">
+          <div><div style="font-size:13px;font-weight:700;color:var(--dark)">Enable Alerts</div><div style="font-size:10px;color:var(--gray)">Push notification for matching PairdUps</div></div>
+          <label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" id="set-instant-alerts" onchange="toggleInstantAlerts(this)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span><span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
+        </div>
+        <div id="alert-prefs-detail" style="display:none">
+          <div style="padding:8px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:6px">
+            <div style="font-size:11px;font-weight:700;color:var(--dark);margin-bottom:6px">Categories to watch:</div>
+            <div id="alert-categories" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          </div>
+          <div style="padding:8px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:6px">
+            <div style="font-size:11px;font-weight:700;color:var(--dark);margin-bottom:6px">Type:</div>
+            <div id="alert-pair-type" style="display:flex;gap:6px">
+              <button class="alert-type-pill" data-val="" onclick="toggleAlertType(this)" style="padding:5px 12px;border-radius:50px;border:1.5px solid var(--gray-border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--dark)">All</button>
+              <button class="alert-type-pill" data-val="Just for Fun" onclick="toggleAlertType(this)" style="padding:5px 12px;border-radius:50px;border:1.5px solid var(--gray-border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--dark)">🎉 Fun</button>
+              <button class="alert-type-pill" data-val="Date" onclick="toggleAlertType(this)" style="padding:5px 12px;border-radius:50px;border:1.5px solid var(--gray-border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--dark)">💕 Date</button>
+            </div>
+          </div>
+          <div style="padding:8px 14px;background:var(--gray-light);border-radius:12px;margin-bottom:6px">
+            <div style="font-size:11px;font-weight:700;color:var(--dark);margin-bottom:4px">Location:</div>
+            <div style="font-size:10px;color:var(--gray)" id="alert-location-display">Your city only</div>
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button class="alert-loc-pill" data-val="city" onclick="toggleAlertLoc(this)" style="padding:5px 12px;border-radius:50px;border:1.5px solid var(--gray-border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--dark)">My City</button>
+              <button class="alert-loc-pill" data-val="state" onclick="toggleAlertLoc(this)" style="padding:5px 12px;border-radius:50px;border:1.5px solid var(--gray-border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--dark)">My State</button>
+              <button class="alert-loc-pill" data-val="all" onclick="toggleAlertLoc(this)" style="padding:5px 12px;border-radius:50px;border:1.5px solid var(--gray-border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--dark)">Anywhere</button>
+            </div>
+          </div>
+          <button onclick="saveAlertPreferences()" style="width:100%;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;border:none;border-radius:50px;padding:11px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px rgba(245,158,11,0.3);margin-bottom:4px">💾 Save Alert Preferences</button>
+        </div>
+      </div>
+
       <!-- DANGER ZONE -->
       <div style="font-size:11px;font-weight:800;color:#DC2626;text-transform:uppercase;letter-spacing:1px;padding:12px 0 2px">⚠️ Danger Zone</div>
       <div onclick="closeModal('modal-settings');openModal('modal-cancel-account')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#FEF2F2;border-radius:12px;cursor:pointer;border:1px solid #FECACA">
@@ -4676,6 +4710,8 @@ function loadSettings() {
   }
   el = document.getElementById('set-auto-delete'); if (el) el.checked = !!s.autoDeleteExpired;
   el = document.getElementById('set-pause-account'); if (el) el.checked = !!s.pauseAccount;
+  // Load instant alerts UI
+  loadAlertSettingsUI();
   // Preferred units
   var units = s.preferredUnits || 'mi';
   var miBtn = document.getElementById('unit-mi');
@@ -10784,33 +10820,192 @@ function confirmRenameFilter() {
 }
 
 // ── Instant Alerts for Matching PairdUps (Gold) ──────────
+// ── Instant Alerts System (Gold) ─────────────────────────
+var ALERT_CATEGORIES = ['Sports','Coffee','Dining','Outdoor','Bowling/Games','Cultural','Nightlife','Other'];
+
+function toggleInstantAlerts(checkbox) {
+  if (!isGold()) {
+    checkbox.checked = false;
+    showPremiumModal('🔔 Instant alerts for matching PairdUps is a Gold-exclusive feature! Upgrade to get notified when new PairdUps matching your interests are posted.');
+    return;
+  }
+  var detailEl = document.getElementById('alert-prefs-detail');
+  if (checkbox.checked) {
+    if (detailEl) detailEl.style.display = '';
+    renderAlertCategories();
+    loadAlertPreferences();
+  } else {
+    if (detailEl) detailEl.style.display = 'none';
+    saveSetting('instantAlerts', false);
+    showToast('Instant alerts turned off');
+  }
+}
+
+function renderAlertCategories() {
+  var container = document.getElementById('alert-categories');
+  if (!container) return;
+  var prefs = getAlertPreferences();
+  container.innerHTML = ALERT_CATEGORIES.map(function(cat) {
+    var isOn = prefs.categories.indexOf(cat) !== -1;
+    return '<button class="alert-cat-pill" data-cat="'+cat+'" onclick="toggleAlertCat(this)" style="padding:5px 10px;border-radius:50px;border:1.5px solid '+(isOn?'var(--pink)':'var(--gray-border)')+';background:'+(isOn?'var(--pink)':'#fff')+';color:'+(isOn?'#fff':'var(--dark)')+';font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s">'+cat+'</button>';
+  }).join('');
+}
+
+function toggleAlertCat(btn) {
+  var cat = btn.dataset.cat;
+  var prefs = getAlertPreferences();
+  var idx = prefs.categories.indexOf(cat);
+  if (idx !== -1) { prefs.categories.splice(idx, 1); } else { prefs.categories.push(cat); }
+  setAlertPreferences(prefs);
+  renderAlertCategories();
+}
+
+function toggleAlertType(btn) {
+  document.querySelectorAll('.alert-type-pill').forEach(function(p) {
+    p.style.background = '#fff'; p.style.color = 'var(--dark)'; p.style.borderColor = 'var(--gray-border)';
+  });
+  btn.style.background = 'var(--pink)'; btn.style.color = '#fff'; btn.style.borderColor = 'var(--pink)';
+  var prefs = getAlertPreferences();
+  prefs.pairType = btn.dataset.val;
+  setAlertPreferences(prefs);
+}
+
+function toggleAlertLoc(btn) {
+  document.querySelectorAll('.alert-loc-pill').forEach(function(p) {
+    p.style.background = '#fff'; p.style.color = 'var(--dark)'; p.style.borderColor = 'var(--gray-border)';
+  });
+  btn.style.background = 'var(--pink)'; btn.style.color = '#fff'; btn.style.borderColor = 'var(--pink)';
+  var prefs = getAlertPreferences();
+  prefs.locationScope = btn.dataset.val;
+  setAlertPreferences(prefs);
+  var locDisplay = document.getElementById('alert-location-display');
+  if (locDisplay) {
+    if (btn.dataset.val === 'city') locDisplay.textContent = 'Only PairdUps in your city';
+    else if (btn.dataset.val === 'state') locDisplay.textContent = 'PairdUps in your state/province';
+    else locDisplay.textContent = 'PairdUps from anywhere';
+  }
+}
+
+function getAlertPreferences() {
+  var s = _getSettings();
+  return s.alertPrefs || { categories: [], pairType: '', locationScope: 'city' };
+}
+
+function setAlertPreferences(prefs) {
+  var s = _getSettings();
+  s.alertPrefs = prefs;
+  _saveSettings(s);
+}
+
+function loadAlertPreferences() {
+  var prefs = getAlertPreferences();
+  // Set type pills
+  document.querySelectorAll('.alert-type-pill').forEach(function(p) {
+    var isActive = p.dataset.val === prefs.pairType;
+    p.style.background = isActive ? 'var(--pink)' : '#fff';
+    p.style.color = isActive ? '#fff' : 'var(--dark)';
+    p.style.borderColor = isActive ? 'var(--pink)' : 'var(--gray-border)';
+  });
+  // Set location pills
+  document.querySelectorAll('.alert-loc-pill').forEach(function(p) {
+    var isActive = p.dataset.val === (prefs.locationScope || 'city');
+    p.style.background = isActive ? 'var(--pink)' : '#fff';
+    p.style.color = isActive ? '#fff' : 'var(--dark)';
+    p.style.borderColor = isActive ? 'var(--pink)' : 'var(--gray-border)';
+  });
+  var locDisplay = document.getElementById('alert-location-display');
+  if (locDisplay) {
+    if (prefs.locationScope === 'state') locDisplay.textContent = 'PairdUps in your state/province';
+    else if (prefs.locationScope === 'all') locDisplay.textContent = 'PairdUps from anywhere';
+    else locDisplay.textContent = 'Only PairdUps in your city';
+  }
+}
+
+function saveAlertPreferences() {
+  var prefs = getAlertPreferences();
+  if (prefs.categories.length === 0) {
+    showToast('Please select at least one category');
+    return;
+  }
+  saveSetting('instantAlerts', true);
+  // Also save to Supabase for server-side checks
+  if (_supabase && currentUser.supabaseId) {
+    _supabase.from('profiles').update({ alert_preferences: prefs }).eq('id', currentUser.supabaseId);
+  }
+  showToast('Alert preferences saved! 🔔 You\'ll be notified of matching PairdUps.');
+}
+
+function loadAlertSettingsUI() {
+  var section = document.getElementById('instant-alerts-section');
+  if (!section) return;
+  if (isGold()) {
+    section.style.display = '';
+    var s = _getSettings();
+    var toggle = document.getElementById('set-instant-alerts');
+    var detail = document.getElementById('alert-prefs-detail');
+    if (toggle) toggle.checked = !!s.instantAlerts;
+    if (detail) detail.style.display = s.instantAlerts ? '' : 'none';
+    if (s.instantAlerts) {
+      renderAlertCategories();
+      loadAlertPreferences();
+    }
+  } else {
+    section.style.display = 'none';
+  }
+}
+
 async function checkInstantAlerts() {
   if (!isGold() || !_supabase || !currentUser.supabaseId) return;
+  var s = _getSettings();
+  if (!s.instantAlerts) return;
+  var prefs = s.alertPrefs;
+  if (!prefs || !prefs.categories || prefs.categories.length === 0) return;
   try {
-    // Get user's interests
-    var interests = currentUser.interests || [];
-    if (interests.length === 0) return;
-    // Check for new listings in the last 24 hours matching user's interests/location
-    var yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    var { data: newListings } = await _supabase.from('listings')
-      .select('id, title, category, city, owner_id')
-      .gte('created_at', yesterday)
+    // Check for new listings in the last hour
+    var oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    var query = _supabase.from('listings')
+      .select('id, title, category, city, pair_type, owner_id')
+      .gte('created_at', oneHourAgo)
       .neq('owner_id', currentUser.supabaseId)
       .eq('is_active', true)
+      .in('category', prefs.categories)
       .limit(10);
+    // Filter by pair type if set
+    if (prefs.pairType) {
+      query = query.eq('pair_type', prefs.pairType);
+    }
+    var { data: newListings } = await query;
     if (!newListings || newListings.length === 0) return;
+    // Location filter (client-side)
+    var userCity = (currentUser.loc || '').split(',')[0].trim().toLowerCase();
+    var userState = (currentUser.loc || '').split(',')[1]?.trim().toLowerCase() || '';
+    if (prefs.locationScope === 'city' && userCity) {
+      newListings = newListings.filter(function(l) { return l.city && l.city.toLowerCase().indexOf(userCity) !== -1; });
+    } else if (prefs.locationScope === 'state' && userState) {
+      newListings = newListings.filter(function(l) { return l.city && l.city.toLowerCase().indexOf(userState) !== -1; });
+    }
+    if (newListings.length === 0) return;
     // Check against already-alerted IDs
     var alertedIds = JSON.parse(localStorage.getItem('pu_alerted_listings') || '[]');
-    var newMatches = newListings.filter(function(l) {
-      return !alertedIds.includes(l.id) && (
-        (currentUser.loc && l.city && l.city.toLowerCase().indexOf(currentUser.loc.split(',')[0].trim().toLowerCase()) !== -1)
-      );
-    });
+    var newMatches = newListings.filter(function(l) { return !alertedIds.includes(l.id); });
     if (newMatches.length > 0) {
       alertedIds = alertedIds.concat(newMatches.map(function(l) { return l.id; }));
-      if (alertedIds.length > 100) alertedIds = alertedIds.slice(-100);
+      if (alertedIds.length > 200) alertedIds = alertedIds.slice(-200);
       localStorage.setItem('pu_alerted_listings', JSON.stringify(alertedIds));
-      showToast('🔔 ' + newMatches.length + ' new PairdUp' + (newMatches.length > 1 ? 's' : '') + ' near you!');
+      // Show in-app notification
+      var matchTitle = newMatches[0].title;
+      var matchCount = newMatches.length;
+      if (matchCount === 1) {
+        showToast('🔔 New matching PairdUp: "' + matchTitle + '"');
+      } else {
+        showToast('🔔 ' + matchCount + ' new PairdUps matching your alerts!');
+      }
+      // Send push notification to self
+      sendPush(currentUser.supabaseId, 'instant_alert', {
+        to_name: currentUser.name || 'there',
+        listing_title: matchTitle,
+        match_count: matchCount
+      });
     }
   } catch(e) { console.log('[PairdUps] Instant alerts error:', e); }
 }
