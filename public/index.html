@@ -9718,9 +9718,13 @@ function clearAdvancedFilters() {
   var ageMin = document.getElementById('filter-age-min');
   var ageMax = document.getElementById('filter-age-max');
   var distance = document.getElementById('filter-distance');
+  var posterType = document.getElementById('filter-poster-type');
+  var groupType = document.getElementById('filter-group-type');
   if (ageMin) ageMin.value = '';
   if (ageMax) ageMax.value = '';
   if (distance) distance.value = '';
+  if (posterType) posterType.value = '';
+  if (groupType) groupType.value = '';
   // Clear any active pills in advanced filter section
   document.querySelectorAll('#modal-filter .advanced-filter-pill.active').forEach(function(p) { p.classList.remove('active'); });
   // Reset saved filter highlight
