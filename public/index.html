@@ -10846,8 +10846,26 @@ function updateAlertBadge(count) {
 }
 
 function showAlertNotifications() {
+  var _s = _getSettings();
+  if (!_s.instantAlerts) {
+    // Alerts not configured — prompt to set up
+    var ie = document.getElementById('plan-change-icon');
+    var te = document.getElementById('plan-change-title');
+    var me = document.getElementById('plan-change-msg');
+    var be = document.getElementById('plan-change-confirm-btn');
+    if (ie) ie.textContent = '🔔';
+    if (te) te.textContent = 'Set Up Instant Alerts';
+    if (me) me.innerHTML = 'Get notified when new PairdUps matching your interests are posted!<br><br>Go to <strong>Profile → Settings → Instant Alerts</strong> to choose your categories, location, and type preferences.';
+    if (be) {
+      be.textContent = '⚙️ Go to Settings';
+      be.style.background = 'linear-gradient(135deg,#F59E0B,#FBBF24)';
+      be.onclick = function() { closeModal('modal-confirm-plan'); navTo('profile'); setTimeout(function() { loadSettings(); openModal('modal-settings'); }, 300); };
+    }
+    openModal('modal-confirm-plan');
+    return;
+  }
   if (_alertNotifications.length === 0) {
-    showToast('No new alerts. Check your alert settings in Profile → Settings.');
+    showToast('No new alerts right now. Your preferences are active! 🔔');
     return;
   }
   // Show a simple summary modal
@@ -10876,8 +10894,7 @@ function showAlertNotifications() {
 function showAlertBellForGold() {
   var bellWrap = document.getElementById('alert-bell-wrap');
   if (bellWrap) {
-    var s = _getSettings();
-    bellWrap.style.display = (isGold() && s.instantAlerts) ? '' : 'none';
+    bellWrap.style.display = isGold() ? '' : 'none';
   }
 }
 
