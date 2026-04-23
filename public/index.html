@@ -5964,7 +5964,7 @@ function openConvoChat(convoId) {
   // Gold: mark messages as read and check read receipts
   if (convo.supabaseId) {
     markMessagesAsRead(convo.supabaseId);
-    setTimeout(function() { checkReadReceipts(convo.supabaseId); }, 1000);
+    setTimeout(function() { checkReadReceipts(convo.supabaseId); }, 2000);
   }
   goTo('screen-chat');
 }
@@ -6059,6 +6059,9 @@ function startChatPolling(convoId) {
         // Mark as read
         var readUpdate = convo.iAmRequester ? { requester_unread: false } : { poster_unread: false };
         _supabase.from('conversations').update(readUpdate).eq('id', convo.supabaseId).then(function(){});
+        // Check read receipts for Gold users
+        markMessagesAsRead(convo.supabaseId);
+        checkReadReceipts(convo.supabaseId);
       });
   }, 3000); // Poll every 3 seconds
 }
