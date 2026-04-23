@@ -1533,11 +1533,66 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     </div>
     <div id="manage-plan-note" style="display:none;font-size:11px;color:var(--gray);text-align:center;margin-bottom:12px;line-height:1.5;background:var(--gray-light);padding:10px;border-radius:10px"></div>
     <button id="manage-plan-btn" onclick="confirmPlanChange()" style="display:none;width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35);margin-bottom:8px">Change Plan</button>
+    <div style="text-align:center;margin-bottom:12px"><a onclick="closeModal('modal-manage-plan');showPlanFeaturesModal()" style="font-size:12px;color:var(--pink);font-weight:700;cursor:pointer;text-decoration:underline">⭐ See all plan features & benefits</a></div>
     <button onclick="closeModal('modal-manage-plan')" style="width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Close</button>
   </div>
 </div>
 
 <!-- PHOTO DELETE CONFIRMATION MODAL -->
+<!-- PLAN FEATURES MODAL -->
+<div class="modal-bg" id="modal-plan-features" onclick="if(event.target===this)closeModal('modal-plan-features')" style="align-items:flex-end;justify-content:center">
+  <div class="modal-sheet" style="max-height:85vh;overflow-y:auto;padding:24px 20px 20px;border-radius:24px 24px 0 0">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:36px;margin-bottom:6px">⭐</div>
+      <div style="font-size:20px;font-weight:900;color:var(--dark)">Plan Features & Benefits</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px">Compare what's included in each plan</div>
+    </div>
+    <!-- Free -->
+    <div style="background:#F9FAFB;border:2px solid #E5E7EB;border-radius:16px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:20px">🆓</span><span style="font-size:16px;font-weight:900;color:var(--dark)">Free</span><span style="font-size:12px;color:var(--gray);font-weight:600">$0/month</span></div>
+      <div style="font-size:12px;color:#4B5563;line-height:1.8">
+        📸 1 profile photo<br>
+        📝 Create & join PairdUps<br>
+        💬 Messaging with matches<br>
+        🔍 Browse the Discover feed<br>
+        📍 Filter by location
+      </div>
+    </div>
+    <!-- Premium -->
+    <div style="background:#FFF0F5;border:2px solid #FF6FA3;border-radius:16px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:20px">⭐</span><span style="font-size:16px;font-weight:900;color:var(--dark)">Premium</span><span style="font-size:12px;color:var(--pink);font-weight:700">$4.99/month</span></div>
+      <div style="font-size:12px;color:#4B5563;line-height:1.8">
+        📸 Up to <strong>5 profile photos</strong><br>
+        ✅ <strong>Verified badge</strong> on your profile<br>
+        👀 See <strong>who viewed your profile</strong><br>
+        📊 PairdUp <strong>analytics</strong><br>
+        ⭐ <strong>Priority placement</strong> in Discover<br>
+        🔍 <strong>Advanced filters</strong> (age, distance)<br>
+        ↩️ <strong>Undo decline</strong> within 24 hours<br>
+        🎨 <strong>3 profile theme colors</strong>
+      </div>
+    </div>
+    <!-- Gold -->
+    <div style="background:#FFFBEB;border:2px solid #F59E0B;border-radius:16px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:20px">👑</span><span style="font-size:16px;font-weight:900;color:var(--dark)">Gold</span><span style="font-size:12px;color:#D97706;font-weight:700">$9.99/month</span></div>
+      <div style="font-size:12px;color:#4B5563;line-height:1.8">
+        <strong>Everything in Premium, plus:</strong><br>
+        📸 Up to <strong>12 profile photos</strong><br>
+        👑 <strong>Gold crown badge</strong> + Verified<br>
+        ⭐ <strong>Featured PairdUp</strong> (1/week with banner)<br>
+        📌 <strong>Pin PairdUp</strong> to top of Discover<br>
+        💬 <strong>Read receipts</strong> in messages<br>
+        🔔 <strong>Instant alerts</strong> for matching PairdUps<br>
+        📊 <strong>Full analytics dashboard</strong><br>
+        🔍 <strong>Saved search filters</strong><br>
+        ↩️ <strong>Undo decline anytime</strong> (no 24hr limit)<br>
+        🎨 <strong>8 profile theme colors</strong>
+      </div>
+    </div>
+    <div id="plan-features-action" style="text-align:center;margin-bottom:10px"></div>
+    <button onclick="closeModal('modal-plan-features')" style="width:100%;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Close</button>
+  </div>
+</div>
 <div class="modal-bg" id="modal-delete-photo" onclick="if(event.target===this)closeModal('modal-delete-photo')" style="align-items:center;justify-content:center">
   <div class="modal-sheet" style="max-width:320px;padding:28px 24px;border-radius:24px;text-align:center">
     <div style="font-size:52px;margin-bottom:10px">🤔</div>
@@ -3142,7 +3197,9 @@ window.setTestTier = function(tier) {
   console.log('[PairdUps] Found ' + upgradeBtns.length + ' upgrade buttons, tier=' + tier);
   upgradeBtns.forEach(function(btn) {
     if (tier === 'gold') {
-      btn.style.display = 'none';
+      btn.style.display = '';
+      btn.innerHTML = '<div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" width="22" height="22" style="fill:#F59E0B !important;stroke:#D97706 !important"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" style="fill:#F59E0B;stroke:#D97706"/></svg></div><span class="nav-label" style="color:#D97706;font-weight:700;font-size:9px">My Plan</span>';
+      btn.onclick = function() { showPlanFeaturesModal(); };
     } else if (tier === 'premium') {
       btn.style.display = '';
       btn.innerHTML = '<div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" width="22" height="22" style="fill:#F59E0B !important;stroke:#D97706 !important;filter:drop-shadow(0 0 4px rgba(245,158,11,0.6))"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" style="fill:#F59E0B;stroke:#D97706"/></svg></div><span class="nav-label" style="color:#D97706;font-weight:800">Go Gold</span>';
@@ -3320,7 +3377,9 @@ function updateAllTierBadges() {
   var upgradeBtns = document.querySelectorAll('.nav-upgrade-btn');
   upgradeBtns.forEach(function(btn) {
     if (tier === 'gold') {
-      btn.style.display = 'none';
+      btn.style.display = '';
+      btn.innerHTML = '<div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" width="22" height="22" style="fill:#F59E0B !important;stroke:#D97706 !important"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" style="fill:#F59E0B;stroke:#D97706"/></svg></div><span class="nav-label" style="color:#D97706;font-weight:700;font-size:9px">My Plan</span>';
+      btn.onclick = function() { showPlanFeaturesModal(); };
     } else if (tier === 'premium') {
       btn.style.display = '';
       btn.innerHTML = '<div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24" width="22" height="22" style="fill:#F59E0B !important;stroke:#D97706 !important;filter:drop-shadow(0 0 4px rgba(245,158,11,0.6))"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" style="fill:#F59E0B;stroke:#D97706"/></svg></div><span class="nav-label" style="color:#D97706;font-weight:800">Go Gold</span>';
@@ -3527,6 +3586,22 @@ async function executePlanChange() {
   renderPhotoGallery();
   loadProfileTheme();
   _selectedPlanChange = null;
+}
+
+function showPlanFeaturesModal() {
+  var tier = getUserTier();
+  var actionEl = document.getElementById('plan-features-action');
+  if (actionEl) {
+    if (tier === 'gold') {
+      actionEl.innerHTML = '<div style="font-size:12px;color:#D97706;font-weight:700">👑 You\'re on the Gold plan — you have access to everything!</div>';
+    } else if (tier === 'premium') {
+      actionEl.innerHTML = '<button onclick="closeModal(\'modal-plan-features\');subscribeToPlan(\'gold\')" style="width:100%;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(245,158,11,0.35);margin-bottom:8px">👑 Upgrade to Gold — $9.99/mo</button>';
+    } else {
+      actionEl.innerHTML = '<button onclick="closeModal(\'modal-plan-features\');subscribeToPlan(\'premium\')" style="width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35);margin-bottom:6px">⭐ Upgrade to Premium — $4.99/mo</button>'
+        + '<button onclick="closeModal(\'modal-plan-features\');subscribeToPlan(\'gold\')" style="width:100%;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(245,158,11,0.35);margin-bottom:8px">👑 Upgrade to Gold — $9.99/mo</button>';
+    }
+  }
+  openModal('modal-plan-features');
 }
 
 function showPhotoUpsell() {
@@ -8362,6 +8437,15 @@ function initMiniCarousel(photos) {
   container.onmouseleave = function() {
     if (isMouseDragging) { isMouseDragging = false; track.classList.remove('dragging'); goToSlide(currentIdx); mouseDiffX = 0; }
   };
+  // Tap left/right halves to navigate
+  container.addEventListener('click', function(e) {
+    if (Math.abs(diffX) > 5 || Math.abs(mouseDiffX) > 5) return;
+    if (e.target.closest('.photo-carousel-dot')) return;
+    var rect = container.getBoundingClientRect();
+    var tapX = e.clientX - rect.left;
+    if (tapX < rect.width * 0.35) goToSlide(currentIdx - 1);
+    else if (tapX > rect.width * 0.65) goToSlide(currentIdx + 1);
+  });
   goToSlide(0);
 }
 
@@ -8444,6 +8528,15 @@ function initDetailCarousel(photos) {
   container.onmouseleave = function() {
     if (isMouseDragging) { isMouseDragging = false; track.classList.remove('dragging'); goToSlide(currentIdx); mouseDiffX = 0; }
   };
+  // Tap left/right halves to navigate
+  container.addEventListener('click', function(e) {
+    if (Math.abs(diffX) > 5 || Math.abs(mouseDiffX) > 5) return;
+    if (e.target.closest('.photo-carousel-dot')) return;
+    var rect = container.getBoundingClientRect();
+    var tapX = e.clientX - rect.left;
+    if (tapX < rect.width * 0.35) goToSlide(currentIdx - 1);
+    else if (tapX > rect.width * 0.65) goToSlide(currentIdx + 1);
+  });
   goToSlide(0);
 }
 
