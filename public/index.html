@@ -10318,12 +10318,14 @@ async function markMessagesAsRead(convoId) {
   // All users mark messages as read — this is needed so Gold senders can see "Seen"
   if (!_supabase || !currentUser.supabaseId) return;
   try {
-    await _supabase.from('messages')
+    var { data: markData, error: markErr, count: markCount } = await _supabase.from('messages')
       .update({ read_at: new Date().toISOString() })
       .eq('conversation_id', convoId)
       .neq('sender_id', currentUser.supabaseId)
-      .is('read_at', null);
-  } catch(e) { console.log('[PairdUps] Read receipt error:', e); }
+      .is('read_at', null)
+      .select();
+    console.log('[PairdUps] markMessagesAsRead result — updated:', markData ? markData.length : 0, 'error:', markErr, 'convoId:', convoId);
+  } catch(e) { console.log('[PairdUps] markMessagesAsRead error:', e); }
 }
 
 // Check if a message has been read and update receipts
