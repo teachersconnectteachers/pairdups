@@ -3427,79 +3427,88 @@ async function executePlanChange() {
 
   if (_supabase && currentUser.supabaseId) {
     try {
+      var session = await _supabase.auth.getSession();
+      var token = session.data?.session?.access_token;
+      if (!token) { showToast('Please sign in again to manage your plan.'); return; }
+
+      var action = '';
+      var targetPlan = plan;
       if (plan === 'free') {
-        // Cancelling subscription — tell Stripe to cancel at period end
-        // The user keeps current features until the period ends
-        var { data: profile } = await _supabase.from('profiles').select('stripe_subscription_id, subscription_expires_at').eq('id', currentUser.supabaseId).maybeSingle();
-        if (profile && profile.stripe_subscription_id) {
-          // Call Stripe to cancel at period end via our edge function
-          var session = await _supabase.auth.getSession();
-          var token = session.data?.session?.access_token;
-          // Use create-checkout edge function endpoint to cancel (or we call Stripe portal)
-          // For now, mark as pending and let user use Stripe portal
-          await _supabase.from('profiles').update({
-            pending_downgrade: 'free'
-          }).eq('id', currentUser.supabaseId);
-          
-          var renewalDate = profile.subscription_expires_at ? new Date(profile.subscription_expires_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'your next renewal date';
-          
-          // Send email with renewal date
-          if (token && currentUser.email) {
-            fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-              body: JSON.stringify({
-                type: 'plan_cancelled',
-                to_email: currentUser.email,
-                to_user_id: currentUser.supabaseId,
-                to_name: currentUser.name || 'there',
-                current_plan: currentTier === 'gold' ? 'Gold' : 'Premium',
-                renewal_date: renewalDate
-              })
-            });
-          }
-          showToast('Subscription will be cancelled on ' + renewalDate + '. You keep all ' + (currentTier === 'gold' ? 'Gold' : 'Premium') + ' features until then! ✓');
-        } else {
-          // No Stripe subscription found — just update directly
-          await _supabase.from('profiles').update({ subscription_tier: 'free', pending_downgrade: null }).eq('id', currentUser.supabaseId);
-          currentUser.subscriptionTier = 'free';
-          showToast('Plan changed to Free. ✓');
-        }
+        action = 'cancel';
       } else if (plan === 'premium' && currentTier === 'gold') {
-        // Gold → Premium downgrade — schedule price swap at period end
-        var { data: profile2 } = await _supabase.from('profiles').select('stripe_subscription_id, subscription_expires_at').eq('id', currentUser.supabaseId).maybeSingle();
-        
-        if (profile2 && profile2.stripe_subscription_id) {
-          await _supabase.from('profiles').update({
-            pending_downgrade: 'premium'
-          }).eq('id', currentUser.supabaseId);
-          
-          var renewalDate2 = profile2.subscription_expires_at ? new Date(profile2.subscription_expires_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'your next renewal date';
-          
-          var session2 = await _supabase.auth.getSession();
-          var token2 = session2.data?.session?.access_token;
-          if (token2 && currentUser.email) {
-            fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token2 },
-              body: JSON.stringify({
-                type: 'plan_downgraded',
-                to_email: currentUser.email,
-                to_user_id: currentUser.supabaseId,
-                to_name: currentUser.name || 'there',
-                plan_name: 'Premium',
-                effective_date: renewalDate2
-              })
-            });
-          }
-          showToast('Plan will change to Premium on ' + renewalDate2 + '. You keep all Gold features until then! ✓');
-        } else {
-          await _supabase.from('profiles').update({ subscription_tier: 'premium', pending_downgrade: null }).eq('id', currentUser.supabaseId);
-          currentUser.subscriptionTier = 'premium';
-          showToast('Plan changed to Premium. ✓');
-        }
+        action = 'downgrade';
+      } else if (plan === 'gold' && currentTier === 'premium') {
+        action = 'upgrade';
+      }
+
+      if (!action) { showToast('Invalid plan change.'); return; }
+
+      var res = await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/manage-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ action: action, user_id: currentUser.supabaseId, target_plan: targetPlan })
+      });
+      var result = await res.json();
+
+      if (result.error) {
+        showToast('Error: ' + result.error);
+        return;
+      }
+
+      // Format the effective date for display
+      var renewalDate = result.effective_date ? new Date(result.effective_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'your next renewal date';
+
+      if (action === 'cancel') {
+        // Send cancellation email with renewal date
+        fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            type: 'plan_cancelled',
+            to_email: currentUser.email,
+            to_user_id: currentUser.supabaseId,
+            to_name: currentUser.name || 'there',
+            current_plan: currentTier === 'gold' ? 'Gold' : 'Premium',
+            renewal_date: renewalDate
+          })
+        });
+        showToast('Subscription will be cancelled on ' + renewalDate + '. You keep all ' + (currentTier === 'gold' ? 'Gold' : 'Premium') + ' features until then! ✓');
+      } else if (action === 'downgrade') {
+        // Send downgrade email with effective date
+        fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            type: 'plan_downgraded',
+            to_email: currentUser.email,
+            to_user_id: currentUser.supabaseId,
+            to_name: currentUser.name || 'there',
+            plan_name: 'Premium',
+            effective_date: renewalDate
+          })
+        });
+        showToast('Plan will change to Premium on ' + renewalDate + '. You keep all Gold features until then! ✓');
+      } else if (action === 'upgrade') {
+        // Upgrade is immediate
+        currentUser.subscriptionTier = targetPlan;
+        fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            type: 'plan_upgraded',
+            to_email: currentUser.email,
+            to_user_id: currentUser.supabaseId,
+            to_name: currentUser.name || 'there',
+            plan_name: 'Gold'
+          })
+        });
+        showToast('Upgraded to Gold! All Gold features are now active. 👑');
       }
     } catch(e) { console.log('Plan change error:', e); showToast('Error processing plan change. Please try again.'); }
+  }
+  // Refresh UI
+  if (typeof loadSubscriptionStatus === 'function') {
+    await loadSubscriptionStatus();
   }
   syncProfileForm();
   updateAllTierBadges();
