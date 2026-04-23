@@ -10325,20 +10325,28 @@ async function markMessagesAsRead(convoId) {
 
 // Check if a message has been read and update receipts
 async function checkReadReceipts(convoId) {
-  if (!isGold() || !_supabase || !currentUser.supabaseId) return;
+  if (!isGold() || !_supabase || !currentUser.supabaseId) {
+    console.log('[PairdUps] checkReadReceipts skipped — isGold:', isGold(), 'convoId:', convoId);
+    return;
+  }
   var settings = _getSettings();
-  if (settings.showReadReceipts === false) return;
+  if (settings.showReadReceipts === false) {
+    console.log('[PairdUps] checkReadReceipts skipped — setting disabled');
+    return;
+  }
   try {
-    var { data: msgs } = await _supabase.from('messages')
+    var { data: msgs, error: rrErr } = await _supabase.from('messages')
       .select('id, read_at, sender_id')
       .eq('conversation_id', convoId)
       .eq('sender_id', currentUser.supabaseId)
       .not('read_at', 'is', null)
       .order('created_at', { ascending: false })
       .limit(20);
+    console.log('[PairdUps] checkReadReceipts query result — msgs:', msgs ? msgs.length : 0, 'error:', rrErr);
     if (msgs && msgs.length > 0) {
       // Update the last sent message bubble to show "Seen"
       var bubbles = document.querySelectorAll('#chat-messages .bubble-wrap.me .bubble-time');
+      console.log('[PairdUps] checkReadReceipts — found', bubbles.length, 'sent message bubbles');
       if (bubbles.length > 0) {
         var lastBubble = bubbles[bubbles.length - 1];
         if (!lastBubble.querySelector('.read-seen')) {
@@ -10347,10 +10355,11 @@ async function checkReadReceipts(convoId) {
           seen.style.cssText = 'margin-left:4px;color:var(--pink);font-size:10px;font-weight:600';
           seen.textContent = '· Seen';
           lastBubble.appendChild(seen);
+          console.log('[PairdUps] checkReadReceipts — added Seen label');
         }
       }
     }
-  } catch(e) {}
+  } catch(e) { console.log('[PairdUps] checkReadReceipts error:', e); }
 }
 
 // ── Pin PairdUp (Gold) ────────────────────────────────────
