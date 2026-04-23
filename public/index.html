@@ -1552,7 +1552,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 
 <!-- PLAN CHANGE CONFIRMATION MODAL -->
 <div class="modal-bg" id="modal-pin-switch" onclick="if(event.target===this)closeModal('modal-pin-switch')" style="align-items:center;justify-content:center">
-  <div class="modal-card" style="max-width:360px;text-align:center;padding:28px 24px">
+  <div class="modal-card" style="max-width:360px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="font-size:40px;margin-bottom:10px">🤔</div>
     <div style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:14px">Switch Your Pin?</div>
     <p id="pin-switch-msg" style="font-size:13px;color:var(--gray);line-height:1.6;margin:0 0 20px"></p>
@@ -6335,12 +6335,14 @@ function initCardCarousel(listingId, photos) {
   // Tap left/right thirds on desktop (only if click didn't trigger navigation)
   container.addEventListener('click', function(e) {
     if (Math.abs(diffX) > 5) return;
-    // Don't advance if the click target is a button, link, or the card body (which opens detail)
-    if (e.target.closest('.card-body, .card-footer, .card-title, .card-desc, .card-meta-row, a, button, .send-req-btn')) return;
+    // Don't advance if click is on anything other than the carousel image itself
+    if (e.target.closest('.card-body, .card-footer, .card-title, .card-desc, .card-meta-row, a, button, .send-req-btn, .poster-badge, .card-carousel-dots')) return;
+    // Only advance on desktop (not touch devices) to avoid double-trigger
+    if ('ontouchstart' in window) return;
     var rect = container.getBoundingClientRect();
     var tapX = e.clientX - rect.left;
-    if (tapX < rect.width * 0.3) goToSlide(currentIdx - 1);
-    else if (tapX > rect.width * 0.7) goToSlide(currentIdx + 1);
+    if (tapX < rect.width * 0.3) { e.stopPropagation(); goToSlide(currentIdx - 1); }
+    else if (tapX > rect.width * 0.7) { e.stopPropagation(); goToSlide(currentIdx + 1); }
   });
 }
 
@@ -6380,8 +6382,10 @@ async function loadSupabaseListings() {
     document.querySelectorAll('.listing-card[data-owner-email]').forEach(function(c) {
       if (c.dataset.ownerEmail) c.remove();
     });
-    // Clear my-listings container of dynamic cards
-    document.querySelectorAll('#my-listings-container .my-card').forEach(function(c) { c.remove(); });
+    // Clear my-listings container of dynamic cards (skip if only refreshing Discover)
+    if (!_skipMyListingsRebuild) {
+      document.querySelectorAll('#my-listings-container .my-card').forEach(function(c) { c.remove(); });
+    }
     
     // Build listing data and render
     userListings = [];
@@ -6410,10 +6414,12 @@ async function loadSupabaseListings() {
         isFeatured: !!row.is_featured
       };
       userListings.push(d);
-      renderUserListing(d);
+      if (!_skipMyListingsRebuild) renderUserListing(d);
     });
-    _saveListings(userListings);
-    toggleMyListingsEmpty();
+    if (!_skipMyListingsRebuild) {
+      _saveListings(userListings);
+      toggleMyListingsEmpty();
+    }
     // Re-apply face centering for new images
     setTimeout(applyFaceCentering, 300);
     // Re-sort expired cards
@@ -10212,6 +10218,17 @@ async function checkReadReceipts(convoId) {
 }
 
 // ── Pin PairdUp (Gold) ────────────────────────────────────
+// Refresh only the Discover feed sort order (without rebuilding My Listings)
+var _skipMyListingsRebuild = false;
+function refreshDiscoverOnly() {
+  _skipMyListingsRebuild = true;
+  if (typeof loadSupabaseListings === 'function') {
+    loadSupabaseListings().then(function() { _skipMyListingsRebuild = false; });
+  } else {
+    _skipMyListingsRebuild = false;
+  }
+}
+
 async function pinPairdUp(btn, listingId) {
   if (!isGold()) { showPremiumModal('📌 Pin your PairdUp to the top of your city\'s Discover feed! Upgrade to Gold.'); return; }
   if (!listingId || !_supabase) { showToast('Cannot pin this listing.'); return; }
@@ -10230,7 +10247,7 @@ async function pinPairdUp(btn, listingId) {
       var ul = userListings.find(function(l) { return l.supabaseId === listingId; });
       if (ul) ul.isPinned = false;
       showToast('PairdUp unpinned.');
-      if (typeof loadSupabaseListings === 'function') loadSupabaseListings();
+      refreshDiscoverOnly();
       return;
     }
     
@@ -10289,7 +10306,7 @@ async function doPin(btn, listingId) {
   if (ul2) ul2.isPinned = true;
   showToast('PairdUp pinned to top of Discover! 📌');
   awardXP(3, 'Pinned a PairdUp');
-  if (typeof loadSupabaseListings === 'function') loadSupabaseListings();
+  refreshDiscoverOnly();
 }
 
 // ── Featured PairdUp (Gold) ──────────────────────────────
@@ -10329,7 +10346,7 @@ async function featurePairdUp(btn, listingId) {
       awardXP(3, 'Featured a PairdUp');
     }
     // Refresh Discover feed
-    if (typeof loadSupabaseListings === 'function') loadSupabaseListings();
+    refreshDiscoverOnly();
   } catch(e) { console.log('[PairdUps] Feature error:', e); showToast('Could not feature. Try again.'); }
   btn.disabled = false;
 }
