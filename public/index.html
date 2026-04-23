@@ -7352,7 +7352,8 @@ function sendMsg() {
   var chatArea = document.getElementById('chat-messages');
   chatArea._myProfile = { name: currentUser.name||'Me', age: currentUser.age||'', loc: currentUser.loc||'', bio: currentUser.bio||'', interests: currentUser.interests||[], photo: myPhoto, ownerEmail: currentUser.email||'' };
   const wrap = document.createElement('div'); wrap.className='bubble-wrap me';
-  wrap.innerHTML='<div class="bubble-row"><div class="bubble">'+escHtml(text)+'</div><div class="mini-avatar" data-profile="my" style="cursor:pointer"><img src="'+myPhoto+'" style="width:100%;height:100%;object-fit:cover;object-position:top"></div></div><div class="bubble-time">Just now</div>';
+  var sentTimeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  wrap.innerHTML='<div class="bubble-row"><div class="bubble">'+escHtml(text)+'</div><div class="mini-avatar" data-profile="my" style="cursor:pointer"><img src="'+myPhoto+'" style="width:100%;height:100%;object-fit:cover;object-position:top"></div></div><div class="bubble-time">'+sentTimeStr+'</div>';
   chatArea.appendChild(wrap);
   inp.value='';
   chatArea.scrollTop=9999;
@@ -10315,17 +10316,14 @@ function addReadReceipt(bubbleWrap) {
 // ── Read Receipt Tracking (Gold) ──────────────────────────
 // Mark messages as read in Supabase when opening a chat
 async function markMessagesAsRead(convoId) {
-  // All users mark messages as read — this is needed so Gold senders can see "Seen"
   if (!_supabase || !currentUser.supabaseId) return;
   try {
-    var { data: markData, error: markErr, count: markCount } = await _supabase.from('messages')
+    await _supabase.from('messages')
       .update({ read_at: new Date().toISOString() })
       .eq('conversation_id', convoId)
       .neq('sender_id', currentUser.supabaseId)
-      .is('read_at', null)
-      .select();
-    console.log('[PairdUps] markMessagesAsRead result — updated:', markData ? markData.length : 0, 'error:', markErr, 'convoId:', convoId);
-  } catch(e) { console.log('[PairdUps] markMessagesAsRead error:', e); }
+      .is('read_at', null);
+  } catch(e) { /* silent */ }
 }
 
 // Check if a message has been read and update receipts
