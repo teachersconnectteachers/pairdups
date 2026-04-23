@@ -5283,13 +5283,30 @@ async function sendJoinRequest() {
 
         // Create conversation in Supabase — but first check if one already exists between these two users
         var existingConvo = null;
-        var { data: existingConvos } = await _supabase.from('conversations')
+        // Check both directions: current user as requester OR as poster
+        var { data: existingConvos1, error: ecErr1 } = await _supabase.from('conversations')
           .select('id')
-          .or('and(requester_id.eq.' + currentUser.supabaseId + ',poster_id.eq.' + posterProfile.id + '),and(requester_id.eq.' + posterProfile.id + ',poster_id.eq.' + currentUser.supabaseId + ')')
+          .eq('requester_id', currentUser.supabaseId)
+          .eq('poster_id', posterProfile.id)
           .limit(1);
-        if (existingConvos && existingConvos.length > 0) {
-          existingConvo = existingConvos[0];
-          console.log('[PairdUps] Found existing conversation:', existingConvo.id);
+        console.log('[PairdUps] Existing convo check (as requester):', existingConvos1 ? existingConvos1.length : 0, 'error:', ecErr1);
+        if (existingConvos1 && existingConvos1.length > 0) {
+          existingConvo = existingConvos1[0];
+        } else {
+          var { data: existingConvos2, error: ecErr2 } = await _supabase.from('conversations')
+            .select('id')
+            .eq('requester_id', posterProfile.id)
+            .eq('poster_id', currentUser.supabaseId)
+            .limit(1);
+          console.log('[PairdUps] Existing convo check (as poster):', existingConvos2 ? existingConvos2.length : 0, 'error:', ecErr2);
+          if (existingConvos2 && existingConvos2.length > 0) {
+            existingConvo = existingConvos2[0];
+          }
+        }
+        if (existingConvo) {
+          console.log('[PairdUps] Reusing existing conversation:', existingConvo.id);
+        } else {
+          console.log('[PairdUps] No existing conversation found, creating new one');
         }
 
         if (existingConvo) {
@@ -5987,10 +6004,11 @@ function openConvoChat(convoId) {
   });
   // Store active convo id for sendMsg
   chatArea.dataset.activeConvo = convoId;
-  chatArea.scrollTop = chatArea.scrollHeight;
-  // Also scroll after a short delay to ensure DOM has rendered
-  setTimeout(function() { chatArea.scrollTop = chatArea.scrollHeight; }, 100);
-  setTimeout(function() { chatArea.scrollTop = chatArea.scrollHeight; }, 300);
+  // Scroll to bottom — the scrollable container is .scroll-area parent, not chat-messages
+  var chatScrollArea = chatArea.closest('.scroll-area') || chatArea.parentElement;
+  chatScrollArea.scrollTop = chatScrollArea.scrollHeight;
+  setTimeout(function() { chatScrollArea.scrollTop = chatScrollArea.scrollHeight; }, 100);
+  setTimeout(function() { chatScrollArea.scrollTop = chatScrollArea.scrollHeight; }, 300);
   // Mark as read in Supabase
   if (_supabase && currentUser.supabaseId && convo.supabaseId) {
     var readUpdate = convo.iAmRequester ? { requester_unread: false } : { poster_unread: false };
@@ -6115,7 +6133,7 @@ function startChatPolling(convoId) {
           }
           chatArea.appendChild(wrap);
         }
-        chatArea.scrollTop = 9999;
+        var _sa = chatArea.closest(".scroll-area") || chatArea.parentElement; _sa.scrollTop = _sa.scrollHeight;
         renderConversations();
         // Mark as read
         var readUpdate = convo.iAmRequester ? { requester_unread: false } : { poster_unread: false };
@@ -7414,7 +7432,7 @@ function sendMsg() {
   wrap.innerHTML='<div class="bubble-row"><div class="bubble">'+escHtml(text)+'</div><div class="mini-avatar" data-profile="my" style="cursor:pointer"><img src="'+myPhoto+'" style="width:100%;height:100%;object-fit:cover;object-position:top"></div></div><div class="bubble-time">'+sentTimeStr+'</div>';
   chatArea.appendChild(wrap);
   inp.value='';
-  chatArea.scrollTop=9999;
+  var _sa = chatArea.closest(".scroll-area") || chatArea.parentElement; _sa.scrollTop = _sa.scrollHeight;
   // Add read receipt to sent message
   addReadReceipt(wrap);
   // Update activity timestamp
@@ -10348,7 +10366,7 @@ function showTypingIndicator() {
   wrap.innerHTML = '<div class="bubble-row"><div class="mini-avatar" data-profile="poster" style="cursor:pointer"><img src="'+(chatArea._posterProfile?.photo||'')+'" style="width:100%;height:100%;object-fit:cover;object-position:top"></div>'
     + '<div class="bubble" style="padding:12px 18px"><span class="typing-dots" style="display:inline-flex;gap:4px"><span style="width:6px;height:6px;background:var(--gray);border-radius:50%;animation:typingBounce 1.4s infinite ease-in-out both"></span><span style="width:6px;height:6px;background:var(--gray);border-radius:50%;animation:typingBounce 1.4s infinite ease-in-out both;animation-delay:0.2s"></span><span style="width:6px;height:6px;background:var(--gray);border-radius:50%;animation:typingBounce 1.4s infinite ease-in-out both;animation-delay:0.4s"></span></span></div></div>';
   chatArea.appendChild(wrap);
-  chatArea.scrollTop = 9999;
+  var _sa = chatArea.closest(".scroll-area") || chatArea.parentElement; _sa.scrollTop = _sa.scrollHeight;
 }
 function hideTypingIndicator() {
   var el = document.getElementById('typing-indicator');
