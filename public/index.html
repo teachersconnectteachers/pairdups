@@ -10833,7 +10833,7 @@ function confirmRenameFilter() {
 
 // ── Instant Alerts for Matching PairdUps (Gold) ──────────
 // ── Instant Alerts System (Gold) ─────────────────────────
-var ALERT_CATEGORIES = ['Sports','Coffee','Dining','Outdoor','Bowling/Games','Cultural','Nightlife','Other'];
+var ALERT_CATEGORIES = ['All','Sports','Coffee','Dining','Outdoor','Bowling/Games','Cultural','Nightlife','Other'];
 var _alertNotifications = [];
 
 function updateAlertBadge(count) {
@@ -10933,8 +10933,20 @@ function renderAlertCategories() {
 function toggleAlertCat(btn) {
   var cat = btn.dataset.cat;
   var prefs = getAlertPreferences();
-  var idx = prefs.categories.indexOf(cat);
-  if (idx !== -1) { prefs.categories.splice(idx, 1); } else { prefs.categories.push(cat); }
+  if (cat === 'All') {
+    // Toggle All: if All is selected, deselect everything. If not, select All and deselect others.
+    if (prefs.categories.indexOf('All') !== -1) {
+      prefs.categories = [];
+    } else {
+      prefs.categories = ['All'];
+    }
+  } else {
+    // Remove 'All' if selecting a specific category
+    var allIdx = prefs.categories.indexOf('All');
+    if (allIdx !== -1) prefs.categories.splice(allIdx, 1);
+    var idx = prefs.categories.indexOf(cat);
+    if (idx !== -1) { prefs.categories.splice(idx, 1); } else { prefs.categories.push(cat); }
+  }
   setAlertPreferences(prefs);
   renderAlertCategories();
 }
@@ -11003,16 +11015,19 @@ function loadAlertPreferences() {
 function saveAlertPreferences() {
   var prefs = getAlertPreferences();
   if (prefs.categories.length === 0) {
-    showToast('Please select at least one category');
+    showToast('Please select at least one category or "All"');
     return;
   }
+  // Reset alerted listings when preferences change so existing matches get notified
+  localStorage.setItem('pu_alerted_listings', '[]');
   saveSetting('instantAlerts', true);
-  // Also save to Supabase for server-side checks
   if (_supabase && currentUser.supabaseId) {
     _supabase.from('profiles').update({ alert_preferences: prefs }).eq('id', currentUser.supabaseId);
   }
   showToast('Alert preferences saved! 🔔 You\'ll be notified of matching PairdUps.');
   showAlertBellForGold();
+  // Run alert check immediately
+  setTimeout(checkInstantAlerts, 1000);
 }
 
 function loadAlertSettingsUI() {
@@ -11041,36 +11056,51 @@ async function checkInstantAlerts() {
   var prefs = s.alertPrefs;
   if (!prefs || !prefs.categories || prefs.categories.length === 0) return;
   try {
-    // Check for new listings in the last hour
-    var oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    // Fetch all active listings not owned by the user
     var query = _supabase.from('listings')
-      .select('id, title, category, city, pair_type, owner_id')
-      .gte('created_at', oneHourAgo)
+      .select('id, title, category, city, pair_type, owner_id, date_val')
       .neq('owner_id', currentUser.supabaseId)
       .eq('is_active', true)
-      .in('category', prefs.categories)
-      .limit(10);
-    // Filter by pair type if set
-    if (prefs.pairType) {
-      query = query.eq('pair_type', prefs.pairType);
-    }
-    var { data: newListings } = await query;
-    if (!newListings || newListings.length === 0) return;
-    // Location filter (client-side)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    var { data: allListings, error: alertErr } = await query;
+    if (alertErr || !allListings || allListings.length === 0) return;
+    
+    // Filter out expired listings
+    var today = new Date().toISOString().split('T')[0];
+    allListings = allListings.filter(function(l) {
+      if (!l.date_val) return true; // No date = recurring or flexible, include
+      return l.date_val >= today;
+    });
+    if (allListings.length === 0) return;
+    
+    // Apply OR matching: category OR type OR location
+    var isAllCategories = prefs.categories.indexOf('All') !== -1;
     var userCity = (currentUser.loc || '').split(',')[0].trim().toLowerCase();
     var userState = (currentUser.loc || '').split(',')[1]?.trim().toLowerCase() || '';
-    if (prefs.locationScope === 'city' && userCity) {
-      newListings = newListings.filter(function(l) { return l.city && l.city.toLowerCase().indexOf(userCity) !== -1; });
-    } else if (prefs.locationScope === 'state' && userState) {
-      newListings = newListings.filter(function(l) { return l.city && l.city.toLowerCase().indexOf(userState) !== -1; });
-    }
-    if (newListings.length === 0) return;
+    
+    var matchedListings = allListings.filter(function(l) {
+      var matchesCategory = isAllCategories || (l.category && prefs.categories.indexOf(l.category) !== -1);
+      var matchesType = !prefs.pairType || (l.pair_type && l.pair_type === prefs.pairType);
+      var matchesLocation = true;
+      if (prefs.locationScope === 'city' && userCity) {
+        matchesLocation = l.city && l.city.toLowerCase().indexOf(userCity) !== -1;
+      } else if (prefs.locationScope === 'state' && userState) {
+        matchesLocation = l.city && l.city.toLowerCase().indexOf(userState) !== -1;
+      }
+      // OR logic: match if ANY criteria matches (but location is always applied as a filter)
+      return matchesLocation && (matchesCategory || matchesType);
+    });
+    
+    if (matchedListings.length === 0) return;
+    
     // Check against already-alerted IDs
     var alertedIds = JSON.parse(localStorage.getItem('pu_alerted_listings') || '[]');
-    var newMatches = newListings.filter(function(l) { return !alertedIds.includes(l.id); });
+    var newMatches = matchedListings.filter(function(l) { return !alertedIds.includes(l.id); });
     if (newMatches.length > 0) {
       alertedIds = alertedIds.concat(newMatches.map(function(l) { return l.id; }));
-      if (alertedIds.length > 200) alertedIds = alertedIds.slice(-200);
+      if (alertedIds.length > 500) alertedIds = alertedIds.slice(-500);
       localStorage.setItem('pu_alerted_listings', JSON.stringify(alertedIds));
       // Show in-app toast
       var matchTitle = newMatches[0].title;
@@ -11089,7 +11119,7 @@ async function checkInstantAlerts() {
         listing_title: matchTitle,
         match_count: matchCount
       });
-      // Send email notification
+      // Send email notification (only if 5+ new matches to avoid spam, or first time)
       try {
         var session = await _supabase.auth.getSession();
         var token = session.data?.session?.access_token;
