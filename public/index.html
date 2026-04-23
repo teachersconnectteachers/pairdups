@@ -9692,6 +9692,9 @@ function clearAdvancedFilters() {
   if (distance) distance.value = '';
   // Clear any active pills in advanced filter section
   document.querySelectorAll('#modal-filter .advanced-filter-pill.active').forEach(function(p) { p.classList.remove('active'); });
+  // Reset saved filter highlight
+  _activeSavedFilterIdx = -1;
+  renderSavedFilters();
   showToast('Advanced filters cleared');
 }
 function applyFilter() {
@@ -10672,12 +10675,14 @@ function renderSavedFilters() {
   if (!container) return;
   if (!isGold()) { container.innerHTML = ''; return; }
   var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
-  _activeSavedFilterIdx = -1;
-  if (savedFilters.length === 0) { container.innerHTML = '<div style="font-size:11px;color:var(--gray);text-align:center;padding:8px">No saved filters yet</div>'; return; }
+  if (savedFilters.length === 0) { _activeSavedFilterIdx = -1; container.innerHTML = '<div style="font-size:11px;color:var(--gray);text-align:center;padding:8px">No saved filters yet</div>'; return; }
+  // Validate active index is still in range
+  if (_activeSavedFilterIdx >= savedFilters.length) _activeSavedFilterIdx = -1;
   container.innerHTML = savedFilters.map(function(sf, i) {
-    return '<div class="saved-filter-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-light);border:2px solid transparent;border-radius:10px;cursor:pointer;transition:all 0.2s" onclick="loadSavedFilter('+i+')">'
-      + '<span class="sf-name" style="font-size:12px;font-weight:700;color:var(--dark);flex:1">🔍 ' + sf.name + '</span>'
-      + '<button onclick="event.stopPropagation();deleteSavedFilter('+i+')" style="background:none;border:none;color:#DC2626;font-size:14px;cursor:pointer;padding:2px 4px">✕</button></div>';
+    var isActive = i === _activeSavedFilterIdx;
+    return '<div class="saved-filter-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:'+(isActive?'var(--pink)':'var(--gray-light)')+';border:2px solid '+(isActive?'var(--pink)':'transparent')+';border-radius:10px;cursor:pointer;transition:all 0.2s" onclick="loadSavedFilter('+i+')">'
+      + '<span class="sf-name" style="font-size:12px;font-weight:700;color:'+(isActive?'#fff':'var(--dark)')+';flex:1">🔍 ' + sf.name + '</span>'
+      + '<button onclick="event.stopPropagation();deleteSavedFilter('+i+')" style="background:none;border:none;color:'+(isActive?'rgba(255,255,255,0.8)':'#DC2626')+';font-size:14px;cursor:pointer;padding:2px 4px">✕</button></div>';
   }).join('');
 }
 
