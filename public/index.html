@@ -6328,11 +6328,29 @@ function stopBackgroundPolling() {
 var _alertPollInterval = null;
 function startAlertPolling() {
   if (_alertPollInterval) clearInterval(_alertPollInterval);
-  if (!isGold()) return;
+  console.log('[PairdUps] startAlertPolling called — isGold:', isGold(), 'isSignedIn:', isSignedIn);
+  if (!isGold()) {
+    // Not Gold yet — retry in 5 seconds (subscription may still be loading)
+    setTimeout(function() {
+      if (isGold() && !_alertPollInterval) {
+        console.log('[PairdUps] startAlertPolling retry — isGold now:', isGold());
+        startAlertPolling();
+      }
+    }, 5000);
+    return;
+  }
+  var _s = _getSettings();
+  if (!_s.instantAlerts) {
+    console.log('[PairdUps] Alert polling skipped — instantAlerts not enabled');
+    return;
+  }
+  console.log('[PairdUps] Alert polling STARTED — checking every 10 seconds');
+  // Run immediately first
+  checkInstantAlerts();
   _alertPollInterval = setInterval(function() {
     if (!isSignedIn || !currentUser.supabaseId) return;
     checkInstantAlerts();
-  }, 10000); // Check every 10 seconds
+  }, 10000);
 }
 function openEditProfile() {
   syncProfileForm();
@@ -11239,11 +11257,12 @@ function loadAlertSettingsUI() {
 }
 
 async function checkInstantAlerts() {
-  if (!isGold() || !_supabase || !currentUser.supabaseId) return;
+  if (!isGold() || !_supabase || !currentUser.supabaseId) { return; }
   var s = _getSettings();
-  if (!s.instantAlerts) return;
+  if (!s.instantAlerts) { return; }
   var prefs = s.alertPrefs;
-  if (!prefs || !prefs.categories || prefs.categories.length === 0) return;
+  if (!prefs || !prefs.categories || prefs.categories.length === 0) { return; }
+  console.log('[PairdUps] checkInstantAlerts running...');
   try {
     var { data: allListings } = await _supabase.from('listings')
       .select('id, title, category, city, pair_type, owner_id, date_val, updated_at')
