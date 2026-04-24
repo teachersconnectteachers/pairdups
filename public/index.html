@@ -3773,12 +3773,28 @@ async function subscribeToPlan(plan) {
 async function loadSubscriptionStatus() {
   if (!_supabase || !currentUser.supabaseId) { console.log('[PairdUps] loadSubscriptionStatus skipped — no supabase or userId'); return; }
   try {
-    var { data: profile, error } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id').eq('id', currentUser.supabaseId).maybeSingle();
+    var { data: profile, error } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id, alert_preferences').eq('id', currentUser.supabaseId).maybeSingle();
     if (error) { console.log('[PairdUps] Subscription load error:', error); return; }
     if (profile) {
       currentUser.subscriptionTier = profile.subscription_tier || 'free';
       currentUser.subscriptionExpires = profile.subscription_expires_at || null;
       console.log('[PairdUps] Subscription:', currentUser.subscriptionTier, 'expires:', currentUser.subscriptionExpires, 'stripe_cust:', profile.stripe_customer_id, 'stripe_sub:', profile.stripe_subscription_id);
+      // Hydrate alert preferences from server so they sync across devices
+      try {
+        if (profile.alert_preferences && typeof profile.alert_preferences === 'object') {
+          var srvPrefs = profile.alert_preferences;
+          if (Array.isArray(srvPrefs.categories)) {
+            setAlertPreferences({
+              categories: srvPrefs.categories,
+              pairType: srvPrefs.pairType || '',
+              locationScope: srvPrefs.locationScope || 'city'
+            });
+            // If the user has saved prefs on the server, instant alerts are on
+            if (srvPrefs.categories.length > 0) saveSetting('instantAlerts', true);
+            console.log('[PairdUps] Alert preferences synced from server');
+          }
+        }
+      } catch(prefErr) { console.log('[PairdUps] Alert prefs sync error:', prefErr); }
       // Update settings tier label
       var tierLabel = document.getElementById('settings-tier-label');
       var tierSub = document.getElementById('settings-tier-sub');
@@ -11146,6 +11162,27 @@ function showAlertBellForGold() {
   }
 }
 
+// If the user arrived via an instant-alert push notification (?openAlerts=1),
+// navigate to Discover and open the alerts panel so they see which PairdUps matched.
+// URL param is stripped afterwards so refreshes don't re-open the modal.
+function checkAlertDeepLink() {
+  try {
+    var params = new URLSearchParams(window.location.search || '');
+    if (params.get('openAlerts') !== '1') return;
+    // Clean the URL so a refresh doesn't keep re-triggering
+    params.delete('openAlerts');
+    var newSearch = params.toString();
+    var newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+    try { window.history.replaceState({}, '', newUrl); } catch(e) {}
+    if (!isGold()) return;
+    // Navigate to Discover, then open the alerts panel after the screen settles
+    try { navTo('discover'); } catch(e) {}
+    setTimeout(function() {
+      try { showAlertNotifications(); } catch(e) { console.log('[PairdUps] checkAlertDeepLink open error:', e); }
+    }, 400);
+  } catch(e) { console.log('[PairdUps] checkAlertDeepLink error:', e); }
+}
+
 function toggleInstantAlerts(checkbox) {
   if (!isGold()) {
     checkbox.checked = false;
@@ -12022,7 +12059,7 @@ window.addEventListener('load', async function() {
           syncProfileForm();
           showTopbarAvatar();
           updateAllTierBadges();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); startAlertPolling(); }); loadGamificationData(); }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); startAlertPolling(); showAlertBellForGold(); checkAlertDeepLink(); }); loadGamificationData(); }, 500);
         }
       }
     } catch(e) { console.log('Supabase session check:', e); }
@@ -12045,7 +12082,7 @@ window.addEventListener('load', async function() {
           syncProfileForm();
           showTopbarAvatar();
           updateAllTierBadges();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); if (_supabase && currentUser.supabaseId) { loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); startAlertPolling(); }); loadGamificationData(); } }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); if (_supabase && currentUser.supabaseId) { loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); startAlertPolling(); showAlertBellForGold(); checkAlertDeepLink(); }); loadGamificationData(); } }, 500);
         }
       }
     } catch(e) {}
