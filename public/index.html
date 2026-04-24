@@ -7136,7 +7136,8 @@ async function saveListing() {
           pair_type: pairType, group_type: groupType, looking_for: lookingFor,
           date_val: dateVal || null, date_str: dateStr, time_val: timeVal,
           end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji,
-          recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit
+          recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit,
+          updated_at: new Date().toISOString()
         }).eq('id', editedListing.supabaseId);
         if (updateErr) { console.log('[PairdUps] Listing update error:', updateErr); }
         else { console.log('[PairdUps] Listing updated in Supabase:', editedListing.supabaseId); }
@@ -11300,6 +11301,10 @@ async function checkInstantAlerts() {
         var session = await _supabase.auth.getSession();
         var token = session.data?.session?.access_token;
         if (token && currentUser.email) {
+          // Build list of all matching listings for email
+          var matchList = newMatches.map(function(m) {
+            return { title: m.title, city: m.city || '' };
+          });
           fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -11310,7 +11315,8 @@ async function checkInstantAlerts() {
               to_name: currentUser.name || 'there',
               listing_title: matchTitle,
               match_count: matchCount,
-              match_city: matchCity
+              match_city: matchCity,
+              match_list: matchList
             })
           });
         }
