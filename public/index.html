@@ -4374,7 +4374,7 @@ async function signIn() {
   tagOneSignalUser();
   // Load subscription status from DB and refresh all tier UI
   if (_supabase && currentUser.supabaseId) {
-    loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); });
+    loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); startAlertPolling(); });
     loadGamificationData();
   }
   // Clear stale data from previous user session, then reload for this user
@@ -6321,6 +6321,18 @@ function startBackgroundPolling() {
 }
 function stopBackgroundPolling() {
   if (_bgPollInterval) { clearInterval(_bgPollInterval); _bgPollInterval = null; }
+  if (_alertPollInterval) { clearInterval(_alertPollInterval); _alertPollInterval = null; }
+}
+
+// Separate polling interval for instant alerts (doesn't depend on conversation polling)
+var _alertPollInterval = null;
+function startAlertPolling() {
+  if (_alertPollInterval) clearInterval(_alertPollInterval);
+  if (!isGold()) return;
+  _alertPollInterval = setInterval(function() {
+    if (!isSignedIn || !currentUser.supabaseId) return;
+    checkInstantAlerts();
+  }, 10000); // Check every 10 seconds
 }
 function openEditProfile() {
   syncProfileForm();
@@ -11947,7 +11959,7 @@ window.addEventListener('load', async function() {
           syncProfileForm();
           showTopbarAvatar();
           updateAllTierBadges();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); }); loadGamificationData(); }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); tagOneSignalUser(); loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); startAlertPolling(); }); loadGamificationData(); }, 500);
         }
       }
     } catch(e) { console.log('Supabase session check:', e); }
@@ -11970,7 +11982,7 @@ window.addEventListener('load', async function() {
           syncProfileForm();
           showTopbarAvatar();
           updateAllTierBadges();
-          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); if (_supabase && currentUser.supabaseId) { loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); }); loadGamificationData(); } }, 500);
+          setTimeout(function(){ showToast('Welcome back, ' + currentUser.name + '! 👋'); if (_supabase && currentUser.supabaseId) { loadSubscriptionStatus().then(function() { updateAllTierBadges(); renderPhotoGallery(); loadProfileTheme(); startAlertPolling(); }); loadGamificationData(); } }, 500);
         }
       }
     } catch(e) {}
@@ -12020,7 +12032,7 @@ window.addEventListener('load', async function() {
   if (isSignedIn) setTimeout(startBackgroundPolling, 2000);
   setTimeout(loadCardBadges, 3000);
   // Gold: check for matching PairdUps alerts
-  if (isSignedIn) setTimeout(checkInstantAlerts, 5000);
+  if (isSignedIn) { setTimeout(checkInstantAlerts, 5000); setTimeout(startAlertPolling, 6000); }
   loadProfileTheme();
   checkSubscriptionReturn();
 
