@@ -10968,9 +10968,9 @@ async function loadAlertMatches() {
       }
       return matchesLoc && (matchesCat || matchesType);
     });
-    // Remove dismissed alerts
-    var dismissed = JSON.parse(localStorage.getItem('pu_dismissed_alerts') || '[]');
-    matched = matched.filter(function(l) { return dismissed.indexOf(l.id) === -1; });
+    // Remove dismissed alerts (dismissal resets when listing content changes)
+    var dismissedMap = getDismissedAlertsMap();
+    matched = matched.filter(function(l) { return !isListingDismissed(l, dismissedMap); });
     _alertedListings = matched;
     renderAlertPanel(matched);
   } catch(e) { console.log('[PairdUps] loadAlertMatches error:', e); renderAlertPanel([]); }
@@ -11038,11 +11038,50 @@ function viewAlertPairdUp(listingId) {
   }
 }
 
+// ── Alert content-hash helpers (dismissals reset on content change) ─────────
+function getListingContentHash(l) {
+  return (l.title||'') + '|' + (l.category||'') + '|' + (l.city||'') + '|' + (l.date_val||'') + '|' + (l.pair_type||'');
+}
+// Read dismissed alerts as a map { listingId: contentHash }.
+// Handles legacy array format by migrating to a map with empty hashes
+// (so any current content hash will differ and re-surface the alert).
+function getDismissedAlertsMap() {
+  try {
+    var raw = localStorage.getItem('pu_dismissed_alerts');
+    if (!raw) return {};
+    var parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      var migrated = {};
+      parsed.forEach(function(id) { migrated[id] = ''; });
+      localStorage.setItem('pu_dismissed_alerts', JSON.stringify(migrated));
+      return migrated;
+    }
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch(e) { return {}; }
+}
+function setDismissedAlertsMap(map) {
+  // Keep map size reasonable
+  var keys = Object.keys(map);
+  if (keys.length > 500) {
+    var toRemove = keys.slice(0, keys.length - 500);
+    toRemove.forEach(function(k) { delete map[k]; });
+  }
+  localStorage.setItem('pu_dismissed_alerts', JSON.stringify(map));
+}
+// True if the listing has been dismissed AND its content hasn't changed since dismissal
+function isListingDismissed(listing, dismissedMap) {
+  if (!(listing.id in dismissedMap)) return false;
+  var dismissedHash = dismissedMap[listing.id];
+  var currentHash = getListingContentHash(listing);
+  return dismissedHash === currentHash;
+}
+
 function dismissAlert(listingId) {
-  var dismissed = JSON.parse(localStorage.getItem('pu_dismissed_alerts') || '[]');
-  dismissed.push(listingId);
-  if (dismissed.length > 500) dismissed = dismissed.slice(-500);
-  localStorage.setItem('pu_dismissed_alerts', JSON.stringify(dismissed));
+  var dismissedMap = getDismissedAlertsMap();
+  // Look up the listing to capture its current content hash
+  var listing = (_alertedListings || []).find(function(l) { return l.id === listingId; });
+  dismissedMap[listingId] = listing ? getListingContentHash(listing) : '';
+  setDismissedAlertsMap(dismissedMap);
   // Remove from panel
   var item = document.querySelector('.alert-item[data-alert-id="'+listingId+'"]');
   if (item) {
@@ -11066,10 +11105,9 @@ function dismissAlert(listingId) {
 }
 
 function clearAllAlerts() {
-  var dismissed = JSON.parse(localStorage.getItem('pu_dismissed_alerts') || '[]');
-  _alertedListings.forEach(function(l) { dismissed.push(l.id); });
-  if (dismissed.length > 500) dismissed = dismissed.slice(-500);
-  localStorage.setItem('pu_dismissed_alerts', JSON.stringify(dismissed));
+  var dismissedMap = getDismissedAlertsMap();
+  _alertedListings.forEach(function(l) { dismissedMap[l.id] = getListingContentHash(l); });
+  setDismissedAlertsMap(dismissedMap);
   _alertedListings = [];
   renderAlertPanel([]);
   showToast('All alerts cleared');
@@ -11226,7 +11264,7 @@ function saveAlertPreferences() {
   }
   // Reset alerted listings when preferences change so existing matches get notified
   localStorage.setItem('pu_alerted_map', '{}');
-  localStorage.setItem('pu_dismissed_alerts', '[]');
+  localStorage.setItem('pu_dismissed_alerts', '{}');
   saveSetting('instantAlerts', true);
   if (_supabase && currentUser.supabaseId) {
     _supabase.from('profiles').update({ alert_preferences: prefs }).eq('id', currentUser.supabaseId);
@@ -11300,11 +11338,11 @@ async function checkInstantAlerts() {
     if (matched.length === 0) { return; }
     // Track alerted listings by id + content hash so edits trigger new alerts
     var alertedMap = JSON.parse(localStorage.getItem('pu_alerted_map') || '{}');
-    var dismissed = JSON.parse(localStorage.getItem('pu_dismissed_alerts') || '[]');
-    console.log('[PairdUps] Alert: alertedMap keys:', Object.keys(alertedMap).length, 'dismissed:', dismissed.length);
+    var dismissedMap = getDismissedAlertsMap();
+    console.log('[PairdUps] Alert: alertedMap keys:', Object.keys(alertedMap).length, 'dismissed:', Object.keys(dismissedMap).length);
     var newMatches = matched.filter(function(l) {
-      if (dismissed.indexOf(l.id) !== -1) { console.log('[PairdUps] Alert: dismissed:', l.title); return false; }
-      var contentHash = (l.title||'') + '|' + (l.category||'') + '|' + (l.city||'') + '|' + (l.date_val||'') + '|' + (l.pair_type||'');
+      if (isListingDismissed(l, dismissedMap)) { console.log('[PairdUps] Alert: dismissed:', l.title); return false; }
+      var contentHash = getListingContentHash(l);
       var lastAlerted = alertedMap[l.id];
       var isNew = !lastAlerted || lastAlerted !== contentHash;
       if (!isNew) console.log('[PairdUps] Alert: already alerted:', l.title);
@@ -11314,7 +11352,7 @@ async function checkInstantAlerts() {
     if (newMatches.length > 0) {
       // Update alerted map with content hashes
       newMatches.forEach(function(l) {
-        alertedMap[l.id] = (l.title||'') + '|' + (l.category||'') + '|' + (l.city||'') + '|' + (l.date_val||'') + '|' + (l.pair_type||'');
+        alertedMap[l.id] = getListingContentHash(l);
       });
       // Keep map size reasonable
       var mapKeys = Object.keys(alertedMap);
