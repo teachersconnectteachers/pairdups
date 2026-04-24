@@ -11232,6 +11232,7 @@ async function checkInstantAlerts() {
   if (!s.instantAlerts) return;
   var prefs = s.alertPrefs;
   if (!prefs || !prefs.categories || prefs.categories.length === 0) return;
+  console.log('[PairdUps] checkInstantAlerts running — categories:', prefs.categories, 'type:', prefs.pairType, 'loc:', prefs.locationScope);
   try {
     var { data: allListings } = await _supabase.from('listings')
       .select('id, title, category, city, pair_type, owner_id, date_val, updated_at')
@@ -11262,17 +11263,20 @@ async function checkInstantAlerts() {
       }
       return matchesLoc && (matchesCat || matchesType);
     });
-    if (matched.length === 0) return;
+    if (matched.length === 0) { console.log('[PairdUps] Alert check: 0 matched after filtering'); return; }
     // Track alerted listings by id + updated_at so edits trigger new alerts
     var alertedMap = JSON.parse(localStorage.getItem('pu_alerted_map') || '{}');
     var dismissed = JSON.parse(localStorage.getItem('pu_dismissed_alerts') || '[]');
+    console.log('[PairdUps] Alert check: matched:', matched.length, 'alertedMap keys:', Object.keys(alertedMap).length, 'dismissed:', dismissed.length);
     var newMatches = matched.filter(function(l) {
       if (dismissed.indexOf(l.id) !== -1) return false;
       var lastAlerted = alertedMap[l.id];
       var updatedAt = l.updated_at || '';
-      // New if never alerted, or if listing was updated since last alert
-      return !lastAlerted || lastAlerted !== updatedAt;
+      var isNew = !lastAlerted || lastAlerted !== updatedAt;
+      if (!isNew && l.title) console.log('[PairdUps] Alert skip (already alerted):', l.title, 'stored:', lastAlerted?.slice(-10), 'current:', updatedAt?.slice(-10));
+      return isNew;
     });
+    console.log('[PairdUps] Alert check: newMatches:', newMatches.length);
     if (newMatches.length > 0) {
       // Update alerted map
       newMatches.forEach(function(l) { alertedMap[l.id] = l.updated_at || ''; });
