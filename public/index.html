@@ -11262,14 +11262,15 @@ async function checkInstantAlerts() {
   if (!s.instantAlerts) { return; }
   var prefs = s.alertPrefs;
   if (!prefs || !prefs.categories || prefs.categories.length === 0) { return; }
-  console.log('[PairdUps] checkInstantAlerts running...');
+  console.log('[PairdUps] checkInstantAlerts running — prefs:', JSON.stringify(prefs));
   try {
-    var { data: allListings } = await _supabase.from('listings')
+    var { data: allListings, error: fetchErr } = await _supabase.from('listings')
       .select('id, title, category, city, pair_type, owner_id, date_val, updated_at')
       .neq('owner_id', currentUser.supabaseId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(50);
+    console.log('[PairdUps] Alert: fetched', allListings ? allListings.length : 0, 'listings, error:', fetchErr);
     if (!allListings || allListings.length === 0) return;
     // Filter expired
     var today = new Date().toISOString().split('T')[0];
@@ -11277,11 +11278,13 @@ async function checkInstantAlerts() {
       if (!l.date_val) return true;
       return l.date_val >= today;
     });
+    console.log('[PairdUps] Alert: after expired filter:', allListings.length);
     if (allListings.length === 0) return;
     // Apply matching with OR logic
     var isAllCategories = prefs.categories.indexOf('All') !== -1;
     var userCity = (currentUser.loc || '').split(',')[0].trim().toLowerCase();
     var userState = (currentUser.loc || '').split(',')[1]?.trim().toLowerCase() || '';
+    console.log('[PairdUps] Alert: isAllCat:', isAllCategories, 'userCity:', userCity, 'locScope:', prefs.locationScope);
     var matched = allListings.filter(function(l) {
       var matchesCat = isAllCategories || (l.category && prefs.categories.indexOf(l.category) !== -1);
       var matchesType = !prefs.pairType || (l.pair_type && l.pair_type === prefs.pairType);
@@ -11293,18 +11296,21 @@ async function checkInstantAlerts() {
       }
       return matchesLoc && (matchesCat || matchesType);
     });
+    console.log('[PairdUps] Alert: matched:', matched.length, 'titles:', matched.map(function(m){return m.title;}));
     if (matched.length === 0) { return; }
     // Track alerted listings by id + content hash so edits trigger new alerts
     var alertedMap = JSON.parse(localStorage.getItem('pu_alerted_map') || '{}');
     var dismissed = JSON.parse(localStorage.getItem('pu_dismissed_alerts') || '[]');
+    console.log('[PairdUps] Alert: alertedMap keys:', Object.keys(alertedMap).length, 'dismissed:', dismissed.length);
     var newMatches = matched.filter(function(l) {
-      if (dismissed.indexOf(l.id) !== -1) return false;
-      // Create a simple hash from title+category+city+date+type to detect edits
+      if (dismissed.indexOf(l.id) !== -1) { console.log('[PairdUps] Alert: dismissed:', l.title); return false; }
       var contentHash = (l.title||'') + '|' + (l.category||'') + '|' + (l.city||'') + '|' + (l.date_val||'') + '|' + (l.pair_type||'');
       var lastAlerted = alertedMap[l.id];
       var isNew = !lastAlerted || lastAlerted !== contentHash;
+      if (!isNew) console.log('[PairdUps] Alert: already alerted:', l.title);
       return isNew;
     });
+    console.log('[PairdUps] Alert: newMatches:', newMatches.length);
     if (newMatches.length > 0) {
       // Update alerted map with content hashes
       newMatches.forEach(function(l) {
