@@ -3773,12 +3773,25 @@ async function subscribeToPlan(plan) {
 async function loadSubscriptionStatus() {
   if (!_supabase || !currentUser.supabaseId) { console.log('[PairdUps] loadSubscriptionStatus skipped — no supabase or userId'); return; }
   try {
-    var { data: profile, error } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id, alert_preferences').eq('id', currentUser.supabaseId).maybeSingle();
+    var { data: profile, error } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id, alert_preferences, user_settings').eq('id', currentUser.supabaseId).maybeSingle();
     if (error) { console.log('[PairdUps] Subscription load error:', error); return; }
     if (profile) {
       currentUser.subscriptionTier = profile.subscription_tier || 'free';
       currentUser.subscriptionExpires = profile.subscription_expires_at || null;
       console.log('[PairdUps] Subscription:', currentUser.subscriptionTier, 'expires:', currentUser.subscriptionExpires, 'stripe_cust:', profile.stripe_customer_id, 'stripe_sub:', profile.stripe_subscription_id);
+      // Hydrate cross-device settings from server (server wins on conflict)
+      try {
+        if (profile.user_settings && typeof profile.user_settings === 'object') {
+          var localSettings = _getSettings();
+          var merged = Object.assign({}, localSettings);
+          _SYNCED_SETTING_KEYS.forEach(function(k) {
+            if (profile.user_settings[k] !== undefined) merged[k] = profile.user_settings[k];
+          });
+          // Write directly to localStorage to avoid triggering another server sync
+          localStorage.setItem('pu_settings', JSON.stringify(merged));
+          console.log('[PairdUps] User settings synced from server');
+        }
+      } catch(setErr) { console.log('[PairdUps] Settings sync error:', setErr); }
       // Hydrate alert preferences from server so they sync across devices
       try {
         if (profile.alert_preferences && typeof profile.alert_preferences === 'object') {
@@ -4714,7 +4727,25 @@ async function doCancelAccount() {
 function _getSettings() {
   try { return JSON.parse(localStorage.getItem('pu_settings') || '{}'); } catch(e) { return {}; }
 }
-function _saveSettings(s) { localStorage.setItem('pu_settings', JSON.stringify(s)); }
+// Settings that should sync across devices via Supabase profiles.user_settings (JSONB).
+// timezone and darkMode are intentionally excluded (device-specific).
+var _SYNCED_SETTING_KEYS = ['notifRequests','notifMessages','notifExpired','profileVisible','showLastActive','autoDeleteExpired','showReadReceipts','preferredUnits','radius','pauseAccount','instantAlerts'];
+var _settingsSyncTimer = null;
+function _saveSettings(s) {
+  localStorage.setItem('pu_settings', JSON.stringify(s));
+  // Debounced server sync (synced subset only)
+  if (_supabase && currentUser && currentUser.supabaseId) {
+    if (_settingsSyncTimer) clearTimeout(_settingsSyncTimer);
+    _settingsSyncTimer = setTimeout(function() {
+      try {
+        var syncPayload = {};
+        _SYNCED_SETTING_KEYS.forEach(function(k) { if (s[k] !== undefined) syncPayload[k] = s[k]; });
+        _supabase.from('profiles').update({ user_settings: syncPayload }).eq('id', currentUser.supabaseId)
+          .then(function(res) { if (res && res.error) console.log('[PairdUps] Settings sync error:', res.error); });
+      } catch(e) { console.log('[PairdUps] Settings sync err:', e); }
+    }, 1500);
+  }
+}
 function saveSetting(key, val) {
   var s = _getSettings();
   s[key] = val;
@@ -11337,7 +11368,9 @@ async function checkInstantAlerts() {
   if (!s.instantAlerts) { return; }
   var prefs = s.alertPrefs;
   if (!prefs || !prefs.categories || prefs.categories.length === 0) { return; }
-  console.log('[PairdUps] checkInstantAlerts running — prefs:', JSON.stringify(prefs));
+  // Verbose alert tracing — off by default. Toggle from console: window._DEBUG_ALERTS = true
+  var _alog = window._DEBUG_ALERTS ? function(){ console.log.apply(console, arguments); } : function(){};
+  _alog('[PairdUps] checkInstantAlerts running — prefs:', JSON.stringify(prefs));
   try {
     var { data: allListings, error: fetchErr } = await _supabase.from('listings')
       .select('id, title, category, city, pair_type, owner_id, date_val, updated_at')
@@ -11345,7 +11378,7 @@ async function checkInstantAlerts() {
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(50);
-    console.log('[PairdUps] Alert: fetched', allListings ? allListings.length : 0, 'listings, error:', fetchErr);
+    _alog('[PairdUps] Alert: fetched', allListings ? allListings.length : 0, 'listings, error:', fetchErr);
     if (!allListings || allListings.length === 0) return;
     // Filter expired
     var today = new Date().toISOString().split('T')[0];
@@ -11353,13 +11386,13 @@ async function checkInstantAlerts() {
       if (!l.date_val) return true;
       return l.date_val >= today;
     });
-    console.log('[PairdUps] Alert: after expired filter:', allListings.length);
+    _alog('[PairdUps] Alert: after expired filter:', allListings.length);
     if (allListings.length === 0) return;
     // Apply matching with OR logic
     var isAllCategories = prefs.categories.indexOf('All') !== -1;
     var userCity = (currentUser.loc || '').split(',')[0].trim().toLowerCase();
     var userState = (currentUser.loc || '').split(',')[1]?.trim().toLowerCase() || '';
-    console.log('[PairdUps] Alert: isAllCat:', isAllCategories, 'userCity:', userCity, 'locScope:', prefs.locationScope);
+    _alog('[PairdUps] Alert: isAllCat:', isAllCategories, 'userCity:', userCity, 'locScope:', prefs.locationScope);
     var matched = allListings.filter(function(l) {
       var matchesCat = isAllCategories || (l.category && prefs.categories.indexOf(l.category) !== -1);
       var matchesType = !prefs.pairType || (l.pair_type && l.pair_type === prefs.pairType);
@@ -11371,21 +11404,21 @@ async function checkInstantAlerts() {
       }
       return matchesLoc && (matchesCat || matchesType);
     });
-    console.log('[PairdUps] Alert: matched:', matched.length, 'titles:', matched.map(function(m){return m.title;}));
+    _alog('[PairdUps] Alert: matched:', matched.length, 'titles:', matched.map(function(m){return m.title;}));
     if (matched.length === 0) { return; }
     // Track alerted listings by id + content hash so edits trigger new alerts
     var alertedMap = JSON.parse(localStorage.getItem('pu_alerted_map') || '{}');
     var dismissedMap = getDismissedAlertsMap();
-    console.log('[PairdUps] Alert: alertedMap keys:', Object.keys(alertedMap).length, 'dismissed:', Object.keys(dismissedMap).length);
+    _alog('[PairdUps] Alert: alertedMap keys:', Object.keys(alertedMap).length, 'dismissed:', Object.keys(dismissedMap).length);
     var newMatches = matched.filter(function(l) {
-      if (isListingDismissed(l, dismissedMap)) { console.log('[PairdUps] Alert: dismissed:', l.title); return false; }
+      if (isListingDismissed(l, dismissedMap)) { _alog('[PairdUps] Alert: dismissed:', l.title); return false; }
       var contentHash = getListingContentHash(l);
       var lastAlerted = alertedMap[l.id];
       var isNew = !lastAlerted || lastAlerted !== contentHash;
-      if (!isNew) console.log('[PairdUps] Alert: already alerted:', l.title);
+      if (!isNew) _alog('[PairdUps] Alert: already alerted:', l.title);
       return isNew;
     });
-    console.log('[PairdUps] Alert: newMatches:', newMatches.length);
+    _alog('[PairdUps] Alert: newMatches:', newMatches.length);
     if (newMatches.length > 0) {
       // Update alerted map with content hashes
       newMatches.forEach(function(l) {
