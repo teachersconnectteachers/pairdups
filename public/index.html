@@ -9061,28 +9061,34 @@ function canvasFaceDetect(src, callback) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.onload = () => {
     const W = 100, H = Math.round(100 * img.naturalHeight / img.naturalWidth);
     canvas.width = W; canvas.height = H;
-    ctx.drawImage(img, 0, 0, W, H);
-    const data = ctx.getImageData(0, 0, W, H).data;
-    // Find row with highest skin-tone pixel density
-    let bestRow = Math.floor(H * 0.2), bestScore = -1;
-    for (let y = 0; y < H; y++) {
-      let score = 0;
-      for (let x = 0; x < W; x++) {
-        const i = (y * W + x) * 4;
-        const r = data[i], g = data[i+1], b = data[i+2];
-        // Skin tone range: warm, reddish, more R than G and B
-        if (r > 80 && g > 40 && b > 20 && r > g && r > b &&
-            r - b > 15 && r < 255 && g < 220 && b < 200) score++;
+    try {
+      ctx.drawImage(img, 0, 0, W, H);
+      const data = ctx.getImageData(0, 0, W, H).data;
+      // Find row with highest skin-tone pixel density
+      let bestRow = Math.floor(H * 0.2), bestScore = -1;
+      for (let y = 0; y < H; y++) {
+        let score = 0;
+        for (let x = 0; x < W; x++) {
+          const i = (y * W + x) * 4;
+          const r = data[i], g = data[i+1], b = data[i+2];
+          // Skin tone range: warm, reddish, more R than G and B
+          if (r > 80 && g > 40 && b > 20 && r > g && r > b &&
+              r - b > 15 && r < 255 && g < 220 && b < 200) score++;
+        }
+        if (score > bestScore) { bestScore = score; bestRow = y; }
       }
-      if (score > bestScore) { bestScore = score; bestRow = y; }
+      const pct = Math.round(bestRow / H * 100);
+      // Pull up slightly (show forehead), clamp 3%–50%
+      const finalPct = Math.min(Math.max(pct - 10, 3), 50);
+      callback(`center ${finalPct}%`);
+    } catch(canvasErr) {
+      // CORS-tainted canvas — fall back to a sensible default
+      callback('center 20%');
     }
-    const pct = Math.round(bestRow / H * 100);
-    // Pull up slightly (show forehead), clamp 3%–50%
-    const finalPct = Math.min(Math.max(pct - 10, 3), 50);
-    callback(`center ${finalPct}%`);
   };
   img.onerror = () => callback('center 20%');
   img.src = src;
@@ -11582,28 +11588,41 @@ async function smartFaceCenter(imgEl, src) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const tmpImg = new Image();
+    tmpImg.crossOrigin = 'anonymous';
     tmpImg.onload = () => {
       const W = 80, H = 120; // small thumbnail for speed
       canvas.width = W; canvas.height = H;
-      ctx.drawImage(tmpImg, 0, 0, W, H);
-      const data = ctx.getImageData(0, 0, W, H).data;
-      // Scan rows for highest skin-tone density (R>100, G>50, B<200, R>G, R>B)
-      let bestRow = 0, bestScore = -1;
-      const rowH = 4; // check every 4px row
-      for (let y = 0; y < H - rowH; y += rowH) {
-        let score = 0;
-        for (let x = 0; x < W; x++) {
-          const i = (y * W + x) * 4;
-          const r = data[i], g = data[i+1], b = data[i+2];
-          if (r > 90 && g > 50 && b > 30 && r > g && r > b && r - b > 15) score++;
+      try {
+        ctx.drawImage(tmpImg, 0, 0, W, H);
+        const data = ctx.getImageData(0, 0, W, H).data;
+        // Scan rows for highest skin-tone density (R>100, G>50, B<200, R>G, R>B)
+        let bestRow = 0, bestScore = -1;
+        const rowH = 4; // check every 4px row
+        for (let y = 0; y < H - rowH; y += rowH) {
+          let score = 0;
+          for (let x = 0; x < W; x++) {
+            const i = (y * W + x) * 4;
+            const r = data[i], g = data[i+1], b = data[i+2];
+            if (r > 90 && g > 50 && b > 30 && r > g && r > b && r - b > 15) score++;
+          }
+          if (score > bestScore) { bestScore = score; bestRow = y; }
         }
-        if (score > bestScore) { bestScore = score; bestRow = y; }
+        const faceYpct = Math.round((bestRow / H) * 100);
+        // Bias: pull up 8% so forehead shows, clamp between 5% and 45%
+        const pos = `center ${Math.min(Math.max(faceYpct - 8, 5), 45)}%`;
+        facePositionCache.set(src, pos);
+        imgEl.style.objectPosition = pos;
+      } catch(canvasErr) {
+        // CORS-tainted canvas — fall back to a sensible default
+        const fallback = 'center 18%';
+        facePositionCache.set(src, fallback);
+        imgEl.style.objectPosition = fallback;
       }
-      const faceYpct = Math.round((bestRow / H) * 100);
-      // Bias: pull up 8% so forehead shows, clamp between 5% and 45%
-      const pos = `center ${Math.min(Math.max(faceYpct - 8, 5), 45)}%`;
-      facePositionCache.set(src, pos);
-      imgEl.style.objectPosition = pos;
+    };
+    tmpImg.onerror = () => {
+      const fallback = 'center 18%';
+      facePositionCache.set(src, fallback);
+      imgEl.style.objectPosition = fallback;
     };
     tmpImg.src = src;
     return;
