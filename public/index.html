@@ -2448,7 +2448,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
       <div id="theme-section">
         <div id="theme-locked" style="display:none;padding:10px 14px;background:linear-gradient(135deg,#FFF5F7,#FFFBEB);border-radius:12px;text-align:center;margin-bottom:4px">
           <div style="font-size:11px;color:var(--gray);margin-bottom:6px">🔒 Customize your profile card colors</div>
-          <button onclick="closeModal('modal-settings');showPremiumModal('🎨 Upgrade to customize your profile with unique theme colors!')" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:7px 18px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit">✨ Upgrade to Unlock</button>
+          <button onclick="showPremiumModalFromSettings()" style="background:var(--pink);color:#fff;border:none;border-radius:50px;padding:7px 18px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit">✨ Upgrade to Unlock</button>
         </div>
         <div id="theme-colors" style="display:none;gap:8px;flex-wrap:wrap;padding:8px 14px;background:var(--gray-light);border-radius:12px">
           <div onclick="setProfileTheme('#FF3B7F')" style="width:32px;height:32px;border-radius:50%;background:#FF3B7F;cursor:pointer;border:3px solid transparent" class="theme-dot" data-color="#FF3B7F"></div>
@@ -4769,7 +4769,8 @@ function toggleReadReceipts(checkbox) {
       btnEl.style.background = 'linear-gradient(135deg,#F59E0B,#FBBF24)';
       btnEl.onclick = function() { closeModal('modal-confirm-plan'); subscribeToPlan('gold'); };
     }
-    closeModal('modal-settings');
+    // Open upgrade prompt over settings — do NOT close settings, so closing the upgrade
+    // prompt drops the user back into settings instead of jumping to Discover.
     openModal('modal-confirm-plan');
     return;
   }
@@ -6578,8 +6579,8 @@ function renderUserListing(d, skipMyListings) {
     +'<div class="card-type-badge '+typeClass+'">'+typeEmoji+' '+d.pairType+'</div>'
     +'<div class="card-type-badge '+typeClass+'" style="top:36px;left:10px;font-size:10px;padding:3px 10px">'+(d.groupType==='Group'?'👥 Group':'👤 One-on-One')+'</div>'
     +(d.recurring ? '<div style="position:absolute;bottom:10px;left:10px;background:rgba(46,125,50,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;backdrop-filter:blur(4px)">🔄 Recurring</div>' : '')
-    +(d.isFeatured ? '<div style="position:absolute;top:36px;right:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;pointer-events:none;box-shadow:0 2px 8px rgba(245,158,11,0.4);z-index:2">⭐ Featured</div>' : '')
-    +(d.isPinned ? '<div style="position:absolute;bottom:32px;left:10px;background:rgba(217,119,6,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;z-index:2">📌 Pinned</div>' : '')
+    +(d.isFeatured && d.ownerTier === 'gold' ? '<div style="position:absolute;top:36px;right:10px;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;pointer-events:none;box-shadow:0 2px 8px rgba(245,158,11,0.4);z-index:2">⭐ Featured</div>' : '')
+    +(d.isPinned && d.ownerTier === 'gold' ? '<div style="position:absolute;bottom:32px;left:10px;background:rgba(217,119,6,0.9);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;pointer-events:none;z-index:2">📌 Pinned</div>' : '')
     +'</div>'
     +'<div class="card-body">'
     +'<div style="margin-bottom:4px"><span class="card-tag"'+(tagStyle?' style="'+tagStyle+'"':'')+'>Activity Partner &middot; '+(d.lookingFor==='M/F'?'M/F':d.lookingFor)+'</span></div>'
@@ -6619,8 +6620,12 @@ function renderUserListing(d, skipMyListings) {
       +'<div class="my-actions">'
       +'<button class="act-btn edit">✏️ Edit</button>'
       +'<button class="act-btn delete" onclick="confirmDeleteListing(this)">🗑 Delete</button>'
-      +(isGold() ? '<button class="act-btn" style="background:'+(d.isPinned?'#FF3B7F':'#FEF3C7')+';color:'+(d.isPinned?'#fff':'#D97706')+'" onclick="pinPairdUp(this,\''+esc(d.supabaseId||'')+'\')">📌 '+(d.isPinned?'Pinned!':'Pin')+'</button>' : '')
-      +(isGold() ? '<button class="act-btn" style="background:'+(d.isFeatured?'#2563EB':'#DBEAFE')+';color:'+(d.isFeatured?'#fff':'#2563EB')+'" onclick="featurePairdUp(this,\''+esc(d.supabaseId||'')+'\')">⭐ '+(d.isFeatured?'Featured!':'Feature')+'</button>' : '')
+      +(isGold()
+        ? '<button class="act-btn" style="background:'+(d.isPinned?'#FF3B7F':'#FEF3C7')+';color:'+(d.isPinned?'#fff':'#D97706')+'" onclick="pinPairdUp(this,\''+esc(d.supabaseId||'')+'\')">📌 '+(d.isPinned?'Pinned!':'Pin')+'</button>'
+        : '<button class="act-btn" style="background:#FEF3C7;color:#D97706;opacity:0.85" onclick="showPremiumModal(\'📌 Pinning your PairdUps to the top of Discover is a Gold-exclusive feature. Upgrade to make your listings stand out!\')">📌 Pin</button>')
+      +(isGold()
+        ? '<button class="act-btn" style="background:'+(d.isFeatured?'#2563EB':'#DBEAFE')+';color:'+(d.isFeatured?'#fff':'#2563EB')+'" onclick="featurePairdUp(this,\''+esc(d.supabaseId||'')+'\')">⭐ '+(d.isFeatured?'Featured!':'Feature')+'</button>'
+        : '<button class="act-btn" style="background:#DBEAFE;color:#2563EB;opacity:0.85" onclick="showPremiumModal(\'⭐ Featured PairdUps get a special banner and priority placement. This is a Gold-exclusive feature — upgrade to feature your listing!\')">⭐ Feature</button>')
       +'</div></div>'
       +'<div class="my-badge" style="background:#E0F7FA;color:#00796B">'+(d.pairType==='Date'?'Date':'Fun')+'</div>';
     // Attach edit handler with closure over current data including recurring
