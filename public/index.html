@@ -4100,23 +4100,19 @@ function loadProfileTheme() {
   var goldOnlyColors = ['#9C27B0', '#FF9800', '#E91E63', '#00BCD4', '#795548'];
   var premiumColors = ['#FF3B7F', '#2196F3', '#4CAF50'];
   var defaultColor = '#FF3B7F';
-  
+
   if (s.themeColor) {
-    // Check if user still has access to their selected theme color
+    // If user previously chose a Gold-only color and is no longer Gold, fall back
+    // to the default for DISPLAY ONLY — but preserve the saved value so it auto-restores
+    // if they re-upgrade. This mirrors how photos 6-12 are hidden but not deleted.
     var tier = getUserTier();
+    var displayColor = s.themeColor;
     if (goldOnlyColors.indexOf(s.themeColor) !== -1 && tier !== 'gold') {
-      // Gold-only color but user is no longer Gold — reset to default
-      s.themeColor = defaultColor;
-      _saveSettings(s);
-      // Also update Supabase
-      if (_supabase && currentUser.supabaseId) {
-        _supabase.from('profiles').update({ theme_color: defaultColor }).eq('id', currentUser.supabaseId);
-      }
-      showToast('Theme color reset — that color requires Gold membership');
+      displayColor = defaultColor;
     }
-    document.documentElement.style.setProperty('--pink', s.themeColor);
+    document.documentElement.style.setProperty('--pink', displayColor);
     document.querySelectorAll('.theme-dot').forEach(function(d) {
-      d.style.borderColor = d.dataset.color === s.themeColor ? '#333' : 'transparent';
+      d.style.borderColor = d.dataset.color === displayColor ? '#333' : 'transparent';
     });
   }
 }
