@@ -3773,7 +3773,7 @@ async function subscribeToPlan(plan) {
 async function loadSubscriptionStatus() {
   if (!_supabase || !currentUser.supabaseId) { console.log('[PairdUps] loadSubscriptionStatus skipped — no supabase or userId'); return; }
   try {
-    var { data: profile, error } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id, alert_preferences, user_settings').eq('id', currentUser.supabaseId).maybeSingle();
+    var { data: profile, error } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id, alert_preferences, user_settings, theme_color').eq('id', currentUser.supabaseId).maybeSingle();
     if (error) { console.log('[PairdUps] Subscription load error:', error); return; }
     if (profile) {
       currentUser.subscriptionTier = profile.subscription_tier || 'free';
@@ -3808,6 +3808,20 @@ async function loadSubscriptionStatus() {
           }
         }
       } catch(prefErr) { console.log('[PairdUps] Alert prefs sync error:', prefErr); }
+      // Hydrate theme color from server so it syncs across devices
+      try {
+        if (profile.theme_color) {
+          var localSettings2 = _getSettings();
+          if (localSettings2.themeColor !== profile.theme_color) {
+            localSettings2.themeColor = profile.theme_color;
+            // Write directly to localStorage to avoid triggering another server sync
+            localStorage.setItem('pu_settings', JSON.stringify(localSettings2));
+            console.log('[PairdUps] Theme color synced from server:', profile.theme_color);
+            // Re-apply theme now that we have the synced value
+            try { loadProfileTheme(); } catch(e) {}
+          }
+        }
+      } catch(themeErr) { console.log('[PairdUps] Theme sync error:', themeErr); }
       // Update settings tier label
       var tierLabel = document.getElementById('settings-tier-label');
       var tierSub = document.getElementById('settings-tier-sub');
