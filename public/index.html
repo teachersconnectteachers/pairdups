@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4098,8 +4100,12 @@ function setProfileTheme(color) {
   });
   // Save to Supabase
   if (_supabase && currentUser.supabaseId) {
-    _supabase.from('profiles').update({ theme_color: color }).eq('id', currentUser.supabaseId).then(function() {
-      console.log('[PairdUps] Theme saved:', color);
+    _supabase.from('profiles').update({ theme_color: color }).eq('id', currentUser.supabaseId).then(function(res) {
+      if (res && res.error) {
+        console.error('[PairdUps] Theme save FAILED:', res.error.message || res.error, 'status:', res.status, 'full:', res);
+      } else {
+        console.log('[PairdUps] Theme saved to server:', color, 'status:', res && res.status);
+      }
     });
   }
   // Save locally
