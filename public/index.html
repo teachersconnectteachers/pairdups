@@ -2168,6 +2168,32 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   </div>
 </div>
 
+<!-- UNSAVED CHANGES MODAL -->
+<div class="modal-bg" id="modal-unsaved-changes" onclick="if(event.target===this)closeModal('modal-unsaved-changes')" style="align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:18px;padding:28px 24px 22px;max-width:340px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.18);text-align:center;animation:slideUp 0.22s ease">
+    <div style="font-size:44px;margin-bottom:10px">😮</div>
+    <div style="font-size:17px;font-weight:800;color:var(--dark);margin-bottom:8px">Your changes are not saved!</div>
+    <div style="font-size:13px;color:var(--gray);line-height:1.7;margin-bottom:20px">If you leave now, the changes you've made on this screen will be lost. Are you sure you want to leave without saving?</div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="_confirmLeaveUnsaved()" style="flex:1;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px 20px;font-weight:700;font-size:14px;cursor:pointer">Leave Anyway</button>
+      <button onclick="closeModal('modal-unsaved-changes')" style="flex:1;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 20px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(255,59,127,0.3)">Keep Editing</button>
+    </div>
+  </div>
+</div>
+
+<!-- DUPLICATE PAIRDUP MODAL -->
+<div class="modal-bg" id="modal-duplicate-pairdup" onclick="if(event.target===this)closeModal('modal-duplicate-pairdup')" style="align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:18px;padding:28px 24px 22px;max-width:340px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.18);text-align:center;animation:slideUp 0.22s ease">
+    <div style="font-size:44px;margin-bottom:10px">🤔</div>
+    <div style="font-size:17px;font-weight:800;color:var(--dark);margin-bottom:8px">Duplicate PairdUp?</div>
+    <div style="font-size:13px;color:var(--gray);line-height:1.7;margin-bottom:20px">You already have a PairdUp with this title and date. Do you want to create another one anyway?</div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="closeModal('modal-duplicate-pairdup')" style="flex:1;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px 20px;font-weight:700;font-size:14px;cursor:pointer">Cancel</button>
+      <button onclick="_confirmDuplicatePairdUp()" style="flex:1;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px 20px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(255,59,127,0.3)">Create Anyway</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- HELP & SUPPORT MODAL -->
 <div class="modal-bg" id="modal-help" onclick="if(event.target===this)closeModal('modal-help')" style="align-items:flex-end">
@@ -7275,75 +7301,12 @@ async function saveListing() {
   } else {
     // Check for duplicate PairdUp
     if (checkDuplicatePairdUp(title, dateVal)) {
-      if (!confirm('You already have a PairdUp with this title and date. Create another one anyway?')) return;
+      // Stash all the params so the modal's "Create Anyway" can resume this flow
+      _pendingDuplicateCreate = function() { _createListingFromForm(title, desc, venue, dateVal, timeVal, endTimeVal, city, catName, pairType, lookingFor, groupType, dateStr, emoji, recurring, recurInterval, recurLimit); };
+      openModal('modal-duplicate-pairdup');
+      return;
     }
-    // Create new listing - save data object and render it
-    var newId = 'user-' + Date.now();
-    var listingData = {
-      id: newId, title: title, desc: desc, venue: venue, dateVal: dateVal,
-      timeVal: timeVal, endTimeVal: endTimeVal, city: city, catName: catName, pairType: pairType,
-      lookingFor: lookingFor, groupType: groupType, dateStr: dateStr, emoji: emoji,
-      recurring: recurring, recurInterval: recurInterval, recurLimit: recurLimit, recurCount: 0,
-      userName: currentUser.name || 'You', userAge: currentUser.age || '',
-      userLoc: currentUser.loc || city, userPhoto: currentUser.photo || _DEFAULT_AVATAR,
-      userBio: currentUser.bio || '', userInterests: currentUser.interests || [],
-      userFacePos: currentUser.facePos || 'center 20%', ownerEmail: currentUser.email || ''
-    };
-    userListings.push(listingData);
-    _saveListings(userListings);
-    renderUserListing(listingData);
-    toggleMyListingsEmpty();
-
-    // Sync to Supabase
-    if (_supabase && currentUser.supabaseId) {
-      (async function() {
-        try {
-          var { data: insertedRow, error: insertErr } = await _supabase.from('listings').insert({
-            owner_id: currentUser.supabaseId, title: title,
-            description: desc, category: catName, pair_type: pairType,
-            group_type: groupType, looking_for: lookingFor,
-            date_val: dateVal || null, date_str: dateStr, time_val: timeVal,
-            end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji,
-            recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit, recur_count: 0,
-            is_active: true
-          }).select().single();
-          if (insertErr) { console.log('[PairdUps] Listing insert error:', insertErr); }
-          else if (insertedRow) {
-            // Update local listing with Supabase UUID
-            listingData.supabaseId = insertedRow.id;
-            _saveListings(userListings);
-            console.log('[PairdUps] Listing saved to Supabase:', insertedRow.id);
-          } else {
-            console.log('[PairdUps] Listing insert: no row returned');
-          }
-        } catch(e) { console.log('Listing sync error:', e); }
-      })();
-    }
-
-    // Reset form
-    document.getElementById('cf-title').value = '';
-    document.getElementById('cf-desc').value = '';
-    document.getElementById('cf-date').value = '';
-    document.getElementById('cf-time-hr').value = '';
-    document.getElementById('cf-time-min').value = '';
-    document.getElementById('cf-time-ampm').value = 'AM';
-    document.getElementById('cf-etime-hr').value = '';
-    document.getElementById('cf-etime-min').value = '';
-    document.getElementById('cf-etime-ampm').value = 'AM';
-    document.getElementById('cf-city').value = '';
-    document.getElementById('cf-venue').value = '';
-
-    // Re-apply current category filter so new card shows correctly
-    const activePill = document.querySelector('#screen-discover .cat-pill.active');
-    if (activePill && activePill.textContent.trim() !== 'All') {
-      const cat = activePill.textContent.trim();
-      filterCards(cat);
-    }
-
-    showToast('PairdUp posted! 🎉 Check Discover feed.');
-    awardXP(10, 'Posted a PairdUp');
-    showConfetti();
-    clearFormDirty();
+    _createListingFromForm(title, desc, venue, dateVal, timeVal, endTimeVal, city, catName, pairType, lookingFor, groupType, dateStr, emoji, recurring, recurInterval, recurLimit);
   }
   _listingJustCreated = true;
   setTimeout(function() { _listingJustCreated = false; }, 5000);
@@ -10360,19 +10323,104 @@ function updateMyActivity() {
   } catch(e) {}
 }
 
+// ── Shared: create a new listing from the Create-PairdUp form ─────
+// Extracted so both the normal create path and the duplicate-confirm modal can call it.
+function _createListingFromForm(title, desc, venue, dateVal, timeVal, endTimeVal, city, catName, pairType, lookingFor, groupType, dateStr, emoji, recurring, recurInterval, recurLimit) {
+  var newId = 'user-' + Date.now();
+  var listingData = {
+    id: newId, title: title, desc: desc, venue: venue, dateVal: dateVal,
+    timeVal: timeVal, endTimeVal: endTimeVal, city: city, catName: catName, pairType: pairType,
+    lookingFor: lookingFor, groupType: groupType, dateStr: dateStr, emoji: emoji,
+    recurring: recurring, recurInterval: recurInterval, recurLimit: recurLimit, recurCount: 0,
+    userName: currentUser.name || 'You', userAge: currentUser.age || '',
+    userLoc: currentUser.loc || city, userPhoto: currentUser.photo || _DEFAULT_AVATAR,
+    userBio: currentUser.bio || '', userInterests: currentUser.interests || [],
+    userFacePos: currentUser.facePos || 'center 20%', ownerEmail: currentUser.email || ''
+  };
+  userListings.push(listingData);
+  _saveListings(userListings);
+  renderUserListing(listingData);
+  toggleMyListingsEmpty();
+
+  // Sync to Supabase
+  if (_supabase && currentUser.supabaseId) {
+    (async function() {
+      try {
+        var { data: insertedRow, error: insertErr } = await _supabase.from('listings').insert({
+          owner_id: currentUser.supabaseId, title: title,
+          description: desc, category: catName, pair_type: pairType,
+          group_type: groupType, looking_for: lookingFor,
+          date_val: dateVal || null, date_str: dateStr, time_val: timeVal,
+          end_time_val: endTimeVal, venue: venue, city: city, emoji: emoji,
+          recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit, recur_count: 0,
+          is_active: true
+        }).select().single();
+        if (insertErr) { console.log('[PairdUps] Listing insert error:', insertErr); }
+        else if (insertedRow) {
+          listingData.supabaseId = insertedRow.id;
+          _saveListings(userListings);
+          console.log('[PairdUps] Listing saved to Supabase:', insertedRow.id);
+        } else {
+          console.log('[PairdUps] Listing insert: no row returned');
+        }
+      } catch(e) { console.log('Listing sync error:', e); }
+    })();
+  }
+
+  // Reset form
+  document.getElementById('cf-title').value = '';
+  document.getElementById('cf-desc').value = '';
+  document.getElementById('cf-date').value = '';
+  document.getElementById('cf-time-hr').value = '';
+  document.getElementById('cf-time-min').value = '';
+  document.getElementById('cf-time-ampm').value = 'AM';
+  document.getElementById('cf-etime-hr').value = '';
+  document.getElementById('cf-etime-min').value = '';
+  document.getElementById('cf-etime-ampm').value = 'AM';
+  document.getElementById('cf-city').value = '';
+  document.getElementById('cf-venue').value = '';
+
+  // Re-apply current category filter so new card shows correctly
+  const activePill = document.querySelector('#screen-discover .cat-pill.active');
+  if (activePill && activePill.textContent.trim() !== 'All') {
+    const cat = activePill.textContent.trim();
+    filterCards(cat);
+  }
+
+  showToast('PairdUp posted! 🎉 Check Discover feed.');
+  awardXP(10, 'Posted a PairdUp');
+  showConfetti();
+  clearFormDirty();
+}
+
+// Duplicate-PairdUp modal continuation
+var _pendingDuplicateCreate = null;
+function _confirmDuplicatePairdUp() {
+  closeModal('modal-duplicate-pairdup');
+  var fn = _pendingDuplicateCreate;
+  _pendingDuplicateCreate = null;
+  if (fn) fn();
+}
+
 // ── Unsaved changes warning ───────────────────────────────
 var _formDirty = false;
+var _unsavedLeaveCallback = null;
 function markFormDirty() { _formDirty = true; }
 function clearFormDirty() { _formDirty = false; }
 function checkUnsavedChanges(callback) {
   if (_formDirty) {
-    if (confirm('You have unsaved changes. Leave anyway?')) {
-      _formDirty = false;
-      callback();
-    }
+    _unsavedLeaveCallback = callback;
+    openModal('modal-unsaved-changes');
   } else {
     callback();
   }
+}
+function _confirmLeaveUnsaved() {
+  closeModal('modal-unsaved-changes');
+  _formDirty = false;
+  var cb = _unsavedLeaveCallback;
+  _unsavedLeaveCallback = null;
+  if (cb) cb();
 }
 
 // ── Sort Discover ─────────────────────────────────────────
