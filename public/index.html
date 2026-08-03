@@ -10987,6 +10987,46 @@ function loadSavedFilter(idx) {
   if (f.ageMin) { var el = document.getElementById('filter-age-min'); if (el) el.value = f.ageMin; }
   if (f.ageMax) { var el = document.getElementById('filter-age-max'); if (el) el.value = f.ageMax; }
   if (f.distance) { var el = document.getElementById('filter-distance'); if (el) el.value = f.distance; }
+
+  // Restore category pill selection (multi-select).
+  // Normalize the stored data — supports both new `categories` array and legacy `category` string.
+  var wantedCats = [];
+  if (Array.isArray(f.categories)) {
+    wantedCats = f.categories;
+  } else if (f.category && f.category !== 'All') {
+    wantedCats = [f.category];
+  }
+  var pills = document.querySelectorAll('#screen-discover .cat-pill');
+  if (pills.length) {
+    pills.forEach(function(p) { p.classList.remove('active'); });
+    if (wantedCats.length === 0) {
+      // Empty or "All" — reactivate the All pill
+      pills.forEach(function(p) { if (p.textContent.trim() === 'All') p.classList.add('active'); });
+    } else {
+      // Match each stored pill label against current pill labels (exact match)
+      wantedCats.forEach(function(want) {
+        pills.forEach(function(p) {
+          if (p.textContent.trim() === want) p.classList.add('active');
+        });
+      });
+      // Safety: if nothing matched (labels changed in the app since save), fall back to All
+      var anyActive = false;
+      pills.forEach(function(p) { if (p.classList.contains('active')) anyActive = true; });
+      if (!anyActive) {
+        pills.forEach(function(p) { if (p.textContent.trim() === 'All') p.classList.add('active'); });
+      }
+    }
+    applyCurrentCategoryFilter();
+  }
+
+  // Restore pair type pill selection in the Filter modal, if a value was saved
+  if (f.pairType) {
+    document.querySelectorAll('#modal-filter .pill').forEach(function(p) {
+      if (p.textContent.trim() === f.pairType) p.classList.add('active');
+      else p.classList.remove('active');
+    });
+  }
+
   // Highlight the selected filter
   _activeSavedFilterIdx = idx;
   renderSavedFilters();
