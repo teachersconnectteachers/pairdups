@@ -9937,10 +9937,24 @@ function clearFilter() {
   document.getElementById('filter-prov').value='';
   document.getElementById('filter-city').innerHTML='<option value="">— All Cities —</option>';
   document.getElementById('loc-tag').innerHTML='<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>All Locations';
-  // Also clear advanced filters
-  clearAdvancedFilters();
+  // Also clear advanced filters silently (we show our own combined toast at the end)
+  clearAdvancedFilters(true);
+  // Clear category pill selections too
+  var pills = document.querySelectorAll('#screen-discover .cat-pill');
+  pills.forEach(function(p) { p.classList.remove('active'); });
+  var allPill = document.querySelector('#screen-discover .cat-pill');
+  if (allPill) allPill.classList.add('active');
+  // Re-render Discover so previously-hidden cards become visible again
+  applyCurrentCategoryFilter();
+  // Also hide the no-results messages if they were showing
+  var noRes = document.getElementById('no-results');
+  var noResLoc = document.getElementById('no-results-location');
+  if (noRes) noRes.style.display = 'none';
+  if (noResLoc) noResLoc.style.display = 'none';
+  // Override the toast from clearAdvancedFilters with a more accurate one
+  showToast('All filters cleared');
 }
-function clearAdvancedFilters() {
+function clearAdvancedFilters(silent) {
   var ageMin = document.getElementById('filter-age-min');
   var ageMax = document.getElementById('filter-age-max');
   var distance = document.getElementById('filter-distance');
@@ -9956,7 +9970,7 @@ function clearAdvancedFilters() {
   // Reset saved filter highlight
   _activeSavedFilterIdx = -1;
   renderSavedFilters();
-  showToast('Advanced filters cleared');
+  if (!silent) showToast('Advanced filters cleared');
 }
 function applyFilter() {
   // Determine which country tab is active
