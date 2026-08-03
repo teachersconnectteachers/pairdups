@@ -5304,41 +5304,78 @@ function submitSupportForm() {
 
 // ── Discover ───────────────────────────────────────────────
 function scrollCats(dx) { document.getElementById('cat-scroll').scrollBy({left:dx,behavior:'smooth'}); }
+// Multi-select category filtering:
+// - Clicking "All" clears all other selections and shows everything
+// - Clicking a specific category toggles it on/off (adds to set of active categories)
+// - If all specific categories get deselected, "All" auto-activates
+// - Filter shows listings matching ANY of the currently-active specific categories (OR)
 function setCat(el) {
-  document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active');
-  const cat = el.textContent.replace(/^[^a-zA-Z]+/, '').split('/')[0].trim(); // strip emoji, get first word
-  filterCards(cat === 'All' ? null : el.textContent.trim());
+  var pills = document.querySelectorAll('#screen-discover .cat-pill');
+  var isAll = el.textContent.trim() === 'All';
+  if (isAll) {
+    // "All" is exclusive — deselect everything else, activate only "All"
+    pills.forEach(function(p) { p.classList.remove('active'); });
+    el.classList.add('active');
+  } else {
+    // Toggle this specific category
+    el.classList.toggle('active');
+    // "All" cannot be active alongside specific categories
+    pills.forEach(function(p) {
+      if (p.textContent.trim() === 'All') p.classList.remove('active');
+    });
+    // If no specific pill is active, re-activate "All"
+    var anyActive = false;
+    pills.forEach(function(p) { if (p.classList.contains('active')) anyActive = true; });
+    if (!anyActive) {
+      pills.forEach(function(p) { if (p.textContent.trim() === 'All') p.classList.add('active'); });
+    }
+  }
+  applyCurrentCategoryFilter();
 }
 function resetCat() {
-  document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('active'));
-  document.querySelector('.cat-pill').classList.add('active'); // first pill = All
-  filterCards(null);
+  var pills = document.querySelectorAll('#screen-discover .cat-pill');
+  pills.forEach(function(p) { p.classList.remove('active'); });
+  var allPill = document.querySelector('#screen-discover .cat-pill');
+  if (allPill) allPill.classList.add('active'); // first pill = All
+  applyCurrentCategoryFilter();
 }
-function filterCards(cat) {
+// Collects all currently-active specific categories and passes them to filterCards
+function applyCurrentCategoryFilter() {
+  var pills = document.querySelectorAll('#screen-discover .cat-pill.active');
+  var cats = [];
+  pills.forEach(function(p) {
+    var t = p.textContent.trim();
+    if (t !== 'All') cats.push(t);
+  });
+  filterCards(cats.length === 0 ? null : cats);
+}
+// filterCards now accepts either null (show all) OR an array of category pill labels.
+// A card matches if its category matches ANY of the labels.
+function filterCards(cats) {
   const cards = document.querySelectorAll('#screen-discover .listing-card');
   let visible = 0;
   cards.forEach(card => {
-    if (!cat) {
+    if (!cats || cats.length === 0) {
       card.style.display = '';
       visible++;
     } else {
-      // Match against data-category attribute
-      const cardCat = card.dataset.category || '';
-      // Also match partial — "Coffee" matches "☕ Coffee" pill text
-      const pillText = cat.replace(/[^a-zA-Z\/]/g, '').toLowerCase();
-      const cardCatClean = cardCat.toLowerCase();
-      const match = cardCatClean.includes(pillText) || pillText.includes(cardCatClean);
+      const cardCat = (card.dataset.category || '').toLowerCase();
+      var match = false;
+      for (var i = 0; i < cats.length; i++) {
+        var pillText = cats[i].replace(/[^a-zA-Z\/]/g, '').toLowerCase();
+        if (cardCat.includes(pillText) || pillText.includes(cardCat)) { match = true; break; }
+      }
       card.style.display = match ? '' : 'none';
       if (match) visible++;
     }
   });
   const noRes = document.getElementById('no-results');
   const noResCat = document.getElementById('no-results-cat');
-  if (visible === 0 && cat) {
-    // Strip emoji from cat name for display
-    const cleanCat = cat.replace(/[^\w\s\/]/g, '').trim();
-    noResCat.textContent = 'No ' + cleanCat + ' PairdUps yet';
+  if (visible === 0 && cats && cats.length > 0) {
+    // Strip emoji from each cat name for display and join
+    var cleanCats = cats.map(function(c) { return c.replace(/[^\w\s\/]/g, '').trim(); });
+    var label = cleanCats.length === 1 ? cleanCats[0] : cleanCats.slice(0, -1).join(', ') + ' or ' + cleanCats[cleanCats.length - 1];
+    noResCat.textContent = 'No ' + label + ' PairdUps yet';
     noRes.style.display = 'flex';
   } else {
     noRes.style.display = 'none';
@@ -10381,11 +10418,7 @@ function _createListingFromForm(title, desc, venue, dateVal, timeVal, endTimeVal
   document.getElementById('cf-venue').value = '';
 
   // Re-apply current category filter so new card shows correctly
-  const activePill = document.querySelector('#screen-discover .cat-pill.active');
-  if (activePill && activePill.textContent.trim() !== 'All') {
-    const cat = activePill.textContent.trim();
-    filterCards(cat);
-  }
+  applyCurrentCategoryFilter();
 
   showToast('PairdUp posted! 🎉 Check Discover feed.');
   awardXP(10, 'Posted a PairdUp');
@@ -10907,8 +10940,17 @@ function confirmSaveFilter() {
   if (!name) { nameInput.style.borderColor = '#DC2626'; return; }
   closeModal('modal-save-filter');
   
+  // Gather all currently-active specific categories (multi-select)
+  var activeCats = [];
+  document.querySelectorAll('#screen-discover .cat-pill.active').forEach(function(p) {
+    var t = p.textContent.trim();
+    if (t !== 'All') activeCats.push(t);
+  });
   var filters = {
-    category: document.querySelector('.cat-pill.active')?.textContent?.trim() || 'All',
+    // New multi-select field. Empty array = "All". Kept alongside `category` for older
+    // saved filters that stored a single string.
+    categories: activeCats,
+    category: activeCats.length === 1 ? activeCats[0] : (activeCats.length === 0 ? 'All' : ''),
     ageMin: document.getElementById('filter-age-min')?.value || '',
     ageMax: document.getElementById('filter-age-max')?.value || '',
     distance: document.getElementById('filter-distance')?.value || '',
