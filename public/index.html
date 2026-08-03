@@ -5351,23 +5351,57 @@ function applyCurrentCategoryFilter() {
 }
 // filterCards now accepts either null (show all) OR an array of category pill labels.
 // A card matches if its category matches ANY of the labels.
+// Also composes with the current location filter (from the Filter modal's Country/State/City)
+// so tapping category pills doesn't wipe out a previously-applied location filter.
 function filterCards(cats) {
   const cards = document.querySelectorAll('#screen-discover .listing-card');
+  // Read current location filter state from the Filter modal form so we compose properly
+  var locSearchCity = '';
+  var locSearchRegion = '';
+  var locSearchRegionCode = '';
+  try {
+    var wrapState = document.getElementById('wrap-state');
+    var isUSA = wrapState && wrapState.style.display !== 'none';
+    var sel = isUSA ? document.getElementById('filter-state') : document.getElementById('filter-prov');
+    var cityEl = document.getElementById('filter-city');
+    if (cityEl) locSearchCity = (cityEl.value || '').trim().toLowerCase();
+    if (sel) {
+      var regionCode = sel.value || '';
+      var regionText = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '';
+      var isAllRegions = !regionCode || regionText.indexOf('All') >= 0;
+      if (!isAllRegions) {
+        locSearchRegionCode = regionCode.toLowerCase();
+        locSearchRegion = regionText.toLowerCase();
+      }
+    }
+  } catch(e) {}
+
   let visible = 0;
   cards.forEach(card => {
-    if (!cats || cats.length === 0) {
-      card.style.display = '';
-      visible++;
-    } else {
+    var show = true;
+    // Category check
+    if (cats && cats.length > 0) {
       const cardCat = (card.dataset.category || '').toLowerCase();
       var match = false;
       for (var i = 0; i < cats.length; i++) {
         var pillText = cats[i].replace(/[^a-zA-Z\/]/g, '').toLowerCase();
         if (cardCat.includes(pillText) || pillText.includes(cardCat)) { match = true; break; }
       }
-      card.style.display = match ? '' : 'none';
-      if (match) visible++;
+      if (!match) show = false;
     }
+    // Location check (compose with category)
+    if (show && (locSearchCity || locSearchRegionCode)) {
+      var cardCity = (card.getAttribute('data-city') || '').toLowerCase();
+      if (locSearchCity) {
+        var cardCityName = cardCity.split(',')[0].trim();
+        if (cardCityName.indexOf(locSearchCity) < 0 && cardCity.indexOf(locSearchCity) < 0) show = false;
+      } else if (locSearchRegionCode) {
+        var cardRegionPart = cardCity.split(',')[1] ? cardCity.split(',')[1].trim() : '';
+        if (cardRegionPart !== locSearchRegionCode && cardRegionPart !== locSearchRegion && cardCity.indexOf(locSearchRegion) < 0) show = false;
+      }
+    }
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
   });
   const noRes = document.getElementById('no-results');
   const noResCat = document.getElementById('no-results-cat');
@@ -9942,6 +9976,14 @@ function applyFilter() {
   var searchRegion = !isAllRegions ? region.toLowerCase() : '';  // full name like "new york"
   var visibleCount = 0;
 
+  // Determine active category pills for combined filtering (empty array = "All")
+  var activeCatLabels = [];
+  document.querySelectorAll('#screen-discover .cat-pill.active').forEach(function(p) {
+    var t = p.textContent.trim();
+    if (t !== 'All') activeCatLabels.push(t);
+  });
+  var activeCatPatterns = activeCatLabels.map(function(c) { return c.replace(/[^a-zA-Z\/]/g, '').toLowerCase(); });
+
   cards.forEach(function(card) {
     var cardCity = (card.getAttribute('data-city') || '').toLowerCase();
     var show = true;
@@ -9953,6 +9995,16 @@ function applyFilter() {
       // Match state/province abbreviation (after the comma, e.g. ", ny") or full name
       var cardRegionPart = cardCity.split(',')[1] ? cardCity.split(',')[1].trim() : '';
       show = cardRegionPart === searchRegionCode || cardRegionPart === searchRegion || cardCity.indexOf(searchRegion) >= 0;
+    }
+    // Also honour the currently-active category pills so location + category compose
+    if (show && activeCatPatterns.length > 0) {
+      var cardCat = (card.dataset.category || '').toLowerCase();
+      var catMatch = false;
+      for (var i = 0; i < activeCatPatterns.length; i++) {
+        var p = activeCatPatterns[i];
+        if (cardCat.indexOf(p) >= 0 || p.indexOf(cardCat) >= 0) { catMatch = true; break; }
+      }
+      if (!catMatch) show = false;
     }
     card.style.display = show ? '' : 'none';
     if (show) visibleCount++;
