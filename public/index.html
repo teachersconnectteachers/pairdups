@@ -1856,7 +1856,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <div id="saved-filters-section" style="display:none;padding:0 14px 10px">
       <div style="font-size:11px;font-weight:800;color:var(--dark);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">🔍 Saved Filters</div>
       <div id="saved-filters-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
-      <button onclick="openSaveFilterModal()" style="width:100%;background:var(--gray-light);border:1.5px dashed var(--gray-border);border-radius:10px;padding:8px;font-size:11px;font-weight:700;color:var(--gray);cursor:pointer;font-family:inherit">+ Save Current Filters</button>
+      <button id="save-current-filters-btn" onclick="openSaveFilterModal()" style="width:100%;background:var(--gray-light);border:1.5px dashed var(--gray-border);border-radius:10px;padding:8px;font-size:11px;font-weight:700;color:var(--gray);cursor:pointer;font-family:inherit;transition:all 0.2s">+ Save Current Filters</button>
     </div>
     <div class="filter-footer">
       <button class="filter-clear" onclick="clearFilter()">Clear All</button>
@@ -5358,6 +5358,7 @@ function applyCurrentCategoryFilter() {
     if (t !== 'All') cats.push(t);
   });
   filterCards(cats.length === 0 ? null : cats);
+  refreshSaveFilterButton();
 }
 // filterCards now accepts either null (show all) OR an array of category pill labels.
 // A card matches if its category matches ANY of the labels.
@@ -9757,6 +9758,24 @@ function openFilter() {
     if (isGold()) renderSavedFilters();
   }
   openModal('modal-filter');
+  // Refresh save button state and wire up change listeners for live updates
+  refreshSaveFilterButton();
+  _wireSaveFilterButtonListeners();
+}
+
+// Attach one-time change listeners so the save button auto-updates as user edits fields.
+// Uses a flag so listeners are only attached once.
+var _saveFilterListenersWired = false;
+function _wireSaveFilterButtonListeners() {
+  if (_saveFilterListenersWired) return;
+  ['filter-state','filter-prov','filter-city','filter-age-min','filter-age-max','filter-poster-type','filter-group-type'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', refreshSaveFilterButton);
+      el.addEventListener('input', refreshSaveFilterButton);
+    }
+  });
+  _saveFilterListenersWired = true;
 }
 let currentMapLoc = '';
 let currentMapCity = '';
@@ -9980,6 +9999,7 @@ function clearAdvancedFilters(silent) {
   // Reset saved filter highlight
   _activeSavedFilterIdx = -1;
   renderSavedFilters();
+  refreshSaveFilterButton();
   if (!silent) showToast('Advanced filters cleared');
 }
 function applyFilter() {
@@ -11040,6 +11060,7 @@ function confirmUpdateFilter() {
   savedFilters[_activeSavedFilterIdx].filters = _gatherCurrentFilterState();
   localStorage.setItem('pu_saved_filters', JSON.stringify(savedFilters));
   renderSavedFilters();
+  refreshSaveFilterButton();
   showToast('"' + currentName + '" updated ✓');
 }
 
@@ -11103,6 +11124,7 @@ function confirmSaveFilter() {
   if (savedFilters.length > 5) savedFilters = savedFilters.slice(-5);
   localStorage.setItem('pu_saved_filters', JSON.stringify(savedFilters));
   renderSavedFilters();
+  refreshSaveFilterButton();
   showToast('Filter saved as "' + name + '" ✓');
 }
 
@@ -11206,6 +11228,44 @@ function loadSavedFilter(idx) {
   _activeSavedFilterIdx = idx;
   renderSavedFilters();
   showToast('Filter "' + savedFilters[idx].name + '" selected — tap Apply Filters');
+}
+
+// Highlights the "+ Save Current Filters" button when ANY filter field is non-default.
+// Called after any change to filter state (form fields, category pills, saved filter load/deselect).
+function refreshSaveFilterButton() {
+  var btn = document.getElementById('save-current-filters-btn');
+  if (!btn) return;
+  // Detect any non-default field
+  var dirty = false;
+  // Category pills — any active pill other than "All"
+  var pills = document.querySelectorAll('#screen-discover .cat-pill.active');
+  pills.forEach(function(p) { if (p.textContent.trim() !== 'All') dirty = true; });
+  // Location: state / prov / city
+  if ((document.getElementById('filter-state')?.value || '').trim()) dirty = true;
+  if ((document.getElementById('filter-prov')?.value || '').trim()) dirty = true;
+  if ((document.getElementById('filter-city')?.value || '').trim()) dirty = true;
+  // Advanced filters
+  if ((document.getElementById('filter-age-min')?.value || '').trim()) dirty = true;
+  if ((document.getElementById('filter-age-max')?.value || '').trim()) dirty = true;
+  if ((document.getElementById('filter-poster-type')?.value || '').trim()) dirty = true;
+  if ((document.getElementById('filter-group-type')?.value || '').trim()) dirty = true;
+  if (dirty) {
+    // ACTIVE styling — pink solid button, white text
+    btn.style.background = 'var(--pink)';
+    btn.style.borderStyle = 'solid';
+    btn.style.borderColor = 'var(--pink)';
+    btn.style.color = '#fff';
+    btn.style.boxShadow = '0 3px 12px rgba(255,59,127,0.3)';
+    btn.textContent = '💾 Save Current Filters';
+  } else {
+    // IDLE styling — original gray dashed
+    btn.style.background = 'var(--gray-light)';
+    btn.style.borderStyle = 'dashed';
+    btn.style.borderColor = 'var(--gray-border)';
+    btn.style.color = 'var(--gray)';
+    btn.style.boxShadow = 'none';
+    btn.textContent = '+ Save Current Filters';
+  }
 }
 
 function renderSavedFilters() {
