@@ -11121,8 +11121,11 @@ function confirmSaveFilter() {
   closeModal('modal-save-filter');
   var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
   savedFilters.push({ name: name, filters: _gatherCurrentFilterState() });
+  // Enforce max of 5 saved filters
   if (savedFilters.length > 5) savedFilters = savedFilters.slice(-5);
   localStorage.setItem('pu_saved_filters', JSON.stringify(savedFilters));
+  // Highlight the newly-saved filter as the active one (it's always the last item in the list)
+  _activeSavedFilterIdx = savedFilters.length - 1;
   renderSavedFilters();
   refreshSaveFilterButton();
   showToast('Filter saved as "' + name + '" ✓');
@@ -11250,17 +11253,19 @@ function refreshSaveFilterButton() {
   if ((document.getElementById('filter-poster-type')?.value || '').trim()) dirty = true;
   if ((document.getElementById('filter-group-type')?.value || '').trim()) dirty = true;
   if (dirty) {
-    // ACTIVE styling — pink solid button, white text
-    btn.style.background = 'var(--pink)';
+    // ACTIVE styling — amber/gold with darker bold outline (distinct from pink Apply Filters button)
+    btn.style.background = '#F59E0B';
     btn.style.borderStyle = 'solid';
-    btn.style.borderColor = 'var(--pink)';
+    btn.style.borderWidth = '2px';
+    btn.style.borderColor = '#B45309';
     btn.style.color = '#fff';
-    btn.style.boxShadow = '0 3px 12px rgba(255,59,127,0.3)';
+    btn.style.boxShadow = '0 3px 12px rgba(245,158,11,0.4)';
     btn.textContent = '💾 Save Current Filters';
   } else {
     // IDLE styling — original gray dashed
     btn.style.background = 'var(--gray-light)';
     btn.style.borderStyle = 'dashed';
+    btn.style.borderWidth = '1.5px';
     btn.style.borderColor = 'var(--gray-border)';
     btn.style.color = 'var(--gray)';
     btn.style.boxShadow = 'none';
