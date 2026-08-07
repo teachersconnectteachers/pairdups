@@ -11078,12 +11078,13 @@ function loadSavedFilter(idx) {
   var f = savedFilters[idx].filters;
 
   // First, clear everything to a known state so a saved filter that doesn't specify
-  // a field doesn't accidentally inherit whatever was left in the form
-  document.getElementById('filter-age-min').value = '';
-  document.getElementById('filter-age-max').value = '';
-  document.getElementById('filter-distance').value = '';
-  if (document.getElementById('filter-poster-type')) document.getElementById('filter-poster-type').value = '';
-  if (document.getElementById('filter-group-type')) document.getElementById('filter-group-type').value = '';
+  // a field doesn't accidentally inherit whatever was left in the form.
+  // Null-safe: some inputs (e.g. filter-distance) don't exist in the current UI.
+  var _minEl = document.getElementById('filter-age-min'); if (_minEl) _minEl.value = '';
+  var _maxEl = document.getElementById('filter-age-max'); if (_maxEl) _maxEl.value = '';
+  var _distEl = document.getElementById('filter-distance'); if (_distEl) _distEl.value = '';
+  var _postEl = document.getElementById('filter-poster-type'); if (_postEl) _postEl.value = '';
+  var _grpEl = document.getElementById('filter-group-type'); if (_grpEl) _grpEl.value = '';
 
   // Restore country FIRST (this shows/hides the correct state vs prov dropdown)
   if (f.country === 'canada') {
