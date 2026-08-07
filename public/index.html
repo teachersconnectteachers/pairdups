@@ -1628,10 +1628,20 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <div class="modal-bg" id="modal-save-filter" onclick="if(event.target===this)closeModal('modal-save-filter')" style="align-items:center;justify-content:center;z-index:300">
   <div class="modal-card" style="max-width:340px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="font-size:40px;margin-bottom:8px">🔍</div>
-    <div style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:6px">Save Filter Preset</div>
-    <div style="font-size:12px;color:var(--gray);margin-bottom:16px;line-height:1.5">Give your filter a name so you can quickly load it later.</div>
-    <input type="text" id="save-filter-name" placeholder="e.g. Sports nearby, Weekend dates..." style="width:100%;padding:12px 16px;border:2px solid var(--gray-border);border-radius:14px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:16px;transition:border-color 0.2s" onfocus="this.style.borderColor='var(--pink)'" onblur="this.style.borderColor='var(--gray-border)'">
-    <div style="display:flex;gap:10px">
+    <div id="save-filter-title" style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:6px">Save Filter Preset</div>
+    <div id="save-filter-desc" style="font-size:12px;color:var(--gray);margin-bottom:16px;line-height:1.5">Give your filter a name so you can quickly load it later.</div>
+    <!-- Name input (used in "Create new" mode and after tapping "Save as New") -->
+    <div id="save-filter-name-wrap">
+      <input type="text" id="save-filter-name" placeholder="e.g. Sports nearby, Weekend dates..." style="width:100%;padding:12px 16px;border:2px solid var(--gray-border);border-radius:14px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:16px;transition:border-color 0.2s" onfocus="this.style.borderColor='var(--pink)'" onblur="this.style.borderColor='var(--gray-border)'">
+    </div>
+    <!-- Update mode: two buttons -->
+    <div id="save-filter-update-buttons" style="display:none;flex-direction:column;gap:10px">
+      <button onclick="confirmUpdateFilter()" style="width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35)">💾 Update <span id="save-filter-current-name"></span></button>
+      <button onclick="switchToSaveAsNew()" style="width:100%;background:var(--gray-light);color:var(--dark);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">➕ Save as New…</button>
+      <button onclick="closeModal('modal-save-filter')" style="width:100%;background:transparent;color:var(--gray);border:none;padding:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
+    </div>
+    <!-- Create-new mode: one button + cancel -->
+    <div id="save-filter-create-buttons" style="display:flex;gap:10px">
       <button onclick="closeModal('modal-save-filter')" style="flex:1;background:var(--gray-light);color:var(--gray);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
       <button onclick="confirmSaveFilter()" style="flex:1;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:12px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35)">💾 Save Filter</button>
     </div>
@@ -10986,18 +10996,101 @@ async function featurePairdUp(btn, listingId) {
 // ── Saved Search Filters (Gold) ──────────────────────────
 function openSaveFilterModal() {
   if (!isGold()) { showPremiumModal('🔍 Save your filter settings for quick access! Upgrade to Gold.'); return; }
-  // Block if a saved filter is currently selected
+  var titleEl = document.getElementById('save-filter-title');
+  var descEl = document.getElementById('save-filter-desc');
+  var nameWrap = document.getElementById('save-filter-name-wrap');
+  var updateBtns = document.getElementById('save-filter-update-buttons');
+  var createBtns = document.getElementById('save-filter-create-buttons');
+  var nameInput = document.getElementById('save-filter-name');
+
   if (_activeSavedFilterIdx >= 0) {
+    // ── UPDATE MODE: a saved filter is currently selected ──
     var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
-    var activeName = savedFilters[_activeSavedFilterIdx] ? savedFilters[_activeSavedFilterIdx].name : 'a filter';
-    document.getElementById('filter-active-msg').innerHTML = 'You currently have <strong>"' + activeName + '"</strong> selected. Please deselect it first by tapping on it, before saving a new filter.';
-    openModal('modal-filter-active');
+    var activeName = savedFilters[_activeSavedFilterIdx] ? savedFilters[_activeSavedFilterIdx].name : 'this filter';
+    if (titleEl) titleEl.textContent = 'Update filter';
+    if (descEl) descEl.innerHTML = 'Save your changes to <strong>"' + activeName + '"</strong>, or save these settings as a new filter.';
+    if (nameWrap) nameWrap.style.display = 'none';
+    if (updateBtns) updateBtns.style.display = 'flex';
+    if (createBtns) createBtns.style.display = 'none';
+    var currentNameEl = document.getElementById('save-filter-current-name');
+    if (currentNameEl) currentNameEl.textContent = '"' + activeName + '"';
+    openModal('modal-save-filter');
+  } else {
+    // ── CREATE-NEW MODE: no saved filter selected ──
+    if (titleEl) titleEl.textContent = 'Save Filter Preset';
+    if (descEl) descEl.textContent = 'Give your filter a name so you can quickly load it later.';
+    if (nameWrap) nameWrap.style.display = '';
+    if (updateBtns) updateBtns.style.display = 'none';
+    if (createBtns) createBtns.style.display = 'flex';
+    if (nameInput) nameInput.value = '';
+    openModal('modal-save-filter');
+    setTimeout(function() { if (nameInput) nameInput.focus(); }, 300);
+  }
+}
+
+// User tapped "Update" on the Update-mode modal: overwrite the active filter's fields
+function confirmUpdateFilter() {
+  var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
+  if (_activeSavedFilterIdx < 0 || !savedFilters[_activeSavedFilterIdx]) {
+    closeModal('modal-save-filter');
     return;
   }
+  closeModal('modal-save-filter');
+  var currentName = savedFilters[_activeSavedFilterIdx].name;
+  savedFilters[_activeSavedFilterIdx].filters = _gatherCurrentFilterState();
+  localStorage.setItem('pu_saved_filters', JSON.stringify(savedFilters));
+  renderSavedFilters();
+  showToast('"' + currentName + '" updated ✓');
+}
+
+// User tapped "Save as New" on the Update-mode modal: switch the modal to create-new mode
+function switchToSaveAsNew() {
+  var titleEl = document.getElementById('save-filter-title');
+  var descEl = document.getElementById('save-filter-desc');
+  var nameWrap = document.getElementById('save-filter-name-wrap');
+  var updateBtns = document.getElementById('save-filter-update-buttons');
+  var createBtns = document.getElementById('save-filter-create-buttons');
   var nameInput = document.getElementById('save-filter-name');
-  if (nameInput) nameInput.value = '';
-  openModal('modal-save-filter');
-  setTimeout(function() { if (nameInput) nameInput.focus(); }, 300);
+  if (titleEl) titleEl.textContent = 'Save as new filter';
+  if (descEl) descEl.textContent = 'Give this new filter a name so you can load it later.';
+  if (nameWrap) nameWrap.style.display = '';
+  if (updateBtns) updateBtns.style.display = 'none';
+  if (createBtns) createBtns.style.display = 'flex';
+  if (nameInput) { nameInput.value = ''; setTimeout(function() { nameInput.focus(); }, 100); }
+}
+
+// Shared helper: collect the current filter state (form fields + category pills) into an object.
+// Used by both confirmSaveFilter (create new) and confirmUpdateFilter (overwrite existing).
+function _gatherCurrentFilterState() {
+  var activeCats = [];
+  document.querySelectorAll('#screen-discover .cat-pill.active').forEach(function(p) {
+    var t = p.textContent.trim();
+    if (t !== 'All') activeCats.push(t);
+  });
+  var wrapState = document.getElementById('wrap-state');
+  var isUSA = wrapState && wrapState.style.display !== 'none';
+  var regionText = '';
+  var regionSel = isUSA ? document.getElementById('filter-state') : document.getElementById('filter-prov');
+  if (regionSel && regionSel.selectedIndex >= 0) {
+    var opt = regionSel.options[regionSel.selectedIndex];
+    if (opt) regionText = opt.text || '';
+  }
+  return {
+    categories: activeCats,
+    category: activeCats.length === 1 ? activeCats[0] : (activeCats.length === 0 ? 'All' : ''),
+    country: isUSA ? 'usa' : 'canada',
+    state: document.getElementById('filter-state')?.value || '',
+    prov: document.getElementById('filter-prov')?.value || '',
+    city: document.getElementById('filter-city')?.value || '',
+    regionText: regionText,
+    ageMin: document.getElementById('filter-age-min')?.value || '',
+    ageMax: document.getElementById('filter-age-max')?.value || '',
+    distance: document.getElementById('filter-distance')?.value || '',
+    posterType: document.getElementById('filter-poster-type')?.value || '',
+    groupType: document.getElementById('filter-group-type')?.value || '',
+    pairType: document.querySelector('#modal-filter .pill.active')?.textContent?.trim() || '',
+    savedAt: Date.now()
+  };
 }
 
 function confirmSaveFilter() {
@@ -11005,52 +11098,8 @@ function confirmSaveFilter() {
   var name = nameInput ? nameInput.value.trim() : '';
   if (!name) { nameInput.style.borderColor = '#DC2626'; return; }
   closeModal('modal-save-filter');
-
-  // Gather all currently-active specific categories (multi-select)
-  var activeCats = [];
-  document.querySelectorAll('#screen-discover .cat-pill.active').forEach(function(p) {
-    var t = p.textContent.trim();
-    if (t !== 'All') activeCats.push(t);
-  });
-
-  // Read location filter state
-  var wrapState = document.getElementById('wrap-state');
-  var isUSA = wrapState && wrapState.style.display !== 'none';
-  var stateVal = document.getElementById('filter-state')?.value || '';
-  var provVal = document.getElementById('filter-prov')?.value || '';
-  var cityEl = document.getElementById('filter-city');
-  var cityVal = cityEl ? cityEl.value : '';
-  // Also grab the display text for the region so we can rehydrate readable names
-  var regionText = '';
-  var regionSel = isUSA ? document.getElementById('filter-state') : document.getElementById('filter-prov');
-  if (regionSel && regionSel.selectedIndex >= 0) {
-    var opt = regionSel.options[regionSel.selectedIndex];
-    if (opt) regionText = opt.text || '';
-  }
-
-  var filters = {
-    // Multi-select categories (empty array = "All")
-    categories: activeCats,
-    // Legacy compat single-string category
-    category: activeCats.length === 1 ? activeCats[0] : (activeCats.length === 0 ? 'All' : ''),
-    // Location
-    country: isUSA ? 'usa' : 'canada',
-    state: stateVal,
-    prov: provVal,
-    city: cityVal,
-    regionText: regionText,
-    // Advanced filters
-    ageMin: document.getElementById('filter-age-min')?.value || '',
-    ageMax: document.getElementById('filter-age-max')?.value || '',
-    distance: document.getElementById('filter-distance')?.value || '',
-    posterType: document.getElementById('filter-poster-type')?.value || '',
-    groupType: document.getElementById('filter-group-type')?.value || '',
-    // Kept for backwards compat (old code read a pill; nothing currently sets it)
-    pairType: document.querySelector('#modal-filter .pill.active')?.textContent?.trim() || '',
-    savedAt: Date.now()
-  };
   var savedFilters = JSON.parse(localStorage.getItem('pu_saved_filters') || '[]');
-  savedFilters.push({ name: name, filters: filters });
+  savedFilters.push({ name: name, filters: _gatherCurrentFilterState() });
   if (savedFilters.length > 5) savedFilters = savedFilters.slice(-5);
   localStorage.setItem('pu_saved_filters', JSON.stringify(savedFilters));
   renderSavedFilters();
