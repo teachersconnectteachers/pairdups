@@ -11005,21 +11005,47 @@ function confirmSaveFilter() {
   var name = nameInput ? nameInput.value.trim() : '';
   if (!name) { nameInput.style.borderColor = '#DC2626'; return; }
   closeModal('modal-save-filter');
-  
+
   // Gather all currently-active specific categories (multi-select)
   var activeCats = [];
   document.querySelectorAll('#screen-discover .cat-pill.active').forEach(function(p) {
     var t = p.textContent.trim();
     if (t !== 'All') activeCats.push(t);
   });
+
+  // Read location filter state
+  var wrapState = document.getElementById('wrap-state');
+  var isUSA = wrapState && wrapState.style.display !== 'none';
+  var stateVal = document.getElementById('filter-state')?.value || '';
+  var provVal = document.getElementById('filter-prov')?.value || '';
+  var cityEl = document.getElementById('filter-city');
+  var cityVal = cityEl ? cityEl.value : '';
+  // Also grab the display text for the region so we can rehydrate readable names
+  var regionText = '';
+  var regionSel = isUSA ? document.getElementById('filter-state') : document.getElementById('filter-prov');
+  if (regionSel && regionSel.selectedIndex >= 0) {
+    var opt = regionSel.options[regionSel.selectedIndex];
+    if (opt) regionText = opt.text || '';
+  }
+
   var filters = {
-    // New multi-select field. Empty array = "All". Kept alongside `category` for older
-    // saved filters that stored a single string.
+    // Multi-select categories (empty array = "All")
     categories: activeCats,
+    // Legacy compat single-string category
     category: activeCats.length === 1 ? activeCats[0] : (activeCats.length === 0 ? 'All' : ''),
+    // Location
+    country: isUSA ? 'usa' : 'canada',
+    state: stateVal,
+    prov: provVal,
+    city: cityVal,
+    regionText: regionText,
+    // Advanced filters
     ageMin: document.getElementById('filter-age-min')?.value || '',
     ageMax: document.getElementById('filter-age-max')?.value || '',
     distance: document.getElementById('filter-distance')?.value || '',
+    posterType: document.getElementById('filter-poster-type')?.value || '',
+    groupType: document.getElementById('filter-group-type')?.value || '',
+    // Kept for backwards compat (old code read a pill; nothing currently sets it)
     pairType: document.querySelector('#modal-filter .pill.active')?.textContent?.trim() || '',
     savedAt: Date.now()
   };
@@ -11050,9 +11076,42 @@ function loadSavedFilter(idx) {
   }
   
   var f = savedFilters[idx].filters;
+
+  // First, clear everything to a known state so a saved filter that doesn't specify
+  // a field doesn't accidentally inherit whatever was left in the form
+  document.getElementById('filter-age-min').value = '';
+  document.getElementById('filter-age-max').value = '';
+  document.getElementById('filter-distance').value = '';
+  if (document.getElementById('filter-poster-type')) document.getElementById('filter-poster-type').value = '';
+  if (document.getElementById('filter-group-type')) document.getElementById('filter-group-type').value = '';
+
+  // Restore country FIRST (this shows/hides the correct state vs prov dropdown)
+  if (f.country === 'canada') {
+    selectCountry('canada');
+  } else if (f.country === 'usa') {
+    selectCountry('usa');
+  }
+  // Restore state or province
+  if (f.state) {
+    var stateEl = document.getElementById('filter-state');
+    if (stateEl) { stateEl.value = f.state; updateCities(); }
+  }
+  if (f.prov) {
+    var provEl = document.getElementById('filter-prov');
+    if (provEl) { provEl.value = f.prov; updateCities(); }
+  }
+  // Restore city AFTER updateCities has repopulated the list
+  if (f.city) {
+    var cityEl = document.getElementById('filter-city');
+    if (cityEl) cityEl.value = f.city;
+  }
+
+  // Advanced filters
   if (f.ageMin) { var el = document.getElementById('filter-age-min'); if (el) el.value = f.ageMin; }
   if (f.ageMax) { var el = document.getElementById('filter-age-max'); if (el) el.value = f.ageMax; }
   if (f.distance) { var el = document.getElementById('filter-distance'); if (el) el.value = f.distance; }
+  if (f.posterType) { var el = document.getElementById('filter-poster-type'); if (el) el.value = f.posterType; }
+  if (f.groupType) { var el = document.getElementById('filter-group-type'); if (el) el.value = f.groupType; }
 
   // Restore category pill selection (multi-select).
   // Normalize the stored data — supports both new `categories` array and legacy `category` string.
@@ -11109,11 +11168,45 @@ function renderSavedFilters() {
   if (_activeSavedFilterIdx >= savedFilters.length) _activeSavedFilterIdx = -1;
   container.innerHTML = savedFilters.map(function(sf, i) {
     var isActive = i === _activeSavedFilterIdx;
+    // Build a human-readable summary of what's in the filter
+    var summary = _summarizeSavedFilter(sf.filters);
     return '<div class="saved-filter-item" style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:'+(isActive?'var(--pink)':'var(--gray-light)')+';border:2px solid '+(isActive?'var(--pink)':'transparent')+';border-radius:10px;cursor:pointer;transition:all 0.2s" onclick="loadSavedFilter('+i+')">'
-      + '<span class="sf-name" style="font-size:12px;font-weight:700;color:'+(isActive?'#fff':'var(--dark)')+';flex:1">🔍 ' + sf.name + '</span>'
-      + '<button onclick="event.stopPropagation();renameSavedFilter('+i+')" style="background:none;border:none;color:'+(isActive?'rgba(255,255,255,0.8)':'var(--gray)')+';font-size:12px;cursor:pointer;padding:2px 4px" title="Rename">✏️</button>'
-      + '<button onclick="event.stopPropagation();deleteSavedFilter('+i+')" style="background:none;border:none;color:'+(isActive?'rgba(255,255,255,0.8)':'#DC2626')+';font-size:12px;cursor:pointer;padding:2px 4px" title="Delete">✕</button></div>';
+      + '<div style="flex:1;min-width:0">'
+      + '<div class="sf-name" style="font-size:12px;font-weight:700;color:'+(isActive?'#fff':'var(--dark)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔍 ' + sf.name + '</div>'
+      + (summary ? '<div class="sf-summary" style="font-size:10px;color:'+(isActive?'rgba(255,255,255,0.85)':'var(--gray)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">' + summary + '</div>' : '')
+      + '</div>'
+      + '<button onclick="event.stopPropagation();renameSavedFilter('+i+')" style="background:none;border:none;color:'+(isActive?'rgba(255,255,255,0.8)':'var(--gray)')+';font-size:12px;cursor:pointer;padding:2px 4px;flex-shrink:0" title="Rename">✏️</button>'
+      + '<button onclick="event.stopPropagation();deleteSavedFilter('+i+')" style="background:none;border:none;color:'+(isActive?'rgba(255,255,255,0.8)':'#DC2626')+';font-size:12px;cursor:pointer;padding:2px 4px;flex-shrink:0" title="Delete">✕</button></div>';
   }).join('');
+}
+
+// Build a compact human-readable summary of what's in a saved filter, for display
+// under the filter's name in the list. Returns '' if the filter has no meaningful settings.
+function _summarizeSavedFilter(f) {
+  if (!f) return '';
+  var parts = [];
+  // Categories (multi-select) — strip emoji from each label
+  var cats = Array.isArray(f.categories) ? f.categories : (f.category && f.category !== 'All' ? [f.category] : []);
+  if (cats.length > 0) {
+    var cleanCats = cats.map(function(c) { return c.replace(/[^\w\s\/]/g, '').trim(); });
+    parts.push(cleanCats.join(' + '));
+  }
+  // Location — city if set, else region name
+  if (f.city) parts.push(f.city);
+  else if (f.regionText && f.regionText.indexOf('All ') < 0) parts.push(f.regionText);
+  // Age range
+  if (f.ageMin || f.ageMax) {
+    var min = f.ageMin || '18';
+    var max = f.ageMax || '99';
+    parts.push('Age ' + min + '-' + max);
+  }
+  // Distance
+  if (f.distance) parts.push('within ' + f.distance + ' mi');
+  // Poster type (Just for Fun / Date)
+  if (f.posterType) parts.push(f.posterType);
+  // Group type
+  if (f.groupType) parts.push(f.groupType);
+  return parts.join(' · ');
 }
 
 var _pendingDeleteFilterIdx = -1;
