@@ -3851,9 +3851,21 @@ async function loadSubscriptionStatus() {
       }
     } catch(emailSyncErr) { console.log('[PairdUps] Email sync check error:', emailSyncErr); }
 
-    var { data: profile, error } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id, alert_preferences, user_settings, theme_color').eq('id', currentUser.supabaseId).maybeSingle();
+    var { data: profile, error } = await _supabase.from('profiles').select('email, subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id, alert_preferences, user_settings, theme_color').eq('id', currentUser.supabaseId).maybeSingle();
     if (error) { console.log('[PairdUps] Subscription load error:', error); return; }
     if (profile) {
+      // Keep profiles.email in sync with the auth email (the source of truth). This
+      // catches the confirm-then-reload path, where currentUser.email already matches
+      // auth but the profiles column can still hold a stale address that server-side
+      // notification emails (cancellations, scheduled alerts) would otherwise use.
+      // Logs the affected row count so a silent RLS 0-row update is visible.
+      try {
+        if (authEmail && profile.email && profile.email.toLowerCase() !== authEmail.toLowerCase()) {
+          var { data: _emailUpd, error: _emailUpdErr } = await _supabase.from('profiles').update({ email: authEmail }).eq('id', currentUser.supabaseId).select();
+          if (_emailUpdErr) { console.log('[PairdUps] profiles.email reconcile error:', _emailUpdErr); }
+          else { console.log('[PairdUps] profiles.email reconciled to auth:', profile.email, '\u2192', authEmail, '(rows updated:', (_emailUpd ? _emailUpd.length : 0) + ')'); }
+        }
+      } catch(_emailRecErr) { console.log('[PairdUps] profiles.email reconcile exception:', _emailRecErr); }
       currentUser.subscriptionTier = profile.subscription_tier || 'free';
       currentUser.subscriptionExpires = profile.subscription_expires_at || null;
       console.log('[PairdUps] Subscription:', currentUser.subscriptionTier, 'expires:', currentUser.subscriptionExpires, 'stripe_cust:', profile.stripe_customer_id, 'stripe_sub:', profile.stripe_subscription_id);
