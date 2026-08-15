@@ -1666,6 +1666,15 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <button onclick="closeModal('modal-filter-active')" style="width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35)">OK</button>
   </div>
 </div>
+<!-- EMAIL CHANGE CONFIRMATION MODAL -->
+<div class="modal-bg" id="modal-email-change" onclick="if(event.target===this)closeModal('modal-email-change')" style="align-items:center;justify-content:center;z-index:300">
+  <div class="modal-card" style="max-width:360px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:44px;margin-bottom:10px">📧</div>
+    <div style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:10px">Check your inbox to confirm</div>
+    <p id="email-change-msg" style="font-size:13px;color:var(--gray);line-height:1.6;margin:0 0 20px"></p>
+    <button onclick="closeModal('modal-email-change')" style="width:100%;background:var(--pink);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(255,59,127,0.35)">Got it</button>
+  </div>
+</div>
 <div class="modal-bg" id="modal-rename-filter" onclick="if(event.target===this)closeModal('modal-rename-filter')" style="align-items:center;justify-content:center;z-index:300">
   <div class="modal-card" style="max-width:340px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="font-size:40px;margin-bottom:8px">✏️</div>
@@ -3811,6 +3820,37 @@ async function subscribeToPlan(plan) {
 async function loadSubscriptionStatus() {
   if (!_supabase || !currentUser.supabaseId) { console.log('[PairdUps] loadSubscriptionStatus skipped — no supabase or userId'); return; }
   try {
+    // Detect and sync a confirmed email change: after the user clicks the confirm link
+    // Supabase updates auth.users.email, so on next load the session's email will differ
+    // from what we have locally. Reconcile it.
+    try {
+      var sess = await _supabase.auth.getSession();
+      var authEmail = sess?.data?.session?.user?.email;
+      if (authEmail && currentUser.email && authEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
+        console.log('[PairdUps] Detected confirmed email change:', currentUser.email, '→', authEmail);
+        var oldEmail = currentUser.email;
+        currentUser.email = authEmail;
+        // Update local caches
+        try {
+          if (typeof USER_DB !== 'undefined' && USER_DB) {
+            USER_DB[authEmail] = Object.assign({}, currentUser);
+            if (USER_DB[oldEmail]) delete USER_DB[oldEmail];
+            _saveDB(USER_DB);
+          }
+          _saveSession(currentUser);
+        } catch(dbErr) { console.log('[PairdUps] USER_DB sync error:', dbErr); }
+        // Also update the profiles table's email column so it stays in sync
+        try {
+          await _supabase.from('profiles').update({ email: authEmail }).eq('id', currentUser.supabaseId);
+          console.log('[PairdUps] profiles.email updated to match auth');
+        } catch(profileErr) { console.log('[PairdUps] profiles.email sync error:', profileErr); }
+        // Refresh the Edit Profile input field if it's rendered
+        var emailInput = document.getElementById('edit-email');
+        if (emailInput) emailInput.value = authEmail;
+        showToast('Email address confirmed and updated ✓');
+      }
+    } catch(emailSyncErr) { console.log('[PairdUps] Email sync check error:', emailSyncErr); }
+
     var { data: profile, error } = await _supabase.from('profiles').select('subscription_tier, subscription_expires_at, stripe_customer_id, stripe_subscription_id, alert_preferences, user_settings, theme_color').eq('id', currentUser.supabaseId).maybeSingle();
     if (error) { console.log('[PairdUps] Subscription load error:', error); return; }
     if (profile) {
@@ -8160,7 +8200,8 @@ function updateUserListingsProfile() {
 
 function saveProfile() {
   const name  = document.getElementById('edit-name').value.trim()  || currentUser.name;
-  const email = document.getElementById('edit-email').value.trim() || currentUser.email;
+  const emailRaw = document.getElementById('edit-email').value.trim() || currentUser.email;
+  const email = emailRaw.toLowerCase(); // normalize to avoid case-sensitivity mismatches
   const ageInput = document.getElementById('edit-age').value;
   const age   = ageInput !== '' ? ageInput : (currentUser.age || '');
   const birthday = document.getElementById('edit-birthday') ? document.getElementById('edit-birthday').value : '';
@@ -8176,17 +8217,57 @@ function saveProfile() {
   const pills = document.querySelectorAll('#screen-editprofile .pill.active');
   const interests = Array.from(pills).map(p => p.textContent.trim());
 
-  // Update currentUser
+  // ── Detect email change ─────────────────────────────────
+  // If the email changed, we must NOT update currentUser.email locally, USER_DB, or
+  // the profiles row yet. The change is pending until the user clicks the confirm
+  // link in the email that Supabase sends to the NEW address. On confirmation
+  // Supabase updates auth.users.email; on next sign-in we'll pick up the new email.
+  var emailChanged = email && currentUser.email && email !== currentUser.email.toLowerCase();
+  if (emailChanged) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('Please enter a valid email address.'); return;
+    }
+    if (_supabase) {
+      (async function() {
+        try {
+          var { error } = await _supabase.auth.updateUser({ email: email });
+          if (error) {
+            console.log('[PairdUps] Email change error:', error);
+            showToast('Email change failed: ' + (error.message || 'unknown error'));
+            // Revert the input field so it doesn't look like the change succeeded
+            var emailInput = document.getElementById('edit-email');
+            if (emailInput) emailInput.value = currentUser.email;
+            return;
+          }
+          // Show the confirmation modal
+          var msgEl = document.getElementById('email-change-msg');
+          if (msgEl) msgEl.innerHTML = 'We sent a confirmation link to <strong>' + email + '</strong>. Click the link in that email to finish switching. Until you confirm, your account will keep using <strong>' + currentUser.email + '</strong>.';
+          openModal('modal-email-change');
+          // Revert the input display so it shows the current (unchanged) email
+          var emailInput = document.getElementById('edit-email');
+          if (emailInput) emailInput.value = currentUser.email;
+        } catch(e) {
+          console.log('[PairdUps] Email change unexpected error:', e);
+          showToast('Something went wrong. Please try again.');
+        }
+      })();
+    }
+    // Don't fall through to the rest of the save when only email changed:
+    // still allow other field changes to persist below by continuing execution.
+  }
+
+  // Update currentUser (except email, which only changes after Supabase confirmation)
   currentUser.name      = name;
-  currentUser.email     = email;
+  // Only set email locally if it did NOT change (i.e., they left it the same)
+  if (!emailChanged) currentUser.email = email;
   currentUser.age       = age;
   currentUser.birthday  = birthday;
   currentUser.loc       = loc;
   currentUser.bio       = bio;
   currentUser.interests = interests;
 
-  // Persist to USER_DB so login restores it
-  if (email) { USER_DB[email] = Object.assign({}, currentUser); _saveDB(USER_DB); _saveSession(currentUser); }
+  // Persist to USER_DB so login restores it — key by CURRENT (unchanged) email
+  if (currentUser.email) { USER_DB[currentUser.email] = Object.assign({}, currentUser); _saveDB(USER_DB); _saveSession(currentUser); }
 
   // Sync to Supabase
   if (_supabase && currentUser.supabaseId) {
@@ -8210,7 +8291,7 @@ function saveProfile() {
               await fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ type: 'profile_completed', to_email: email, to_user_id: currentUser.supabaseId, to_name: name })
+                body: JSON.stringify({ type: 'profile_completed', to_email: currentUser.email, to_user_id: currentUser.supabaseId, to_name: name })
               });
               console.log('[PairdUps] Profile completed email sent');
             }
