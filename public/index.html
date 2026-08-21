@@ -7150,8 +7150,32 @@ async function loadSupabaseConversations() {
   } catch(e) { console.log('Supabase conversations error:', e); }
 }
 
+// Discover feed ordering — mirrors the sort in loadSupabaseListings so the
+// cached first paint matches the sorted Supabase re-render (prevents load flicker).
+// Operates on the normalized listing object (isPinned/isFeatured/ownerTier/dateVal).
+function _discoverSortCmp(a, b) {
+  // Pinned listings always first
+  if (a.isPinned && !b.isPinned) return -1;
+  if (!a.isPinned && b.isPinned) return 1;
+  // Featured listings next
+  if (a.isFeatured && !b.isFeatured) return -1;
+  if (!a.isFeatured && b.isFeatured) return 1;
+  // Paid tiers (premium + gold) above free
+  var aPaid = (a.ownerTier === 'premium' || a.ownerTier === 'gold') ? 1 : 0;
+  var bPaid = (b.ownerTier === 'premium' || b.ownerTier === 'gold') ? 1 : 0;
+  if (aPaid !== bPaid) return bPaid - aPaid;
+  // Within same tier group, soonest date first
+  var aDate = a.dateVal || '9999-12-31';
+  var bDate = b.dateVal || '9999-12-31';
+  if (aDate !== bDate) return aDate.localeCompare(bDate);
+  return 0;
+}
+
 function restoreUserListings() {
   userListings = _getListings();
+  // Sort the cached feed the SAME way Supabase will, so the first (cached) paint
+  // already matches the final order — no visible reorder flash on load.
+  userListings.sort(_discoverSortCmp);
   var changed = false;
   // Before rendering, sync current user's profile into their listings
   for (var i = 0; i < userListings.length; i++) {
