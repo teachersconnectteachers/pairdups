@@ -106,6 +106,11 @@ body{background:#d0d0d8;display:flex;justify-content:center;align-items:center;m
 .need-ideas-btn:hover{transform:scale(1.05)}
 .need-ideas-btn:active{transform:scale(0.96)}
 @media (prefers-reduced-motion:reduce){.need-ideas-btn{animation:none}}
+@keyframes puSpin{to{transform:rotate(360deg)}}
+.discover-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:56px 20px}
+.discover-loading .pu-spinner{width:34px;height:34px;border:3px solid var(--gray-border);border-top-color:var(--pink);border-radius:50%;animation:puSpin 0.8s linear infinite}
+.discover-loading .pu-loading-msg{font-size:13px;font-weight:700;color:var(--gray)}
+@media (prefers-reduced-motion:reduce){.discover-loading .pu-spinner{animation-duration:1.6s}}
 .scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .scroll-area::-webkit-scrollbar{display:none}
 
@@ -4734,6 +4739,10 @@ async function logOut() {
     try { await _supabase.auth.signOut({ scope: 'global' }); } catch(e) {}
   }
   isSignedIn = false;
+  // Reset the Discover first-load veil so the next sign-in gets one clean paint
+  _discoverInitialVeil = 'pending';
+  var _puOv = document.getElementById('discover-loading'); if (_puOv) _puOv.remove();
+  var _puCc = document.querySelector('#screen-discover .cards-container'); if (_puCc) _puCc.style.opacity = '1';
   screenHistory = [];
   currentUser = { name:'', age:'', loc:'', bio:'', email:'', password:'', interests:[], photo:'', facePos:'center 20%', isNewUser:false };
   // Clear ALL session and cached data
@@ -7020,6 +7029,12 @@ async function loadSupabaseListings() {
     // Re-run badge loading as safety net (cards now exist in DOM)
     setTimeout(loadCardBadges, 800);
     console.log('[PairdUps] Loaded ' + rows.length + ' listings from Supabase');
+    // First-load reveal: settle ordering (expired to bottom) then lift the veil,
+    // so the feed appears once, already in its final order.
+    if (_discoverInitialVeil === 'active') {
+      try { filterExpiredFromDiscover(); markExpiredCards(); } catch(e) {}
+      _revealDiscoverFeed();
+    }
   } catch(e) { console.log('Supabase listings error:', e); }
 }
 
@@ -7171,6 +7186,31 @@ function _discoverSortCmp(a, b) {
   return 0;
 }
 
+// One-shot Discover first-load veil: show a spinner over the feed until the
+// sorted Supabase data has painted, so the user only ever sees the FINAL order
+// (no post-populate reorder as Gold/pinned arrive). States: pending -> active -> done.
+var _discoverInitialVeil = 'pending';
+function _veilDiscoverFeed() {
+  var sa = document.querySelector('#screen-discover .scroll-area');
+  var cc = document.querySelector('#screen-discover .cards-container');
+  if (!sa || !cc || document.getElementById('discover-loading')) return;
+  cc.style.transition = 'opacity 0.25s ease';
+  cc.style.opacity = '0';
+  var ov = document.createElement('div');
+  ov.id = 'discover-loading';
+  ov.className = 'discover-loading';
+  ov.innerHTML = '<div class="pu-spinner"></div><div class="pu-loading-msg">Finding PairdUps\u2026</div>';
+  sa.insertBefore(ov, cc);
+}
+function _revealDiscoverFeed() {
+  if (_discoverInitialVeil === 'done') return;
+  _discoverInitialVeil = 'done';
+  var ov = document.getElementById('discover-loading');
+  if (ov) ov.remove();
+  var cc = document.querySelector('#screen-discover .cards-container');
+  if (cc) cc.style.opacity = '1';
+}
+
 function restoreUserListings() {
   userListings = _getListings();
   // Sort the cached feed the SAME way Supabase will, so the first (cached) paint
@@ -7194,6 +7234,14 @@ function restoreUserListings() {
   }
   if (changed) _saveListings(userListings);
   toggleMyListingsEmpty();
+  // On the very first signed-in load, veil the feed until the sorted Supabase
+  // data paints so the final order is the only version the user sees.
+  if (_discoverInitialVeil === 'pending' && _supabase && currentUser.supabaseId) {
+    _discoverInitialVeil = 'active';
+    _veilDiscoverFeed();
+    // Safety net: never leave the feed veiled if the network is slow/offline.
+    setTimeout(function() { if (_discoverInitialVeil === 'active') _revealDiscoverFeed(); }, 4000);
+  }
 }
 function toggleMyListingsEmpty() {
   var emptyEl = document.getElementById('my-listings-empty');
