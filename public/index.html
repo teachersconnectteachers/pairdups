@@ -6768,7 +6768,7 @@ function renderUserListing(d, skipMyListings) {
     +'<div class="card-carousel" id="card-carousel-'+d.id+'">'
     +'<div class="card-carousel-track" id="card-carousel-track-'+d.id+'">'
     +'<div class="card-carousel-slide">'
-    +'<img class="card-photo" src="'+d.userPhoto+'" alt="'+esc(d.userName)+'" style="'+(d.userPhoto===_DEFAULT_AVATAR ? 'object-fit:contain;object-position:center center' : 'object-position:'+d.userFacePos)+'"'
+    +'<img loading="lazy" decoding="async" class="card-photo" src="'+d.userPhoto+'" alt="'+esc(d.userName)+'" style="'+(d.userPhoto===_DEFAULT_AVATAR ? 'object-fit:contain;object-position:center center' : 'object-position:'+d.userFacePos)+'"'
     +' onclick="event.stopPropagation();showMiniProfile(\''+esc(d.userName)+'\',\''+d.userAge+'\',\''+esc(d.userLoc)+'\',\''+esc(d.userBio)+'\','+ JSON.stringify(d.userInterests||[]) +',\''+esc(d.userPhoto)+'\',\''+esc(d.ownerEmail||'')+'\')"></div></div>'
     +'<div class="card-carousel-dots" id="card-carousel-dots-'+d.id+'" style="display:none"></div></div>'+
     '<div class="card-activity-icon">'+d.emoji+'</div>'
@@ -6792,7 +6792,7 @@ function renderUserListing(d, skipMyListings) {
     +'</div>'
     +'<div class="card-footer">'
     +'<div class="card-poster" onclick="event.stopPropagation();showMiniProfile(\''+esc(d.userName)+'\',\''+d.userAge+'\',\''+esc(d.userLoc)+'\',\''+esc(d.userBio)+'\','+ JSON.stringify(d.userInterests||[]) +',\''+esc(d.userPhoto)+'\',\''+esc(d.ownerEmail||'')+'\')">'
-    +'<div class="poster-avatar"><img src="'+d.userPhoto+'" alt="'+esc(d.userName)+'" style="object-position:'+d.userFacePos+'"></div>'
+    +'<div class="poster-avatar"><img loading="lazy" decoding="async" src="'+d.userPhoto+'" alt="'+esc(d.userName)+'" style="object-position:'+d.userFacePos+'"></div>'
     +'<div><div class="poster-name">'+d.userName+(d.userAge?', '+d.userAge:'')+'</div>'
     +'<div class="poster-loc">'+d.userLoc+'</div></div></div>'
     +'<button class="btn-sm" onclick="event.stopPropagation();joinListing(this)">Send Request</button>'
@@ -6866,7 +6866,7 @@ function initCardCarousel(listingId, photos) {
   // Build slides
   var slidesHtml = '';
   photos.forEach(function(p, i) {
-    slidesHtml += '<div class="card-carousel-slide"><img class="card-photo" src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+(p.facePos||'center 20%')+'"></div>';
+    slidesHtml += '<div class="card-carousel-slide"><img loading="lazy" decoding="async" class="card-photo" src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+(p.facePos||'center 20%')+'"></div>';
   });
   track.innerHTML = slidesHtml;
 
@@ -8656,7 +8656,7 @@ function renderPhotoGallery() {
   var visiblePhotos = _galleryPhotos.slice(0, limit);
   visiblePhotos.forEach(function(p, i) {
     html += '<div class="photo-gallery-item" data-photo-id="'+p.id+'" data-photo-idx="'+i+'" draggable="true">';
-    html += '<img src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+'">';
+    html += '<img loading="lazy" decoding="async" src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+p.facePos+'">';
     if (p.isPrimary) html += '<div class="photo-primary-badge">★ Main</div>';
     else html += '<div class="photo-set-main-btn" onclick="event.stopPropagation();setGalleryPrimary(\''+p.id+'\')">Set as Main</div>';
     html += '<div class="photo-order-badge">'+(i+1)+'</div>';
@@ -8931,7 +8931,7 @@ function initMiniCarousel(photos) {
 
   var slidesHtml = '';
   photos.forEach(function(p, i) {
-    slidesHtml += '<div class="photo-carousel-slide"><img src="'+p.url+'" alt="Photo '+(i+1)+'" style="width:100%;height:100%;object-fit:cover;object-position:'+(p.facePos||'center 20%')+'"></div>';
+    slidesHtml += '<div class="photo-carousel-slide"><img loading="lazy" decoding="async" src="'+p.url+'" alt="Photo '+(i+1)+'" style="width:100%;height:100%;object-fit:cover;object-position:'+(p.facePos||'center 20%')+'"></div>';
   });
   track.innerHTML = slidesHtml;
 
@@ -9020,7 +9020,7 @@ function initDetailCarousel(photos) {
   // Build slides
   var slidesHtml = '';
   photos.forEach(function(p, i) {
-    slidesHtml += '<div class="photo-carousel-slide"><img class="detail-hero-img" src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+(p.facePos||'center 20%')+'"></div>';
+    slidesHtml += '<div class="photo-carousel-slide"><img loading="lazy" decoding="async" class="detail-hero-img" src="'+p.url+'" alt="Photo '+(i+1)+'" style="object-position:'+(p.facePos||'center 20%')+'"></div>';
   });
   track.innerHTML = slidesHtml;
 
