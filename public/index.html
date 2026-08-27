@@ -706,7 +706,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
           </div>
         </div>
         <div style="position:relative;flex-shrink:0;display:none" id="alert-bell-wrap">
-          <button onclick="showAlertNotifications()" style="background:none;border:none;cursor:pointer;padding:6px;position:relative">
+          <button onclick="showAlertNotifications()" aria-label="Notifications" style="background:none;border:none;cursor:pointer;padding:6px;position:relative">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <span id="alert-bell-badge" style="display:none;position:absolute;top:2px;right:2px;background:#DC2626;color:#fff;font-size:8px;font-weight:800;min-width:14px;height:14px;border-radius:50%;display:none;align-items:center;justify-content:center;border:2px solid #fff">0</span>
           </button>
@@ -819,7 +819,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
       <button onclick="clearLocationFilter()" style="background:none;border:none;color:var(--pink);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;padding:8px">✕ Remove Location Filter</button>
     </div>
   </div>
-  <button class="fab" onclick="goToCreate()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+  <button class="fab" onclick="goToCreate()" aria-label="Create a new PairdUp"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
   <div class="bottom-nav" id="nav-discover">
     <div class="nav-item active" onclick="navTo('discover')"><div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><span class="nav-label">Discover</span></div>
     <div class="nav-item" onclick="navTo('my')"><div class="nav-icon" style="position:relative"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="notif-badge my-pairdup-badge" style="display:none">0</div></div><span class="nav-label">My PairdUps</span></div>
@@ -832,7 +832,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <!-- DETAIL -->
 <div class="screen" id="screen-detail">
   <div class="detail-hero">
-    <button class="detail-back" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <button class="detail-back" onclick="goBack()" aria-label="Go back"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
     <div class="detail-hero-badges"><div class="card-cat-badge" id="d-cat" style="position:static"></div><div class="card-type-badge badge-fun" id="d-type" style="position:static"></div><div class="card-type-badge badge-fun" id="d-group-type" style="position:static;font-size:10px;padding:3px 10px"></div><div id="d-featured-badge" style="display:none;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:50px;box-shadow:0 2px 8px rgba(245,158,11,0.4)">⭐ Featured</div></div>
     <div class="photo-carousel" id="detail-carousel">
       <div class="photo-carousel-track" id="detail-carousel-track">
@@ -884,7 +884,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 
 <!-- CREATE / EDIT -->
 <div class="screen" id="screen-create">
-  <div class="screen-header"><button class="back-btn" onclick="checkUnsavedChanges(goBack)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button><span class="screen-title" id="create-screen-title">Create a PairdUp</span></div>
+  <div class="screen-header"><button class="back-btn" onclick="checkUnsavedChanges(goBack)" aria-label="Go back"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button><span class="screen-title" id="create-screen-title">Create a PairdUp</span></div>
   <div class="scroll-area"><div class="create-form">
     <div class="form-group"><label class="form-label" style="display:flex;justify-content:space-between;align-items:center">Title * <span onclick="openModal('modal-pairdup-ideas')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('modal-pairdup-ideas')}" class="need-ideas-btn" role="button" tabindex="0" aria-label="Need ideas? Open PairdUp idea suggestions">💡 Need Ideas?</span></label><input type="text" class="form-input" placeholder="e.g. Coffee &amp; Conversation" id="cf-title" maxlength="60" oninput="markFormDirty()"></div>
     <div class="form-group"><span class="form-section-label">Activity Type *</span>
@@ -994,7 +994,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <div class="screen" id="screen-my">
   <div class="my-header">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-      <button class="back-btn" onclick="goBackFromMyPairdups()" style="flex-shrink:0"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="back-btn" onclick="goBackFromMyPairdups()" aria-label="Go back" style="flex-shrink:0"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
       <div class="my-title" style="margin-bottom:0">My PairdUps</div>
     </div>
     <div class="tab-bar">
@@ -1084,7 +1084,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <div class="screen" id="screen-messages">
   <div class="msgs-header">
     <div style="display:flex;align-items:center;gap:8px">
-      <button class="back-btn" onclick="navTo('discover')" style="flex-shrink:0"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="back-btn" onclick="navTo('discover')" aria-label="Go back" style="flex-shrink:0"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
       <div class="msgs-title">Messages</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -1120,11 +1120,11 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <!-- CHAT -->
 <div class="screen" id="screen-chat">
   <div class="chat-header">
-    <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <button class="back-btn" onclick="goBack()" aria-label="Go back"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
     <div class="chat-avatar"><img id="chat-hdr-img" src="" alt=""></div>
     <div style="flex:1"><div class="chat-name" id="chat-hdr-name"></div><div class="chat-sub" id="chat-hdr-sub"></div></div>
     <button id="chat-search-toggle" onclick="toggleChatSearch()" style="background:none;border:none;cursor:pointer;padding:6px;margin-right:2px" title="Hide Search Bar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--gray)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
-    <button class="chat-menu-btn" onclick="toggleChatMenu()" id="chat-menu-btn">
+    <button class="chat-menu-btn" onclick="toggleChatMenu()" id="chat-menu-btn" aria-label="Chat options">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
       <div class="chat-menu-dropdown" id="chat-menu-dropdown">
         <div class="chat-menu-item" onclick="showToast('User reported.');closeChatMenu()"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Report User</div>
@@ -1165,7 +1165,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   </div></div>
   <div class="chat-input-bar" id="chat-input-bar-normal">
     <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeydown="if(event.key==='Enter')sendMsg()">
-    <button class="send-btn" onclick="sendMsg()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    <button class="send-btn" onclick="sendMsg()" aria-label="Send message"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
   </div>
   <div id="chat-blocked-bar" style="display:none;padding:12px 14px 20px;text-align:center;border-top:1px solid var(--gray-border);background:#FEF2F2;flex-shrink:0">
     <div style="font-size:12px;color:#DC2626;font-weight:600;margin-bottom:8px">🚫 You have blocked this user</div>
@@ -1709,7 +1709,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <button onclick="clearAllAlerts()" id="alerts-clear-all-btn" style="display:none;background:#FEF2F2;color:#DC2626;border:none;border-radius:50px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">Clear All</button>
-        <button onclick="closeModal('modal-alerts-panel')" style="background:var(--gray-light);border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
+        <button onclick="closeModal('modal-alerts-panel')" aria-label="Close notifications" style="background:var(--gray-light);border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
       </div>
     </div>
     <div id="alerts-panel-list" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -1747,7 +1747,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
 <div class="modal-bg" id="modal-filter" onclick="if(event.target===this)closeModal('modal-filter')">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="filter-header"><div class="filter-title">Filter PairdUps</div><button class="filter-close" onclick="closeModal('modal-filter')">✕</button></div>
+    <div class="filter-header"><div class="filter-title">Filter PairdUps</div><button class="filter-close" onclick="closeModal('modal-filter')" aria-label="Close filter">✕</button></div>
     <div class="filter-section">
       <span class="filter-label">Country</span>
       <div class="country-pills">
@@ -1890,7 +1890,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   <div class="map-inner">
     <div class="map-header">
       <div class="map-title-text" id="map-title-text">Location</div>
-      <button class="map-close" onclick="closeMapModal()">✕</button>
+      <button class="map-close" onclick="closeMapModal()" aria-label="Close map">✕</button>
     </div>
     <div id="leaflet-map" style="width:100%;flex:1;z-index:1"></div>
     <div id="map-not-found" style="display:none;position:absolute;top:50px;left:10px;right:10px;z-index:10;background:rgba(255,255,255,0.95);border-radius:12px;padding:14px 16px;box-shadow:0 4px 18px rgba(0,0,0,.15);text-align:center">
@@ -3468,7 +3468,7 @@ function showFullscreenGallery(photos) {
     overlay = document.createElement('div');
     overlay.id = 'fullscreen-gallery-overlay';
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center';
-    overlay.innerHTML = '<button onclick="closeFullscreenGallery()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10001"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
+    overlay.innerHTML = '<button onclick="closeFullscreenGallery()" aria-label="Close gallery" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10001"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
       + '<div style="width:100%;max-width:500px;height:70vh;position:relative;overflow:hidden"><div class="photo-carousel" id="fs-carousel" style="height:100%"><div class="photo-carousel-track" id="fs-carousel-track" style="height:100%"></div><div class="photo-carousel-dots" id="fs-carousel-dots"></div></div></div>'
       + '<div id="fs-gallery-counter" style="color:#fff;font-size:13px;margin-top:12px;font-weight:600"></div>';
     document.body.appendChild(overlay);
