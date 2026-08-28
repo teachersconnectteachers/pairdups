@@ -1,7 +1,7 @@
 {
   "rewrites": [
     { "source": "/admin.html", "destination": "/admin.html" },
-    { "source": "/((?!icons|manifest|sw|favicon|admin|robots).*)", "destination": "/index.html" }
+    { "source": "/((?!icons|manifest|sw|favicon|admin|robots|sitemap).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
