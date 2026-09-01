@@ -602,6 +602,8 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   </div>
 </div>
 
+<div class="offline-banner" id="offline-banner" role="status" aria-live="polite" style="display:none;flex-shrink:0;align-items:center;justify-content:center;text-align:center;background:var(--dark);color:#fff;font-size:12px;font-weight:700;padding:8px 16px;gap:6px">You're offline — some features are paused until you reconnect.</div>
+
 <!-- WELCOME -->
 <div class="screen active" id="screen-welcome">
   <div class="welcome-logo" style="background:#fff;border:2.5px solid var(--pink);position:relative"><div style="display:flex;align-items:flex-end;gap:2px;position:relative;padding:10px 10px 6px">
@@ -1167,7 +1169,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
   </div></div>
   <div class="chat-input-bar" id="chat-input-bar-normal">
     <input class="chat-input" placeholder="Type a message..." id="chat-input-field" onkeydown="if(event.key==='Enter')sendMsg()">
-    <button class="send-btn" onclick="sendMsg()" aria-label="Send message"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    <button class="send-btn" id="chat-send-btn" onclick="sendMsg()" aria-label="Send message"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
   </div>
   <div id="chat-blocked-bar" style="display:none;padding:12px 14px 20px;text-align:center;border-top:1px solid var(--gray-border);background:#FEF2F2;flex-shrink:0">
     <div style="font-size:12px;color:#B91C1C;font-weight:600;margin-bottom:8px">🚫 You have blocked this user</div>
@@ -7257,6 +7259,7 @@ function toggleMyListingsEmpty() {
 }
 
 async function saveListing() {
+  if (!navigator.onLine) { showToast("You're offline. You can't post this right now — please reconnect and try again."); return; }
   const title = document.getElementById('cf-title').value.trim();
   const desc  = document.getElementById('cf-desc').value.trim();
   const venue0 = document.getElementById('cf-venue').value.trim();
@@ -7815,6 +7818,7 @@ function sendMsg() {
   const inp = document.getElementById('chat-input-field');
   const text = inp.value.trim();
   if (!text) return;
+  if (!navigator.onLine) { showToast("You're offline. Your message can't be sent right now — please reconnect and try again."); return; }
   // Check if this conversation is blocked (either direction)
   var activeId = document.getElementById('chat-messages')?.dataset?.activeConvo;
   if (activeId) {
@@ -9891,6 +9895,18 @@ function showMiniProfile(name, age, loc, bio, interests, photo, ownerEmail) {
 // ── Utility ────────────────────────────────────────────────
 function esc(s) { return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/</g,'\\x3C').replace(/>/g,'\\x3E'); }
 function escAttr(s) { return esc(s).replace(/"/g,'&quot;'); }
+function _setOnlineUI() {
+  var offline = !navigator.onLine;
+  var banner = document.getElementById('offline-banner');
+  if (banner) banner.style.display = offline ? 'flex' : 'none';
+  var saveBtn = document.getElementById('create-save-btn');
+  if (saveBtn) saveBtn.disabled = offline;
+  var sendBtn = document.getElementById('chat-send-btn');
+  if (sendBtn) sendBtn.disabled = offline;
+}
+window.addEventListener('online', _setOnlineUI);
+window.addEventListener('offline', _setOnlineUI);
+_setOnlineUI();
 function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 // ── Modals ─────────────────────────────────────────────────
