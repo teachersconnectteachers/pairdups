@@ -881,7 +881,7 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <h3 style="font-size:18px;font-weight:900;margin-bottom:4px;color:var(--dark)">Send Join Request</h3>
     <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.5">Add a message to introduce yourself (optional but recommended!)</p>
     <textarea id="join-msg-input" class="form-input" placeholder="Hey! I'd love to join — I'm really into this activity..." style="min-height:80px;margin-bottom:14px;resize:vertical"></textarea>
-    <button class="btn-primary" onclick="sendJoinRequest()" style="margin-bottom:8px">✨ Send Request</button>
+    <button class="btn-primary" id="join-send-btn" onclick="sendJoinRequest()" style="margin-bottom:8px">✨ Send Request</button>
     <button onclick="closeModal('modal-join')" style="background:none;border:none;color:var(--gray);font-size:13px;font-weight:600;cursor:pointer;padding:8px;font-family:inherit;width:100%">Cancel</button>
   </div>
 </div>
@@ -5628,6 +5628,7 @@ function openJoinModal(posterName, posterPhoto, pairupTitle, posterAge, posterLo
 }
 async function sendJoinRequest() {
   var msg = document.getElementById('join-msg-input').value.trim();
+  if (!navigator.onLine) { showToast("You're offline. Your request can't be sent right now — please reconnect and try again."); return; }
   closeModal('modal-join');
   var poster = _currentDetailPoster;
   if (!poster.name) { showToast('Request sent! ✨'); return; }
@@ -9903,6 +9904,8 @@ function _setOnlineUI() {
   if (saveBtn) saveBtn.disabled = offline;
   var sendBtn = document.getElementById('chat-send-btn');
   if (sendBtn) sendBtn.disabled = offline;
+  var joinBtn = document.getElementById('join-send-btn');
+  if (joinBtn) joinBtn.disabled = offline;
 }
 window.addEventListener('online', _setOnlineUI);
 window.addEventListener('offline', _setOnlineUI);
@@ -10648,6 +10651,7 @@ function updateMyActivity() {
 // ── Shared: create a new listing from the Create-PairdUp form ─────
 // Extracted so both the normal create path and the duplicate-confirm modal can call it.
 function _createListingFromForm(title, desc, venue, dateVal, timeVal, endTimeVal, city, catName, pairType, lookingFor, groupType, dateStr, emoji, recurring, recurInterval, recurLimit) {
+  if (!navigator.onLine) { showToast("You're offline. You can't post this right now — please reconnect and try again."); return; }
   var newId = 'user-' + Date.now();
   var listingData = {
     id: newId, title: title, desc: desc, venue: venue, dateVal: dateVal,
