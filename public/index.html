@@ -6981,11 +6981,11 @@ async function loadSupabaseListings() {
     document.querySelectorAll('.listing-card[data-owner-email]').forEach(function(c) {
       if (c.dataset.ownerEmail) c.remove();
     });
-    // Clear my-listings container of dynamic cards (skip if only refreshing Discover or cards already exist)
+    // Clear my-listings container the same way Discover is reconciled above —
+    // only skipped for a pin/feature-triggered Discover-only refresh
+    // (_skipMyListingsRebuild) — so an unsynced/orphaned local listing can't linger here.
     var myListingsContainer = document.getElementById('my-listings-container');
-    var existingMyCards = myListingsContainer ? myListingsContainer.querySelectorAll('.my-card').length : 0;
-    var shouldRebuildMyListings = !_skipMyListingsRebuild && (existingMyCards === 0 || _forceMyListingsRebuild);
-    _forceMyListingsRebuild = false;
+    var shouldRebuildMyListings = !_skipMyListingsRebuild;
     if (shouldRebuildMyListings && myListingsContainer) {
       myListingsContainer.querySelectorAll('.my-card').forEach(function(c) { c.remove(); });
     }
