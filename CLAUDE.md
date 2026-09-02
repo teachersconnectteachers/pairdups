@@ -100,6 +100,27 @@ All shipped from prior sessions and are deployed unless noted:
   flows. Closes the gap where a listing whose Supabase insert failed (e.g.
   while offline) could linger in My PairdUps forever after disappearing from
   Discover.
+- **Discover filter indicator** — a numbered badge (`#filter-badge-count`,
+  reusing the `.notif-badge` style, `#D6235F`) on the Filter pill shows how
+  many slide-up filters are currently active: Location (State/Province or
+  City, counted as one combined dimension), Age range, Poster Type, and
+  Group Size. Category pills and the Country USA/Canada mode switch are
+  deliberately excluded — category pills already show their own active
+  state, and Country always has exactly one side selected, so it isn't an
+  on/off filter. `updateFilterBadge()` runs at every point the applied
+  filter state actually changes.
+- **Discover filter sync bugs fixed** — three related bugs where the feed,
+  the Filter modal's fields, and the badge above could disagree with each
+  other are fixed, all via the same pattern (a silent re-apply through
+  `applyFilter(true)`): `navTo()` no longer clears the location filter when
+  tapping the Discover tab — it silently re-applies whatever filters are
+  set once `loadSupabaseListings()` finishes repainting;
+  `filterExpiredFromDiscover()` now re-applies the active filter at the end
+  of its 500ms expired-card sweep instead of unconditionally un-hiding
+  every card; and `clearLocationFilter()` ("✕ Remove Location Filter") now
+  clears only the location fields while keeping other active filters
+  applied and reflected in the badge, with its toast updated to "Location
+  filter cleared ✓".
 
 ## Pre-launch checklist status
 
