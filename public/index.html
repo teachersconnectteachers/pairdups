@@ -10319,13 +10319,11 @@ function clearLocationFilter() {
   if (stateEl) stateEl.selectedIndex = 0;
   if (provEl) provEl.selectedIndex = 0;
   document.getElementById('filter-city').innerHTML='<option value="">— All Cities —</option>';
-  // Show all cards
-  var cards = document.querySelectorAll('#screen-discover .listing-card');
-  cards.forEach(function(card) { card.style.display = ''; });
-  // Hide no-results and reset loc tag
-  document.getElementById('no-results-location').style.display = 'none';
-  document.getElementById('loc-tag').innerHTML='<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>All Locations';
-  showToast('Filters cleared ✓');
+  // Silently re-apply whatever filters remain (category/age/poster-type/
+  // group-size) now that location is cleared — this recomputes the feed,
+  // the loc-tag label, the no-results message, and the badge together.
+  applyFilter(true);
+  showToast('Location filter cleared ✓');
 }
 
 // ── Pills/toggles ──────────────────────────────────────────
