@@ -68,7 +68,7 @@ app stores.
 
 ## Recently completed (verify these stay intact)
 
-All four shipped from a prior working session and are deployed unless noted:
+All shipped from prior sessions and are deployed unless noted:
 
 - **"Need Ideas?" pill** — the Create-a-PairdUp title-field link is now a bolder,
   bordered pill with a gentle pulse (class `need-ideas-btn`, keyframe
@@ -84,8 +84,22 @@ All four shipped from a prior working session and are deployed unless noted:
 - **Image lazy loading (Item 12)** — `loading="lazy" decoding="async"` on the 6
   numerous/below-the-fold image sources (feed card photo + poster avatar, feed
   card carousel slides, gallery grid, gallery-viewer + detail carousels). Single
-  detail-hero images left eager on purpose. NOTE: confirm this is deployed live
-  (search view-source for `loading="lazy"`).
+  detail-hero images left eager on purpose. Confirmed deployed live.
+- **Offline awareness (Item 8)** — persistent top banner (`#offline-banner`)
+  driven by `navigator.onLine` + the `online`/`offline` window events
+  (`_setOnlineUI()`). Create/Edit PairdUp, Send Message, and Send/Join Request
+  are all blocked offline with a clear toast, guarded at their actual write
+  chokepoints rather than just their trigger buttons: `_createListingFromForm()`
+  (covers both the normal create path and the duplicate-confirm "Create
+  Anyway" path via `_confirmDuplicatePairdUp()`), `sendMsg()`, and
+  `sendJoinRequest()`.
+- **My PairdUps reconciliation fix** — `loadSupabaseListings()` now tears down
+  and repaints My PairdUps from the confirmed Supabase rows the same way
+  Discover already does (removed the old empty-check gate), while preserving
+  the `_skipMyListingsRebuild` guard used by the pin/feature optimistic-update
+  flows. Closes the gap where a listing whose Supabase insert failed (e.g.
+  while offline) could linger in My PairdUps forever after disappearing from
+  Discover.
 
 ## Pre-launch checklist status
 
@@ -96,20 +110,38 @@ All four shipped from a prior working session and are deployed unless noted:
 - [x] Item 5 — Downgrade/cancellation end-to-end
 - [x] Item 6 — Cross-device sync (alert prefs + user_settings + theme_color)
 - [x] Item 7 — Empty states audit
-- [ ] Item 8 — Slow network / offline behavior (not started)
+- [x] Item 8 — Slow network / offline behavior. App degrades gracefully
+      offline: cached content still shows, no hanging/blank states. A
+      persistent top banner reads "You're offline — some features are paused
+      until you reconnect." All three server-writing actions are blocked
+      offline — create/edit PairdUp (guarded at the shared
+      `_createListingFromForm()` chokepoint, which also covers the
+      duplicate-warning "Create Anyway" path via
+      `_confirmDuplicatePairdUp()`), send message (`sendMsg()`), and join
+      request (`sendJoinRequest()`). See "Recently completed" above.
 - [ ] Item 9 — Push deep-link "second tab open" edge case; also verify no saved
       OneSignal template/scheduled push references the stale
       `p_Q9_Pear%20Pic.png` image (cosmetic, from an old test push)
 - [x] Item 10 — Console error audit (clean; only benign non-app errors)
-- [ ] Item 11 — Lighthouse audit — **IN PROGRESS.** Note: Lighthouse removed the
-      PWA category (v12+); it now scores Performance, Accessibility, Best
-      Practices, SEO. Check PWA installability separately via DevTools →
-      Application → Manifest + the address-bar install icon. Run signed-in on
-      mobile emulation. Watch for a "lazily-loaded LCP image" flag on the first
-      feed card (targeted fix: mark the top card's image eager).
-- [x] Item 12 — Image lazy loading (code done; confirm deployed)
+- [x] Item 11 — Lighthouse audit. Mobile scores (signed in): Performance 84,
+      Accessibility 100, Best Practices 100, SEO 100. Note: Lighthouse removed
+      the PWA category (v12+); PWA installability verified separately via
+      DevTools → Application → Manifest + the address-bar install icon.
+- [x] Item 12 — Image lazy loading (deployed and live)
 - [ ] Item 13 — "Rate the app" prompt (after Capacitor)
 - [x] Email-change fix (original launch blocker)
+
+## Post-launch / backlog
+
+- **`profile_visitors` insert returns 401 / RLS policy violation** on
+  profile views. Likely needs a Supabase-dashboard row-level-security policy
+  fix on the `profile_visitors` table's insert policy, not an `index.html`
+  change.
+- **Offline queue-and-sync** — actions taken while offline (create/edit
+  PairdUp, send message, join request) are currently just blocked with a
+  toast, not queued for automatic retry on reconnect. Deliberately deferred
+  for v1, which blocks offline writes instead; revisit post-launch if it's
+  worth the added complexity.
 
 ## After the checklist: Capacitor wrap + store submission
 
