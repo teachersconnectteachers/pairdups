@@ -12569,6 +12569,10 @@ function filterExpiredFromDiscover() {
 
     expiredCards.forEach(function(c) { container.appendChild(c); });
   }
+  // Card visibility above is reset unconditionally for the expired-status
+  // reorg — re-apply whatever filters are currently set so they always win
+  // over this reorg, regardless of what triggered it.
+  applyFilter(true);
 }
 
 function applyFaceCentering() {
