@@ -4421,7 +4421,6 @@ function navTo(tab) {
       loadSupabaseConversations();
     }
   }
-  // Clear location filters when navigating to Discover
   if (tab === 'my') {
     markExpiredCards();
     updateReqBadge();
@@ -4434,20 +4433,15 @@ function navTo(tab) {
   }
   if (tab === 'discover') {
     filterExpiredFromDiscover();
-    var cards = document.querySelectorAll('#screen-discover .listing-card');
-    cards.forEach(function(card) { card.style.display = ''; });
-    var noRes = document.getElementById('no-results-location');
-    if (noRes) noRes.style.display = 'none';
-    document.getElementById('loc-tag').innerHTML='<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>All Locations';
-    // Reset filter dropdowns
-    var stateEl = document.getElementById('filter-state');
-    var provEl = document.getElementById('filter-prov');
-    if (stateEl) stateEl.selectedIndex = 0;
-    if (provEl) provEl.selectedIndex = 0;
-    document.getElementById('filter-city').innerHTML='<option value="">— All Cities —</option>';
-    // Refresh from Supabase to pick up listing edits from other users
-    // Skip if we just created a listing (Supabase insert may still be in flight)
-    if (_supabase && isSignedIn && !_listingJustCreated) { loadSupabaseListings(); }
+    // Refresh from Supabase to pick up listing edits from other users, then
+    // silently re-apply whatever filters are currently set — tapping Discover
+    // never clears anything; only "Clear All" does.
+    // Skip refresh if we just created a listing (Supabase insert may still be in flight)
+    if (_supabase && isSignedIn && !_listingJustCreated) {
+      loadSupabaseListings().then(function() { applyFilter(true); });
+    } else {
+      applyFilter(true);
+    }
   }
 }
 
@@ -10210,7 +10204,7 @@ function clearAdvancedFilters(silent) {
   if (!silent) showToast('Advanced filters cleared');
   updateFilterBadge();
 }
-function applyFilter() {
+function applyFilter(silent) {
   // Determine which country tab is active
   var isUSA = document.getElementById('wrap-state').style.display !== 'none';
   var sel = isUSA ? document.getElementById('filter-state') : document.getElementById('filter-prov');
@@ -10312,10 +10306,10 @@ function applyFilter() {
     noResultsEl.style.display = 'flex';
   } else {
     noResultsEl.style.display = 'none';
-    showToast('Filters applied — ' + visibleCount + ' PairdUp' + (visibleCount !== 1 ? 's' : '') + ' found ✓');
+    if (!silent) showToast('Filters applied — ' + visibleCount + ' PairdUp' + (visibleCount !== 1 ? 's' : '') + ' found ✓');
   }
   updateFilterBadge();
-  closeModal('modal-filter');
+  if (!silent) closeModal('modal-filter');
 }
 
 function clearLocationFilter() {
