@@ -121,6 +121,24 @@ All shipped from prior sessions and are deployed unless noted:
   clears only the location fields while keeping other active filters
   applied and reflected in the badge, with its toast updated to "Location
   filter cleared ✓".
+- **Gold alert bell: View marks read, Dismiss removes (read vs. dismissed
+  are separate states)** — The bell (`loadAlertMatches()` /
+  `checkInstantAlerts()`) surfaces new listings matching the user's saved
+  alert preferences (category/location/pair-type). It does not cover join
+  requests — those stay Messages + push, and remain a separate,
+  not-yet-built backlog item (see "Post-launch / backlog"). Alerts now
+  persist in the panel until explicitly dismissed: tapping **View** marks a
+  listing read (`getReadAlertsMap()`/`setReadAlertsMap()`, localStorage key
+  `pu_read_alerts`) and clears the bell badge count, but keeps the item in
+  the panel; only **Dismiss** removes it for good (unchanged
+  `getDismissedAlertsMap()`/`pu_dismissed_alerts`). Unread items render
+  with a bold (font-weight 800) title and a small "NEW" text tag; read
+  items drop to font-weight 500 with no tag — the distinction is
+  weight/label-based per the colorblind rule above, with `#D6235F` on the
+  tag as reinforcement only, never the sole signal. This replaces an
+  earlier fix that had every panel *open* (not just View) mark alerts seen
+  and evict them on the next open — that was the actual "stale alert"
+  cause; eviction is now driven only by Dismiss.
 
 ## Pre-launch checklist status
 
@@ -142,7 +160,12 @@ All shipped from prior sessions and are deployed unless noted:
       request (`sendJoinRequest()`). See "Recently completed" above.
 - [ ] Item 9 — Push deep-link "second tab open" edge case; also verify no saved
       OneSignal template/scheduled push references the stale
-      `p_Q9_Pear%20Pic.png` image (cosmetic, from an old test push)
+      `p_Q9_Pear%20Pic.png` image (cosmetic, from an old test push). Partial
+      progress: `checkAlertDeepLink()` opens the same alerts panel the bell
+      uses, and that panel's alerts now persist (read vs. dismissed, see
+      "Recently completed") instead of vanishing after one view — but the
+      cross-tab sync edge case itself (a second/background tab not
+      reflecting a deep-link-opened alert) is still open.
 - [x] Item 10 — Console error audit (clean; only benign non-app errors)
 - [x] Item 11 — Lighthouse audit. Mobile scores (signed in): Performance 84,
       Accessibility 100, Best Practices 100, SEO 100. Note: Lighthouse removed
