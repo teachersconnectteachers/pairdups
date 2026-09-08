@@ -11655,24 +11655,17 @@ async function loadAlertMatches() {
       }
       return matchesLoc && (matchesCat || matchesType);
     });
-    // Remove dismissed alerts (dismissal resets when listing content changes)
+    // Remove dismissed alerts (dismissal resets when listing content changes).
+    // Read/unread status (getReadAlertsMap) is display-only and never evicts
+    // a match here — an alert persists until explicitly dismissed.
     var dismissedMap = getDismissedAlertsMap();
     matched = matched.filter(function(l) { return !isListingDismissed(l, dismissedMap); });
-    // Also drop matches already shown in a previous panel view (content
-    // unchanged) — so an old match doesn't keep reappearing as if new.
-    var viewedMap = getViewedAlertsMap();
-    matched = matched.filter(function(l) { return viewedMap[l.id] !== getListingContentHash(l); });
     _alertedListings = matched;
     renderAlertPanel(matched);
   } catch(e) { console.log('[PairdUps] loadAlertMatches error:', e); renderAlertPanel([]); }
 }
 
 function renderAlertPanel(listings) {
-  if (listings.length > 0) {
-    var viewedMap = getViewedAlertsMap();
-    listings.forEach(function(l) { viewedMap[l.id] = getListingContentHash(l); });
-    setViewedAlertsMap(viewedMap);
-  }
   var listEl = document.getElementById('alerts-panel-list');
   var emptyEl = document.getElementById('alerts-panel-empty');
   var clearBtn = document.getElementById('alerts-clear-all-btn');
@@ -11688,6 +11681,7 @@ function renderAlertPanel(listings) {
   emptyEl.style.display = 'none';
   clearBtn.style.display = '';
   if (subtitle) subtitle.textContent = listings.length + ' matching PairdUp' + (listings.length > 1 ? 's' : '');
+  var readMap = getReadAlertsMap();
   listEl.innerHTML = listings.map(function(l, i) {
     var poster = l.profiles || {};
     var posterName = poster.name || 'Someone';
@@ -11695,11 +11689,17 @@ function renderAlertPanel(listings) {
     var dateStr = l.date_val ? new Date(l.date_val + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Flexible';
     var catColor = l.pair_type === 'Date' ? '#FCE4EC' : '#E8F5E9';
     var catText = l.pair_type === 'Date' ? '#C2185B' : '#2E7D32';
+    // Unread = never viewed, or content changed since it was last viewed.
+    // Distinguished by weight + an explicit "NEW" text tag (not color alone),
+    // per the colorblind-accessibility rule in CLAUDE.md.
+    var isUnread = readMap[l.id] !== getListingContentHash(l);
+    var newTag = isUnread ? '<span style="font-size:8px;font-weight:800;letter-spacing:0.3px;padding:2px 6px;border-radius:50px;background:var(--pink-dark);color:#fff">NEW</span>' : '';
     return '<div class="alert-item" data-alert-id="'+l.id+'" style="display:flex;gap:10px;padding:12px;background:var(--gray-light);border-radius:14px;align-items:flex-start;position:relative">'
       + '<div style="font-size:24px;flex-shrink:0;margin-top:2px">'+(l.emoji||'🎉')+'</div>'
       + '<div style="flex:1;min-width:0">'
-      + '<div style="font-size:13px;font-weight:800;color:var(--dark);line-height:1.3;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+l.title+'</div>'
+      + '<div style="font-size:13px;font-weight:'+(isUnread?'800':'500')+';color:var(--dark);line-height:1.3;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+l.title+'</div>'
       + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px">'
+      + newTag
       + '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:50px;background:'+catColor+';color:'+catText+'">'+l.category+'</span>'
       + '<span style="font-size:10px;color:var(--gray)">📍 '+(l.city||'')+'</span>'
       + '<span style="font-size:10px;color:var(--gray)">📅 '+dateStr+'</span>'
@@ -11721,6 +11721,13 @@ function renderAlertPanel(listings) {
 }
 
 function viewAlertPairdUp(listingId) {
+  // Mark as read (stays in the panel — only Dismiss removes it for good)
+  var listing = (_alertedListings || []).find(function(l) { return l.id === listingId; });
+  if (listing) {
+    var readMap = getReadAlertsMap();
+    readMap[listingId] = getListingContentHash(listing);
+    setReadAlertsMap(readMap);
+  }
   closeModal('modal-alerts-panel');
   // Find the listing card in Discover and click it
   var card = document.querySelector('.listing-card[data-supabase-id="'+listingId+'"]');
@@ -11764,25 +11771,25 @@ function setDismissedAlertsMap(map) {
   }
   localStorage.setItem('pu_dismissed_alerts', JSON.stringify(map));
 }
-// Read viewed alerts as a map { listingId: contentHash } — an alert
-// already shown in a previous panel view (content unchanged) is excluded
-// from later renders so it doesn't linger indefinitely. Mirrors
-// getDismissedAlertsMap()'s shape/pattern.
-function getViewedAlertsMap() {
+// Read the read/unread map { listingId: contentHash } — an alert the user
+// has tapped View on (content unchanged since) renders as read, but stays
+// in the panel; only Dismiss removes it. Mirrors getDismissedAlertsMap()'s
+// shape/pattern.
+function getReadAlertsMap() {
   try {
-    var raw = localStorage.getItem('pu_seen_alerts');
+    var raw = localStorage.getItem('pu_read_alerts');
     if (!raw) return {};
     var parsed = JSON.parse(raw);
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch(e) { return {}; }
 }
-function setViewedAlertsMap(map) {
+function setReadAlertsMap(map) {
   var keys = Object.keys(map);
   if (keys.length > 500) {
     var toRemove = keys.slice(0, keys.length - 500);
     toRemove.forEach(function(k) { delete map[k]; });
   }
-  localStorage.setItem('pu_seen_alerts', JSON.stringify(map));
+  localStorage.setItem('pu_read_alerts', JSON.stringify(map));
 }
 // True if the listing has been dismissed AND its content hasn't changed since dismissal
 function isListingDismissed(listing, dismissedMap) {
@@ -12002,7 +12009,7 @@ function saveAlertPreferences() {
   // Reset alerted listings when preferences change so existing matches get notified
   localStorage.setItem('pu_alerted_map', '{}');
   localStorage.setItem('pu_dismissed_alerts', '{}');
-  localStorage.setItem('pu_seen_alerts', '{}');
+  localStorage.setItem('pu_read_alerts', '{}');
   saveSetting('instantAlerts', true);
   if (_supabase && currentUser.supabaseId) {
     _supabase.from('profiles').update({ alert_preferences: prefs }).eq('id', currentUser.supabaseId);
