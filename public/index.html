@@ -11658,12 +11658,21 @@ async function loadAlertMatches() {
     // Remove dismissed alerts (dismissal resets when listing content changes)
     var dismissedMap = getDismissedAlertsMap();
     matched = matched.filter(function(l) { return !isListingDismissed(l, dismissedMap); });
+    // Also drop matches already shown in a previous panel view (content
+    // unchanged) — so an old match doesn't keep reappearing as if new.
+    var viewedMap = getViewedAlertsMap();
+    matched = matched.filter(function(l) { return viewedMap[l.id] !== getListingContentHash(l); });
     _alertedListings = matched;
     renderAlertPanel(matched);
   } catch(e) { console.log('[PairdUps] loadAlertMatches error:', e); renderAlertPanel([]); }
 }
 
 function renderAlertPanel(listings) {
+  if (listings.length > 0) {
+    var viewedMap = getViewedAlertsMap();
+    listings.forEach(function(l) { viewedMap[l.id] = getListingContentHash(l); });
+    setViewedAlertsMap(viewedMap);
+  }
   var listEl = document.getElementById('alerts-panel-list');
   var emptyEl = document.getElementById('alerts-panel-empty');
   var clearBtn = document.getElementById('alerts-clear-all-btn');
@@ -11754,6 +11763,26 @@ function setDismissedAlertsMap(map) {
     toRemove.forEach(function(k) { delete map[k]; });
   }
   localStorage.setItem('pu_dismissed_alerts', JSON.stringify(map));
+}
+// Read viewed alerts as a map { listingId: contentHash } — an alert
+// already shown in a previous panel view (content unchanged) is excluded
+// from later renders so it doesn't linger indefinitely. Mirrors
+// getDismissedAlertsMap()'s shape/pattern.
+function getViewedAlertsMap() {
+  try {
+    var raw = localStorage.getItem('pu_seen_alerts');
+    if (!raw) return {};
+    var parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch(e) { return {}; }
+}
+function setViewedAlertsMap(map) {
+  var keys = Object.keys(map);
+  if (keys.length > 500) {
+    var toRemove = keys.slice(0, keys.length - 500);
+    toRemove.forEach(function(k) { delete map[k]; });
+  }
+  localStorage.setItem('pu_seen_alerts', JSON.stringify(map));
 }
 // True if the listing has been dismissed AND its content hasn't changed since dismissal
 function isListingDismissed(listing, dismissedMap) {
@@ -11973,6 +12002,7 @@ function saveAlertPreferences() {
   // Reset alerted listings when preferences change so existing matches get notified
   localStorage.setItem('pu_alerted_map', '{}');
   localStorage.setItem('pu_dismissed_alerts', '{}');
+  localStorage.setItem('pu_seen_alerts', '{}');
   saveSetting('instantAlerts', true);
   if (_supabase && currentUser.supabaseId) {
     _supabase.from('profiles').update({ alert_preferences: prefs }).eq('id', currentUser.supabaseId);
