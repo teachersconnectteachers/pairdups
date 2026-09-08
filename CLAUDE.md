@@ -191,7 +191,10 @@ All shipped from prior sessions and are deployed unless noted:
 - `fredhockey23@gmail.com` — owner's primary account. **Tier varies** — he pays
   to test a tier (e.g. Gold), then refunds via Stripe. Ask which tier it's on;
   don't "correct" it.
-- Juan — currently `fredhockey23+empty6@gmail.com` — main messaging/test account.
+- Juan — currently `fredhockey23+juan@gmail.com` — main messaging/test account.
+  Changed from `fredhockey23+empty6@gmail.com` (itself changed from the
+  original `teachersshopgoods@gmail.com`) via the proper email-change flow;
+  confirmed, and `profiles.email` reconciled cleanly with no 409 error.
 - `fredhockey23+test1@gmail.com`, `+empty1..+empty6@gmail.com` — throwaway
   signups (Gmail `+` aliases route to the main inbox).
 
