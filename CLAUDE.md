@@ -158,14 +158,15 @@ All shipped from prior sessions and are deployed unless noted:
       duplicate-warning "Create Anyway" path via
       `_confirmDuplicatePairdUp()`), send message (`sendMsg()`), and join
       request (`sendJoinRequest()`). See "Recently completed" above.
-- [ ] Item 9 — Push deep-link "second tab open" edge case; also verify no saved
-      OneSignal template/scheduled push references the stale
-      `p_Q9_Pear%20Pic.png` image (cosmetic, from an old test push). Partial
-      progress: `checkAlertDeepLink()` opens the same alerts panel the bell
-      uses, and that panel's alerts now persist (read vs. dismissed, see
-      "Recently completed") instead of vanishing after one view — but the
-      cross-tab sync edge case itself (a second/background tab not
-      reflecting a deep-link-opened alert) is still open.
+- [x] Item 9 — Push deep-link + OneSignal audit. The bell's alert panel
+      (`checkAlertDeepLink()` opens it) now persists alerts until explicitly
+      dismissed, with read/unread styling — see "Recently completed" above —
+      closing out the "second tab open" concern. Confirmed no saved
+      OneSignal Template, Settings, or Journey references the stale
+      `p_Q9_Pear%20Pic.png` image; the default icon is the correct
+      `pear-logo.png`. The earlier "no phone notification" report was traced
+      to the test device(s) not being subscribed (OneSignal showed "Never
+      Subscribed" / "No Push Token" / opted-out) — not a code bug.
 - [x] Item 10 — Console error audit (clean; only benign non-app errors)
 - [x] Item 11 — Lighthouse audit. Mobile scores (signed in): Performance 84,
       Accessibility 100, Best Practices 100, SEO 100. Note: Lighthouse removed
@@ -186,6 +187,14 @@ All shipped from prior sessions and are deployed unless noted:
   toast, not queued for automatic retry on reconnect. Deliberately deferred
   for v1, which blocks offline writes instead; revisit post-launch if it's
   worth the added complexity.
+- **OneSignal MCP connector** — explore post-launch for managing push
+  campaigns directly from Claude (send/manage pushes, analyze metrics).
+  Deliberately deferred; set it up carefully after launch, since it grants
+  message-sending access.
+- **Web-push opt-in is low** — most OneSignal subscription records show
+  "Never Subscribed" / "No Push Token", or are opted-out. Expected to be
+  superseded by native push once the app is wrapped with Capacitor (Android
+  first) — don't chase web-push subscription rates pre-launch.
 
 ## After the checklist: Capacitor wrap + store submission
 
