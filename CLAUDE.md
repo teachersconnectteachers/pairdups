@@ -176,6 +176,58 @@ All shipped from prior sessions and are deployed unless noted:
 - [ ] Item 13 — "Rate the app" prompt (after Capacitor)
 - [x] Email-change fix (original launch blocker)
 
+## Launch / Capacitor
+
+**Strategy:** Android first — the owner is on Windows, so Android needs no
+Mac. iOS is a post-launch fast-follow via a cloud Mac service (rent a cloud
+Mac to build/submit; buy a physical Mac only if the app gains traction and
+needs frequent iOS updates — a Mac is required for every iOS build/update,
+not just the first one).
+
+**Status:** the app is launch-ready — the pre-launch checklist above is
+essentially complete. Remaining work is packaging and shipping, **not** new
+features. New ideas go to "Post-launch / backlog" below, not the launch
+path.
+
+**Decisions locked:** Android via Google Play first; iOS later via a cloud
+Mac. Package ID is TBD (e.g. `com.pairdups.app`) — finalize at Stage 2.
+
+**Open item to flag:** a privacy policy page/URL is required for the Play
+Store listing (Stage 5) — PairdUps handles user data and payments, so this
+isn't optional.
+
+### Stages
+
+- **Stage 0 — Google Play Developer account.** $25 one-time + identity
+  verification, can take days — start this early, it's the longest wait.
+  New personal accounts may face a pre-launch testing requirement — verify
+  current rules before relying on a fast turnaround.
+- **Stage 1 — Windows toolchain (local, owner).** Node.js, Android Studio
+  (bundles the Android SDK + build tools), JDK (bundled with Android
+  Studio). Must be done locally — can't be done in the cloud.
+- **Stage 2 — Add Capacitor to the repo (Claude Code).** Install Capacitor,
+  create `capacitor.config` (app name PairdUps, package ID TBD — e.g.
+  `com.pairdups.app`, pointed at `public/`), add the Android platform.
+  Ships as reviewable PRs, same as everything else in this repo.
+- **Stage 3 — Native push.** Replace web push with native Android push via
+  OneSignal's Capacitor/Android plugin (requires Firebase/FCM setup on the
+  OneSignal side). Claude Code wires the plugin; the owner does the
+  dashboard/FCM side.
+- **Stage 4 — Build & test in Android Studio** on an emulator/real device.
+  Re-test push and deep links (Item 9 tap behavior), and add Item 13
+  ("rate the app" prompt) here, post-wrap.
+- **Stage 5 — Store assets.** Icon, feature graphic, phone screenshots,
+  short + full description, privacy policy URL (**required — must be
+  created**), content rating, data-safety declarations.
+- **Stage 6 — Signing key + release build.** Generate the signing key
+  (guard it — losing it means no future updates) and build a signed
+  release `.aab` in Android Studio.
+- **Stage 7 — Submit via Play Console.** Create the listing, upload the
+  `.aab`, complete content/rating/data-safety, run the required testing
+  track, submit for review (~a few days).
+- **Stage 8 — Post-launch.** iOS via cloud Mac; ongoing updates repeat
+  Stages 4→7.
+
 ## Post-launch / backlog
 
 - **`profile_visitors` insert returns 401 / RLS policy violation** on
