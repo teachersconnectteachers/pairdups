@@ -200,15 +200,25 @@ isn't optional.
 
 - **Stage 0 — Google Play Developer account.** $25 one-time + identity
   verification, can take days — start this early, it's the longest wait.
-  New personal accounts may face a pre-launch testing requirement — verify
-  current rules before relying on a fast turnaround.
+  **IN PROGRESS, awaiting Google verification:** account created as a
+  Personal account; $25 fee paid; identity documents (passport + driver's
+  license) submitted and awaiting Google's review (typically a few days,
+  can be up to ~2 weeks). Phone-number verification is blocked until the
+  ID docs are approved — the "Go to Account Details" button un-greys once
+  approved; Google emails when done, but also check Settings → Developer
+  account → Account details every day or two. The account owner email is
+  permanent and cannot be changed later. Public developer name, support
+  email, and support phone were set during signup; website given as
+  `https://pairdups.com`.
 - **Stage 1 — Windows toolchain (local, owner).** Node.js, Android Studio
   (bundles the Android SDK + build tools), JDK (bundled with Android
   Studio). Must be done locally — can't be done in the cloud.
 - **Stage 2 — Add Capacitor to the repo (Claude Code).** Install Capacitor,
   create `capacitor.config` (app name PairdUps, package ID TBD — e.g.
   `com.pairdups.app`, pointed at `public/`), add the Android platform.
-  Ships as reviewable PRs, same as everything else in this repo.
+  Ships as reviewable PRs, same as everything else in this repo. Confirmed:
+  for a new app, Google auto-registers the package name to the verified
+  account at creation, so pick it carefully.
 - **Stage 3 — Native push.** Replace web push with native Android push via
   OneSignal's Capacitor/Android plugin (requires Firebase/FCM setup on the
   OneSignal side). Claude Code wires the plugin; the owner does the
@@ -218,13 +228,17 @@ isn't optional.
   ("rate the app" prompt) here, post-wrap.
 - **Stage 5 — Store assets.** Icon, feature graphic, phone screenshots,
   short + full description, privacy policy URL (**required — must be
-  created**), content rating, data-safety declarations.
+  created; does not exist yet**), content rating, data-safety declarations.
 - **Stage 6 — Signing key + release build.** Generate the signing key
   (guard it — losing it means no future updates) and build a signed
   release `.aab` in Android Studio.
 - **Stage 7 — Submit via Play Console.** Create the listing, upload the
   `.aab`, complete content/rating/data-safety, run the required testing
-  track, submit for review (~a few days).
+  track, submit for review (~a few days). Confirmed: new Personal accounts
+  must additionally run a closed test (~14 days, with a minimum number of
+  testers) plus device verification via the Play Console mobile app before
+  public release — line up a handful of Android testers in advance
+  (friends, Gmail `+` aliases); this affects the timeline here.
 - **Stage 8 — Post-launch.** iOS via cloud Mac; ongoing updates repeat
   Stages 4→7.
 
