@@ -187,7 +187,8 @@ not just the first one).
 **Status:** the app is launch-ready — the pre-launch checklist above is
 essentially complete. Remaining work is packaging and shipping, **not** new
 features. New ideas go to "Post-launch / backlog" below, not the launch
-path.
+path. Stage 0 is done (Sept 30, 2026); **Stage 1 (Windows toolchain install)
+is the next action**, owner-side.
 
 **Decisions locked:** Android via Google Play first; iOS later via a cloud
 Mac. Package ID is TBD (e.g. `com.pairdups.app`) — finalize at Stage 2.
@@ -198,21 +199,16 @@ isn't optional.
 
 ### Stages
 
-- **Stage 0 — Google Play Developer account.** $25 one-time + identity
-  verification, can take days — start this early, it's the longest wait.
-  **IN PROGRESS, awaiting Google verification:** account created as a
-  Personal account; $25 fee paid; identity documents (passport + driver's
-  license) submitted and awaiting Google's review (typically a few days,
-  can be up to ~2 weeks). Phone-number verification is blocked until the
-  ID docs are approved — the "Go to Account Details" button un-greys once
-  approved; Google emails when done, but also check Settings → Developer
-  account → Account details every day or two. The account owner email is
-  permanent and cannot be changed later. Public developer name, support
-  email, and support phone were set during signup; website given as
-  `https://pairdups.com`.
-- **Stage 1 — Windows toolchain (local, owner).** Node.js, Android Studio
-  (bundles the Android SDK + build tools), JDK (bundled with Android
-  Studio). Must be done locally — can't be done in the cloud.
+- **Stage 0 — Google Play Developer account. DONE (completed Sept 30,
+  2026):** account fully created and verified — Personal account type, $25
+  one-time fee paid, identity verification approved (passport + driver's
+  license), and phone number verified via OTP. Account is live and ready
+  for app submission. The account owner email is permanent and cannot be
+  changed later. Public developer name, support email, and support phone
+  were set during signup; website given as `https://pairdups.com`.
+- **Stage 1 — Windows toolchain (local, owner). NEXT ACTION.** Node.js,
+  Android Studio (bundles the Android SDK + build tools), JDK (bundled
+  with Android Studio). Must be done locally — can't be done in the cloud.
 - **Stage 2 — Add Capacitor to the repo (Claude Code).** Install Capacitor,
   create `capacitor.config` (app name PairdUps, package ID TBD — e.g.
   `com.pairdups.app`, pointed at `public/`), add the Android platform.
