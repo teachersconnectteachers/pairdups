@@ -1,0 +1,16 @@
+node_modules/
+
+# Android / Gradle build output (native project itself is committed)
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/captures/
+android/.cxx/
+
+# OS
+.DS_Store
+Thumbs.db

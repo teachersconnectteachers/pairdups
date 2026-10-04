@@ -1,0 +1,25 @@
+{
+  "name": "pairdups",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PairdUps PWA, wrapped with Capacitor for native app stores.",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teachersconnectteachers/pairdups.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/teachersconnectteachers/pairdups/issues"
+  },
+  "homepage": "https://github.com/teachersconnectteachers/pairdups#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  }
+}
