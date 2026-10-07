@@ -187,8 +187,7 @@ not just the first one).
 **Status:** the app is launch-ready — the pre-launch checklist above is
 essentially complete. Remaining work is packaging and shipping, **not** new
 features. New ideas go to "Post-launch / backlog" below, not the launch
-path. Stage 0 is done (Sept 30, 2026); **Stage 1 (Windows toolchain install)
-is the next action**, owner-side.
+path. Stages 0–4 are done; **Stage 5 (store assets) is the next action**.
 
 **Decisions locked:** Android via Google Play first; iOS later via a cloud
 Mac. Package ID is TBD (e.g. `com.pairdups.app`) — finalize at Stage 2.
@@ -219,9 +218,15 @@ isn't optional.
   OneSignal's Capacitor/Android plugin (requires Firebase/FCM setup on the
   OneSignal side). Claude Code wires the plugin; the owner does the
   dashboard/FCM side.
-- **Stage 4 — Build & test in Android Studio** on an emulator/real device.
-  Re-test push and deep links (Item 9 tap behavior), and add Item 13
-  ("rate the app" prompt) here, post-wrap.
+- **Stage 4 — Build & test in Android Studio. DONE (Oct 6, 2026):** app
+  builds and runs natively on the Android emulator — sign-in, Discover feed
+  (live Supabase data + images), navigation (Messages, My PairdUps,
+  Profile), and creating a new listing all confirmed working in the native
+  build. Required Node 22 LTS (Node 24.21 had a broken npm causing "Class
+  extends value undefined"), TypeScript installed as a dev dependency
+  (`capacitor.config.ts`), and Gradle JVM set to 21 in Android Studio.
+  Re-test push and deep links (Item 9 tap behavior) and add Item 13
+  ("rate the app" prompt) during further device testing, post-wrap.
 - **Stage 5 — Store assets.** Icon, feature graphic, phone screenshots,
   short + full description, privacy policy URL (**required — must be
   created; does not exist yet**), content rating, data-safety declarations.
@@ -257,6 +262,24 @@ isn't optional.
   "Never Subscribed" / "No Push Token", or are opted-out. Expected to be
   superseded by native push once the app is wrapped with Capacitor (Android
   first) — don't chase web-push subscription rates pre-launch.
+- **Spam/abuse protection (flagged Oct 6, 2026 after a spam bot account
+  created a scam "meet up on Telegram" listing on the live site):**
+  1. Turn the Supabase "Confirm email" toggle ON before real launch
+     (Sign In / Providers) — currently OFF for testing; this spam signup is
+     the concrete reason it must be on before inviting real users. (Also
+     tracked in "Supabase config to verify before real launch" below.)
+  2. Add basic spam/abuse protection before or shortly after launch: signup
+     email verification (covered by #1), content moderation on listings,
+     and a user report/block flow. Note: `blocked_users`, `reports`, and
+     `support_tickets` tables already exist in the schema — this may be
+     partly built already; verify what's actually wired up before building
+     more.
+- **Watch item (not a confirmed bug) — emulator photo cropping:** on the
+  Android emulator, listing card photos (e.g. Juan's) appeared slightly
+  more cropped than on web — likely just the different screen aspect
+  ratio. Re-check face-framing across real device sizes during device
+  testing; only adjust image object-position logic if faces are genuinely
+  cut off on common phones.
 
 ## After the checklist: Capacitor wrap + store submission
 
@@ -303,4 +326,6 @@ before editing `send-pairdups-email`, `manage-subscription`, or `stripe-webhook`
 - "Change email address" template exists (confirmed).
 - Redirect URLs `https://pairdups.com/*` + `https://www.pairdups.com/*`.
 - **"Confirm email" toggle** (Sign In / Providers): OFF for testing, must be **ON**
-  before real launch — confirm with the owner.
+  before real launch — confirm with the owner. See the spam/abuse backlog
+  item in "Post-launch / backlog" for why this is now a confirmed
+  requirement, not just a reminder.
