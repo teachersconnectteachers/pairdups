@@ -305,6 +305,15 @@ absent until v1.1.
   ratio. Re-check face-framing across real device sizes during device
   testing; only adjust image object-position logic if faces are genuinely
   cut off on common phones.
+- **In-app Privacy Policy link UX (flagged Oct 9, 2026):** Settings →
+  Privacy & Account → "Privacy Policy" row currently opens
+  `pairdups.com/privacy.html` via `window.open` (a new tab / external
+  browser), which kicks the user out of the app on mobile. Post-launch
+  refinement: consider an in-app slide-up card (or a tidy in-app webview)
+  so users stay in the app. Verify actual native behavior during device
+  testing first — it may already be acceptable; only build the slide-up
+  if it genuinely feels janky on a phone. Not a launch blocker — Google's
+  requirement (an in-app link to the policy) is already satisfied.
 
 ## After the checklist: Capacitor wrap + store submission
 
