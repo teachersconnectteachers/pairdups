@@ -2433,6 +2433,11 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
         <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">Blocked Users</div><div style="font-size:10px;color:var(--gray)">Manage your blocked users list</div></div>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--gray)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
+      <div onclick="window.open('https://pairdups.com/privacy.html','_blank','noopener')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--gray-light);border-radius:12px;cursor:pointer">
+        <div style="font-size:20px">📄</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">Privacy Policy</div><div style="font-size:10px;color:var(--gray)">View our privacy policy</div></div>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--gray)" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </div>
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FFFBEB;border-radius:12px;border:1px solid #FDE68A">
         <div><div style="font-size:13px;font-weight:700;color:#92400E">⏸️ Pause My Account</div><div style="font-size:10px;color:#92400E;opacity:0.7">Temporarily hide your profile & listings</div></div>
         <label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" id="set-pause-account" onchange="togglePauseAccount(this.checked)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s"></span><span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span></label>
