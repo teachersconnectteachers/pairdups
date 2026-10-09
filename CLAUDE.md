@@ -196,6 +196,13 @@ Mac. Package ID is TBD (e.g. `com.pairdups.app`) — finalize at Stage 2.
 Store listing (Stage 5) — PairdUps handles user data and payments, so this
 isn't optional.
 
+**v1.1 decision (Oct 8, 2026):** native push notifications (Stage 3) are
+deferred to a post-launch v1.1 update. v1.0 ships without native push to
+reach submission + the mandatory ~14-day closed test sooner. Email
+notifications and in-app alerts (Gold bell, Messages badge) still work in
+v1.0, so users remain informed — only phone lock-screen push banners are
+absent until v1.1.
+
 ### Stages
 
 - **Stage 0 — Google Play Developer account. DONE (completed Sept 30,
@@ -214,10 +221,11 @@ isn't optional.
   Ships as reviewable PRs, same as everything else in this repo. Confirmed:
   for a new app, Google auto-registers the package name to the verified
   account at creation, so pick it carefully.
-- **Stage 3 — Native push.** Replace web push with native Android push via
-  OneSignal's Capacitor/Android plugin (requires Firebase/FCM setup on the
-  OneSignal side). Claude Code wires the plugin; the owner does the
-  dashboard/FCM side.
+- **Stage 3 — Native push. DEFERRED to v1.1 (post-launch), decided Oct 8,
+  2026.** Replace web push with native Android push via OneSignal's
+  Capacitor/Android plugin (requires Firebase/FCM setup on the OneSignal
+  side). Claude Code wires the plugin; the owner does the dashboard/FCM
+  side. v1.0 ships without this — see the v1.1 decision note above.
 - **Stage 4 — Build & test in Android Studio. DONE (Oct 6, 2026):** app
   builds and runs natively on the Android emulator — sign-in, Discover feed
   (live Supabase data + images), navigation (Messages, My PairdUps,
@@ -264,16 +272,33 @@ isn't optional.
   first) — don't chase web-push subscription rates pre-launch.
 - **Spam/abuse protection (flagged Oct 6, 2026 after a spam bot account
   created a scam "meet up on Telegram" listing on the live site):**
-  1. Turn the Supabase "Confirm email" toggle ON before real launch
-     (Sign In / Providers) — currently OFF for testing; this spam signup is
-     the concrete reason it must be on before inviting real users. (Also
-     tracked in "Supabase config to verify before real launch" below.)
+  1. **DONE (Oct 8, 2026)** — Supabase "Confirm email" toggle (Sign In /
+     Providers) turned ON; new signups now require email confirmation
+     before first login, closing this spam-bot signup gap. (Also tracked
+     in "Supabase config to verify before real launch" below.)
   2. Add basic spam/abuse protection before or shortly after launch: signup
      email verification (covered by #1), content moderation on listings,
      and a user report/block flow. Note: `blocked_users`, `reports`, and
      `support_tickets` tables already exist in the schema — this may be
      partly built already; verify what's actually wired up before building
      more.
+- **Must-do before inviting real users (flagged Oct 8, 2026):**
+  1. Upgrade Supabase from Free to Pro plan before real launch — a
+     production app with real users + Stripe payments shouldn't run on
+     Free tier. Free tier showed a "Disk IO Budget about to deplete"
+     warning (throttles DB throughput under load → slow app), and Free
+     tier also lacks daily backups and can pause on inactivity. Pro gives
+     higher throughput + backups. Verify current Supabase pricing/tiers at
+     upgrade time — they change.
+  2. Test the signup confirmation email flow now that "Confirm email" is
+     ON — confirm a brand-new signup actually receives the confirmation
+     email and the link works, so real users aren't locked out. Test from
+     the native Android app too, not just web.
+  3. Verify email notifications fire from the native app flow — welcome
+     email, new-message, and join-request emails (via the
+     `send-pairdups-email` / `send-welcome-email` edge functions) should
+     still trigger when actions happen in the Android app, not just on
+     web.
 - **Watch item (not a confirmed bug) — emulator photo cropping:** on the
   Android emulator, listing card photos (e.g. Juan's) appeared slightly
   more cropped than on web — likely just the different screen aspect
@@ -325,7 +350,6 @@ before editing `send-pairdups-email`, `manage-subscription`, or `stripe-webhook`
 - "Password changed" / "Email address changed" notifications ON (confirmed).
 - "Change email address" template exists (confirmed).
 - Redirect URLs `https://pairdups.com/*` + `https://www.pairdups.com/*`.
-- **"Confirm email" toggle** (Sign In / Providers): OFF for testing, must be **ON**
-  before real launch — confirm with the owner. See the spam/abuse backlog
-  item in "Post-launch / backlog" for why this is now a confirmed
-  requirement, not just a reminder.
+- **"Confirm email" toggle** (Sign In / Providers): **DONE — turned ON Oct 8,
+  2026.** New signups now require email confirmation before first login,
+  closing the spam-bot signup gap flagged in "Post-launch / backlog" below.
