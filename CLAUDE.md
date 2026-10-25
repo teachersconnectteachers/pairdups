@@ -13,7 +13,8 @@ gamification (XP + badges), and Gold-only perks (saved filters, up to 12 photos,
 custom theme colors, pinned/featured listings, instant push, read receipts).
 
 Goal: finish the pre-launch checklist, wrap with Capacitor, and submit to the
-app stores.
+app stores. **As of Oct 24, 2026 the Android Google Play submission is well
+underway — see "Google Play submission progress" below.**
 
 ## Stack
 
@@ -49,7 +50,9 @@ app stores.
 2. **Silent-RLS trap.** RLS-filtered UPDATEs return HTTP 200 with `data: []` /
    0 rows — that is NOT an error. Always log/verify the row count. The
    `profiles.email` reconcile and the theme save both read the value back after
-   writing; keep that pattern.
+   writing; keep that pattern. **See also the Oct 23 finding below: client
+   writes also silently fail BEFORE a new account confirms its email, because
+   the session isn't authenticated yet.**
 3. **Supabase auth client** must be initialized with `persistSession: true`,
    `autoRefreshToken: true`, `detectSessionInUrl: true`,
    `storage: window.localStorage`, or sessions silently fail to persist → silent
@@ -66,264 +69,191 @@ app stores.
 7. **Avoid spaces in any filename that becomes a URL** (OneSignal images,
    Supabase Storage uploads, repo assets) — use dashes (`pear-logo.png`).
 
-## Recently completed (verify these stay intact)
+## Membership / tier mechanics (how Gold/Premium work)
 
-All shipped from prior sessions and are deployed unless noted:
+- Tier is stored in `profiles.subscription_tier` — values `'free'`, `'premium'`,
+  `'gold'` — plus `profiles.subscription_expires_at`.
+- `getUserTier()` (index.html ~L3331) returns the tier, but downgrades to
+  `'free'` only if `subscription_expires_at` exists AND is past (with a 24h
+  grace). If `subscription_expires_at` is **NULL**, the tier is treated as
+  permanent (never expires). So **tier=gold + expires=NULL = permanent Gold**.
+- `isPremium()` = premium or gold; `isGold()` = gold. `getPhotoLimit()` = 12
+  gold / 5 premium / 1 free.
+- `window.setTestTier('gold'|'premium'|'free')` is a debug helper BUT has a bug:
+  its DB write (`.update(...).eq('id', ...)`) is **not awaited**, and an
+  un-awaited supabase-js query is never actually sent, so it flips the on-screen
+  tier but doesn't persist. To set a tier reliably, either edit the row in the
+  Supabase Table Editor, or run an awaited console update, e.g.
+  `await _supabase.from('profiles').update({subscription_tier:'gold',subscription_expires_at:null}).eq('id',currentUser.supabaseId).select()`.
+  (Fixing setTestTier to await is a queued minor fix.)
 
-- **"Need Ideas?" pill** — the Create-a-PairdUp title-field link is now a bolder,
-  bordered pill with a gentle pulse (class `need-ideas-btn`, keyframe
-  `ideaPulse`). Stands out by size/weight/shape, not color.
-- **Discover feed sort fix (Polish A)** — `restoreUserListings()` now sorts the
-  cached feed with `_discoverSortCmp` (mirrors the Supabase sort) so the cached
-  first paint matches the final order — kills the load reorder flicker.
-- **First-load veil** — a one-shot spinner (`_veilDiscoverFeed` /
-  `_revealDiscoverFeed`, flag `_discoverInitialVeil`) hides the Discover feed
-  until the sorted Supabase data has painted, so users only ever see the final
-  Gold-sorted order. Has a 4s safety-timeout reveal and offline/cache fallback;
-  resets on sign-out.
-- **Image lazy loading (Item 12)** — `loading="lazy" decoding="async"` on the 6
-  numerous/below-the-fold image sources (feed card photo + poster avatar, feed
-  card carousel slides, gallery grid, gallery-viewer + detail carousels). Single
-  detail-hero images left eager on purpose. Confirmed deployed live.
-- **Offline awareness (Item 8)** — persistent top banner (`#offline-banner`)
-  driven by `navigator.onLine` + the `online`/`offline` window events
-  (`_setOnlineUI()`). Create/Edit PairdUp, Send Message, and Send/Join Request
-  are all blocked offline with a clear toast, guarded at their actual write
-  chokepoints rather than just their trigger buttons: `_createListingFromForm()`
-  (covers both the normal create path and the duplicate-confirm "Create
-  Anyway" path via `_confirmDuplicatePairdUp()`), `sendMsg()`, and
-  `sendJoinRequest()`.
-- **My PairdUps reconciliation fix** — `loadSupabaseListings()` now tears down
-  and repaints My PairdUps from the confirmed Supabase rows the same way
-  Discover already does (removed the old empty-check gate), while preserving
-  the `_skipMyListingsRebuild` guard used by the pin/feature optimistic-update
-  flows. Closes the gap where a listing whose Supabase insert failed (e.g.
-  while offline) could linger in My PairdUps forever after disappearing from
-  Discover.
-- **Discover filter indicator** — a numbered badge (`#filter-badge-count`,
-  reusing the `.notif-badge` style, `#D6235F`) on the Filter pill shows how
-  many slide-up filters are currently active: Location (State/Province or
-  City, counted as one combined dimension), Age range, Poster Type, and
-  Group Size. Category pills and the Country USA/Canada mode switch are
-  deliberately excluded — category pills already show their own active
-  state, and Country always has exactly one side selected, so it isn't an
-  on/off filter. `updateFilterBadge()` runs at every point the applied
-  filter state actually changes.
-- **Discover filter sync bugs fixed** — three related bugs where the feed,
-  the Filter modal's fields, and the badge above could disagree with each
-  other are fixed, all via the same pattern (a silent re-apply through
-  `applyFilter(true)`): `navTo()` no longer clears the location filter when
-  tapping the Discover tab — it silently re-applies whatever filters are
-  set once `loadSupabaseListings()` finishes repainting;
-  `filterExpiredFromDiscover()` now re-applies the active filter at the end
-  of its 500ms expired-card sweep instead of unconditionally un-hiding
-  every card; and `clearLocationFilter()` ("✕ Remove Location Filter") now
-  clears only the location fields while keeping other active filters
-  applied and reflected in the badge, with its toast updated to "Location
-  filter cleared ✓".
-- **Gold alert bell: View marks read, Dismiss removes (read vs. dismissed
-  are separate states)** — The bell (`loadAlertMatches()` /
-  `checkInstantAlerts()`) surfaces new listings matching the user's saved
-  alert preferences (category/location/pair-type). It does not cover join
-  requests — those stay Messages + push, and remain a separate,
-  not-yet-built backlog item (see "Post-launch / backlog"). Alerts now
-  persist in the panel until explicitly dismissed: tapping **View** marks a
-  listing read (`getReadAlertsMap()`/`setReadAlertsMap()`, localStorage key
-  `pu_read_alerts`) and clears the bell badge count, but keeps the item in
-  the panel; only **Dismiss** removes it for good (unchanged
-  `getDismissedAlertsMap()`/`pu_dismissed_alerts`). Unread items render
-  with a bold (font-weight 800) title and a small "NEW" text tag; read
-  items drop to font-weight 500 with no tag — the distinction is
-  weight/label-based per the colorblind rule above, with `#D6235F` on the
-  tag as reinforcement only, never the sole signal. This replaces an
-  earlier fix that had every panel *open* (not just View) mark alerts seen
-  and evict them on the next open — that was the actual "stale alert"
-  cause; eviction is now driven only by Dismiss.
+## Queued code fixes before public launch (priority order)
 
-## Pre-launch checklist status
+1. **Silent write failure before email confirmation (onboarding data loss) —
+   IMPORTANT.** Before a new account confirms its email, its Supabase session
+   isn't fully authenticated, so ALL client writes to `profiles` and Storage
+   uploads silently fail (0 rows / "Upload failed", no real error) while the UI
+   updates optimistically. A real user can fill out their whole profile + photo,
+   hit Save, see it "work," then confirm their email, reload, and find the
+   profile empty — silent data loss during onboarding. This is the single root
+   cause behind BOTH the "Upload failed" photo bug and the "profile fields
+   revert" issue found Oct 23. Fix: until email is confirmed, clearly tell the
+   user to confirm first (banner + specific toast, not a generic "Upload
+   failed") and either block the writes or flush the locally-saved profile to
+   the server on confirmation. Keep the email-confirm security gate; just fix
+   the UX/persistence.
+2. **Edited-listing detail card not opening.** Some EDITED listings' detail/
+   summary card doesn't open on tap. Working hypothesis: the edit path doesn't
+   apply the same `escAttr` escaping the display path uses, so a quote/special
+   char in an edited field breaks the inline handler. Needs a broken-listing
+   repro + the console error to confirm.
+3. **Admin "edit user account" feature.** `admin.html` Users table currently has
+   only Block + delete-listings. Add admin controls to set a user's membership
+   tier (free/premium/gold) and edit account fields. (The reviewer demo
+   account's Gold was set as a one-off via an awaited console update — see
+   Membership mechanics.)
+4. **setTestTier await bug (minor, debug-only).** Add `await` so the debug tier
+   helper actually persists; it's not user-facing, so low priority.
 
-- [x] Item 1 — Alert debug logs cleaned (behind `window._DEBUG_ALERTS`)
-- [x] Item 2 — Email template fix (renewal date)
-- [x] Item 3 — Stripe key audit (clean)
-- [x] Item 4 — Service-role key audit (clean)
-- [x] Item 5 — Downgrade/cancellation end-to-end
-- [x] Item 6 — Cross-device sync (alert prefs + user_settings + theme_color)
-- [x] Item 7 — Empty states audit
-- [x] Item 8 — Slow network / offline behavior. App degrades gracefully
-      offline: cached content still shows, no hanging/blank states. A
-      persistent top banner reads "You're offline — some features are paused
-      until you reconnect." All three server-writing actions are blocked
-      offline — create/edit PairdUp (guarded at the shared
-      `_createListingFromForm()` chokepoint, which also covers the
-      duplicate-warning "Create Anyway" path via
-      `_confirmDuplicatePairdUp()`), send message (`sendMsg()`), and join
-      request (`sendJoinRequest()`). See "Recently completed" above.
-- [x] Item 9 — Push deep-link + OneSignal audit. The bell's alert panel
-      (`checkAlertDeepLink()` opens it) now persists alerts until explicitly
-      dismissed, with read/unread styling — see "Recently completed" above —
-      closing out the "second tab open" concern. Confirmed no saved
-      OneSignal Template, Settings, or Journey references the stale
-      `p_Q9_Pear%20Pic.png` image; the default icon is the correct
-      `pear-logo.png`. The earlier "no phone notification" report was traced
-      to the test device(s) not being subscribed (OneSignal showed "Never
-      Subscribed" / "No Push Token" / opted-out) — not a code bug.
-- [x] Item 10 — Console error audit (clean; only benign non-app errors)
-- [x] Item 11 — Lighthouse audit. Mobile scores (signed in): Performance 84,
-      Accessibility 100, Best Practices 100, SEO 100. Note: Lighthouse removed
-      the PWA category (v12+); PWA installability verified separately via
-      DevTools → Application → Manifest + the address-bar install icon.
-- [x] Item 12 — Image lazy loading (deployed and live)
-- [ ] Item 13 — "Rate the app" prompt (after Capacitor)
-- [x] Email-change fix (original launch blocker)
+## Google Play submission progress (updated Oct 24, 2026)
+
+**Store assets — DONE (all created, delivered, saved on owner's PC):**
+- App icon (512 store + 1024 launcher), feature graphic (1024×500), 8 final
+  phone screenshots (numbered upload order), short + full descriptions, privacy
+  policy (live at `pairdups.com/privacy.html`). The screenshot set leads with a
+  diverse Discover feed (female + male listings) and balances dating vs.
+  activity-partner framing.
+
+**App created in Play Console — DONE:**
+- App name: **PairdUps: Activity Partners**
+- Package name (PERMANENT, registered to the account): **`com.pairdups.app`**
+  (matches `appId` in `capacitor.config.ts`).
+- App, Free, English (US).
+
+**App content declarations — ALL DONE:**
+- Content rating (IARC): submitted. Social category, "significant portion used
+  for dating = Yes" → Mature 17+/PEGI 18/USK 18 across regions (fits 18+).
+- Sign in details: reviewer demo account provided (see Test accounts).
+- Target audience: 18 and over; "Restrict users Google determines to be minors"
+  opt-in = ON.
+- Data safety: submitted. No third-party sharing; encrypted in transit = Yes;
+  deletion URLs = pairdups.com/privacy.html; collects Name/Email/User IDs/Other
+  info (age), Approximate location, In-app messages, Photos, App interactions +
+  Other UGC, Device/other IDs; purposes mostly App functionality (+ Account
+  management on identity, Developer communications on email, Analytics on app
+  interactions).
+- Ads = No; Advertising ID = No; Government apps = No; Financial features =
+  None; Health = None.
+
+**Remaining before the closed test can start:**
+- **Main store listing** page (separate from App content): upload icon, feature
+  graphic, 8 screenshots; paste short + full descriptions; pick app category
+  (leaning **Social** or **Lifestyle** — decide); set contact details.
+- **Stage 6:** generate/guard signing key, build signed release `.aab` in
+  Android Studio.
+- **Stage 7:** create closed-testing release, add ~12+ testers (Gmail `+`
+  aliases ok), run the mandatory ~14-day closed test + device verification via
+  the Play Console mobile app, then apply for production.
+
+## Pre-launch checklist status (code)
+
+- [x] Items 1–12 complete (see git history / prior notes). Highlights: offline
+      behavior, push/OneSignal audit, console-error audit, Lighthouse (A11y/BP/
+      SEO 100, Perf 84), image lazy-loading.
+- [ ] Item 13 — "Rate the app" prompt (after Capacitor).
+- [x] Email-change fix (original launch blocker).
+
+## Recently completed (code; verify these stay intact)
+
+- **"Need Ideas?" pill**, **Discover feed sort fix**, **first-load veil**,
+  **image lazy loading**, **offline awareness** (banner + write-blocking at
+  `_createListingFromForm()` / `sendMsg()` / `sendJoinRequest()`),
+  **My PairdUps reconciliation fix**, **Discover filter badge + sync fixes**,
+  and **Gold alert bell read/dismiss states**. (Full detail in prior git
+  history; these all shipped from earlier sessions and are deployed.)
 
 ## Launch / Capacitor
 
 **Strategy:** Android first — the owner is on Windows, so Android needs no
-Mac. iOS is a post-launch fast-follow via a cloud Mac service (rent a cloud
-Mac to build/submit; buy a physical Mac only if the app gains traction and
-needs frequent iOS updates — a Mac is required for every iOS build/update,
-not just the first one).
+Mac. iOS is a post-launch fast-follow via a cloud Mac service.
 
-**Status:** the app is launch-ready — the pre-launch checklist above is
-essentially complete. Remaining work is packaging and shipping, **not** new
-features. New ideas go to "Post-launch / backlog" below, not the launch
-path. Stages 0–4 are done; **Stage 5 (store assets) is the next action**.
+**Decisions locked:** Google Play first; iOS later via a cloud Mac. **Package ID
+= `com.pairdups.app` (FINALIZED & registered at app creation — cannot change).**
 
-**Decisions locked:** Android via Google Play first; iOS later via a cloud
-Mac. Package ID is TBD (e.g. `com.pairdups.app`) — finalize at Stage 2.
-
-**Open item to flag:** a privacy policy page/URL is required for the Play
-Store listing (Stage 5) — PairdUps handles user data and payments, so this
-isn't optional.
-
-**v1.1 decision (Oct 8, 2026):** native push notifications (Stage 3) are
-deferred to a post-launch v1.1 update. v1.0 ships without native push to
-reach submission + the mandatory ~14-day closed test sooner. Email
-notifications and in-app alerts (Gold bell, Messages badge) still work in
-v1.0, so users remain informed — only phone lock-screen push banners are
-absent until v1.1.
+**v1.1 decision (Oct 8, 2026):** native push (Stage 3) deferred to post-launch
+v1.1. v1.0 ships with web push + email + in-app alerts; only phone lock-screen
+push banners are absent until v1.1.
 
 ### Stages
 
-- **Stage 0 — Google Play Developer account. DONE (completed Sept 30,
-  2026):** account fully created and verified — Personal account type, $25
-  one-time fee paid, identity verification approved (passport + driver's
-  license), and phone number verified via OTP. Account is live and ready
-  for app submission. The account owner email is permanent and cannot be
-  changed later. Public developer name, support email, and support phone
-  were set during signup; website given as `https://pairdups.com`.
-- **Stage 1 — Windows toolchain (local, owner). NEXT ACTION.** Node.js,
-  Android Studio (bundles the Android SDK + build tools), JDK (bundled
-  with Android Studio). Must be done locally — can't be done in the cloud.
-- **Stage 2 — Add Capacitor to the repo (Claude Code).** Install Capacitor,
-  create `capacitor.config` (app name PairdUps, package ID TBD — e.g.
-  `com.pairdups.app`, pointed at `public/`), add the Android platform.
-  Ships as reviewable PRs, same as everything else in this repo. Confirmed:
-  for a new app, Google auto-registers the package name to the verified
-  account at creation, so pick it carefully.
-- **Stage 3 — Native push. DEFERRED to v1.1 (post-launch), decided Oct 8,
-  2026.** Replace web push with native Android push via OneSignal's
-  Capacitor/Android plugin (requires Firebase/FCM setup on the OneSignal
-  side). Claude Code wires the plugin; the owner does the dashboard/FCM
-  side. v1.0 ships without this — see the v1.1 decision note above.
-- **Stage 4 — Build & test in Android Studio. DONE (Oct 6, 2026):** app
-  builds and runs natively on the Android emulator — sign-in, Discover feed
-  (live Supabase data + images), navigation (Messages, My PairdUps,
-  Profile), and creating a new listing all confirmed working in the native
-  build. Required Node 22 LTS (Node 24.21 had a broken npm causing "Class
-  extends value undefined"), TypeScript installed as a dev dependency
-  (`capacitor.config.ts`), and Gradle JVM set to 21 in Android Studio.
-  Re-test push and deep links (Item 9 tap behavior) and add Item 13
-  ("rate the app" prompt) during further device testing, post-wrap.
-- **Stage 5 — Store assets.** Icon, feature graphic, phone screenshots,
-  short + full description, privacy policy URL (**required — must be
-  created; does not exist yet**), content rating, data-safety declarations.
-- **Stage 6 — Signing key + release build.** Generate the signing key
-  (guard it — losing it means no future updates) and build a signed
-  release `.aab` in Android Studio.
-- **Stage 7 — Submit via Play Console.** Create the listing, upload the
-  `.aab`, complete content/rating/data-safety, run the required testing
-  track, submit for review (~a few days). Confirmed: new Personal accounts
-  must additionally run a closed test (~14 days, with a minimum number of
-  testers) plus device verification via the Play Console mobile app before
-  public release — line up a handful of Android testers in advance
-  (friends, Gmail `+` aliases); this affects the timeline here.
-- **Stage 8 — Post-launch.** iOS via cloud Mac; ongoing updates repeat
-  Stages 4→7.
+- **Stage 0 — Google Play Developer account. DONE (Sept 30, 2026):** Personal
+  account, $25 paid, identity + phone verified.
+- **Stage 1 — Windows toolchain. DONE.** Node 22 LTS, Android Studio, JDK.
+- **Stage 2 — Capacitor added. DONE.** `capacitor.config.ts`, Android platform,
+  `appId: com.pairdups.app`, pointed at `public/`.
+- **Stage 3 — Native push. DEFERRED to v1.1.**
+- **Stage 4 — Build & test in Android Studio. DONE (Oct 6, 2026):** builds and
+  runs on the emulator (sign-in, Discover feed, nav, create listing confirmed).
+  Needed Node 22, TypeScript dev dep, Gradle JVM 21.
+- **Stage 5 — Store assets. DONE (Oct 23–24, 2026):** icon, feature graphic,
+  8 screenshots, descriptions, privacy policy, content rating, data-safety — all
+  complete. See "Google Play submission progress" above.
+- **Stage 6 — Signing key + release build. NEXT (after Main store listing).**
+  Generate the signing key (losing it = no future updates) and build a signed
+  release `.aab`.
+- **Stage 7 — Submit via Play Console. IN PROGRESS.** App created; App content
+  done. Remaining: Main store listing, upload `.aab`, closed test (~14 days,
+  min testers) + device verification, then apply for production.
+- **Stage 8 — Post-launch.** iOS via cloud Mac; updates repeat Stages 4→7.
+
+## Test accounts
+
+- **`fredhockey23+demo@gmail.com` — "Alex" — GOOGLE PLAY REVIEWER DEMO ACCOUNT.
+  Do NOT delete, change its password, or remove Gold.** Set to permanent Gold
+  (`profiles.subscription_tier='gold'`, `subscription_expires_at=NULL`). Its
+  credentials + instructions are entered in Play Console → App content → Sign in
+  details. Email is confirmed. profiles.id = auth uid =
+  `a7929441-1e30-46c9-a3e4-dafce1dfc5ef`.
+- `fredhockey23@gmail.com` — owner's primary account. **Tier varies** — he pays
+  to test a tier, then refunds via Stripe. Ask which tier it's on; don't
+  "correct" it. Also the only `admin.html` login.
+- Juan — `fredhockey23+juan@gmail.com` — main messaging/test account.
+- Amber — `fredhockey23+amber@gmail.com` — female test account (Ann Arbor, MI);
+  created for screenshot gender balance.
+- `fredhockey23+test1@gmail.com`, `+empty1..+empty6@gmail.com` — throwaway
+  signups (Gmail `+` aliases route to the main inbox).
+
+## Edge functions
+
+Source in the repo may be stale — pull current source from the Supabase Dashboard
+before editing `send-pairdups-email`, `manage-subscription`, or `stripe-webhook`.
 
 ## Post-launch / backlog
 
-- **`profile_visitors` insert returns 401 / RLS policy violation** on
-  profile views. Likely needs a Supabase-dashboard row-level-security policy
-  fix on the `profile_visitors` table's insert policy, not an `index.html`
-  change.
-- **Offline queue-and-sync** — actions taken while offline (create/edit
-  PairdUp, send message, join request) are currently just blocked with a
-  toast, not queued for automatic retry on reconnect. Deliberately deferred
-  for v1, which blocks offline writes instead; revisit post-launch if it's
-  worth the added complexity.
-- **OneSignal MCP connector** — explore post-launch for managing push
-  campaigns directly from Claude (send/manage pushes, analyze metrics).
-  Deliberately deferred; set it up carefully after launch, since it grants
-  message-sending access.
-- **Web-push opt-in is low** — most OneSignal subscription records show
-  "Never Subscribed" / "No Push Token", or are opted-out. Expected to be
-  superseded by native push once the app is wrapped with Capacitor (Android
-  first) — don't chase web-push subscription rates pre-launch.
-- **Spam/abuse protection (flagged Oct 6, 2026 after a spam bot account
-  created a scam "meet up on Telegram" listing on the live site):**
-  1. **DONE (Oct 8, 2026)** — Supabase "Confirm email" toggle (Sign In /
-     Providers) turned ON; new signups now require email confirmation
-     before first login, closing this spam-bot signup gap. (Also tracked
-     in "Supabase config to verify before real launch" below.)
-  2. Add basic spam/abuse protection before or shortly after launch: signup
-     email verification (covered by #1), content moderation on listings,
-     and a user report/block flow. Note: `blocked_users`, `reports`, and
-     `support_tickets` tables already exist in the schema — this may be
-     partly built already; verify what's actually wired up before building
-     more.
-- **Must-do before inviting real users (flagged Oct 8, 2026):**
-  1. Upgrade Supabase from Free to Pro plan before real launch — a
-     production app with real users + Stripe payments shouldn't run on
-     Free tier. Free tier showed a "Disk IO Budget about to deplete"
-     warning (throttles DB throughput under load → slow app), and Free
-     tier also lacks daily backups and can pause on inactivity. Pro gives
-     higher throughput + backups. Verify current Supabase pricing/tiers at
-     upgrade time — they change.
-  2. Test the signup confirmation email flow now that "Confirm email" is
-     ON — confirm a brand-new signup actually receives the confirmation
-     email and the link works, so real users aren't locked out. Test from
-     the native Android app too, not just web.
-  3. Verify email notifications fire from the native app flow — welcome
-     email, new-message, and join-request emails (via the
-     `send-pairdups-email` / `send-welcome-email` edge functions) should
-     still trigger when actions happen in the Android app, not just on
-     web.
-- **Watch item (not a confirmed bug) — emulator photo cropping:** on the
-  Android emulator, listing card photos (e.g. Juan's) appeared slightly
-  more cropped than on web — likely just the different screen aspect
-  ratio. Re-check face-framing across real device sizes during device
-  testing; only adjust image object-position logic if faces are genuinely
-  cut off on common phones.
-- **In-app Privacy Policy link UX (flagged Oct 9, 2026):** Settings →
-  Privacy & Account → "Privacy Policy" row currently opens
-  `pairdups.com/privacy.html` via `window.open` (a new tab / external
-  browser), which kicks the user out of the app on mobile. Post-launch
-  refinement: consider an in-app slide-up card (or a tidy in-app webview)
-  so users stay in the app. Verify actual native behavior during device
-  testing first — it may already be acceptable; only build the slide-up
-  if it genuinely feels janky on a phone. Not a launch blocker — Google's
-  requirement (an in-app link to the policy) is already satisfied.
-
-## After the checklist: Capacitor wrap + store submission
-
-- **iOS** requires macOS + Xcode + an Apple Developer account ($99/yr). The owner
-  is on **Windows** — plan for Mac access (a physical Mac or a cloud Mac service);
-  no tooling removes this requirement.
-- **Android** can be built on Windows with Android Studio; Google Play is a $25
-  one-time fee.
-- Open question carried forward: Stripe-vs-StoreKit / Google Play billing rules
-  for in-app subscriptions (unresolved — research before wrapping).
+- **`profile_visitors` insert returns 401 / RLS policy violation** on profile
+  views — likely a Supabase-dashboard RLS insert-policy fix, not index.html.
+- **Offline queue-and-sync** — offline actions are blocked with a toast, not
+  queued for retry. Deferred for v1.
+- **OneSignal MCP connector** — explore post-launch for push campaign management.
+- **Web-push opt-in is low** — expected to be superseded by native push (v1.1).
+- **Spam/abuse protection:** "Confirm email" is ON (done Oct 8). `blocked_users`,
+  `reports`, `support_tickets` tables exist; block user, report user, and report
+  listing are all wired up in-app (confirmed Oct 23 — this also satisfies
+  Google's UGC report/block requirement). Content moderation on listings is
+  still a possible add.
+- **Must-do before real users:** (1) Upgrade Supabase Free → Pro (the "Disk IO
+  Budget about to deplete" warning throttles throughput to 5 MB/s baseline; Pro
+  adds throughput + daily backups; verify pricing at upgrade time). The Disk IO
+  warning is a Free-tier throttle, not an outage — not the cause of the Oct 23
+  write issue (that was the pre-confirmation session issue above). (2) Test the
+  signup confirmation email end-to-end (web + native). (3) Verify welcome /
+  new-message / join-request emails fire from the native app flow.
+- **In-app Privacy Policy link UX** — Settings → Privacy Policy opens
+  `pairdups.com/privacy.html` via `window.open` (leaves the app on mobile).
+  Consider an in-app slide-up/webview post-launch. Google's requirement (an
+  in-app link) is already satisfied — not a blocker.
+- **Watch item — emulator photo cropping:** listing card photos looked slightly
+  more cropped on the emulator; re-check face-framing on real devices.
 
 ## Environment values (stable)
 
@@ -336,29 +266,13 @@ absent until v1.1.
 - OneSignal app ID: `133a857e-2a5c-4afe-b726-031f74f27586`; default icon
   `pear-logo.png`
 - Admin email (only `admin.html` access): `fredhockey23@gmail.com`
+- Android package ID: `com.pairdups.app`
 
-## Test accounts
-
-- `fredhockey23@gmail.com` — owner's primary account. **Tier varies** — he pays
-  to test a tier (e.g. Gold), then refunds via Stripe. Ask which tier it's on;
-  don't "correct" it.
-- Juan — currently `fredhockey23+juan@gmail.com` — main messaging/test account.
-  Changed from `fredhockey23+empty6@gmail.com` (itself changed from the
-  original `teachersshopgoods@gmail.com`) via the proper email-change flow;
-  confirmed, and `profiles.email` reconciled cleanly with no 409 error.
-- `fredhockey23+test1@gmail.com`, `+empty1..+empty6@gmail.com` — throwaway
-  signups (Gmail `+` aliases route to the main inbox).
-
-## Edge functions
-
-Source in the repo may be stale — pull current source from the Supabase Dashboard
-before editing `send-pairdups-email`, `manage-subscription`, or `stripe-webhook`.
-
-## Supabase config to verify before real launch
+## Supabase config (verified)
 
 - "Password changed" / "Email address changed" notifications ON (confirmed).
 - "Change email address" template exists (confirmed).
 - Redirect URLs `https://pairdups.com/*` + `https://www.pairdups.com/*`.
-- **"Confirm email" toggle** (Sign In / Providers): **DONE — turned ON Oct 8,
-  2026.** New signups now require email confirmation before first login,
-  closing the spam-bot signup gap flagged in "Post-launch / backlog" below.
+- **"Confirm email" toggle: ON** (Oct 8, 2026). New signups require email
+  confirmation before first login. NOTE the onboarding-write UX gap this creates
+  — see Queued code fixes #1.
