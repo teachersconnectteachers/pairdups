@@ -7505,10 +7505,10 @@ async function saveListing() {
       var userLoc = currentUser.loc || city;
       var userPhoto = currentUser.photo || '';
       discoverCard.setAttribute('onclick',
-        "showDetail('" + title.replace(/'/g, "\\'") + "','" + userName.replace(/'/g, "\\'") + "','" + userAge + "','" + userLoc.replace(/'/g, "\\'")
-        + "','" + catName + "','" + pairType + "','" + dateStr.replace(/'/g, "\\'") + "','" + venue.replace(/'/g, "\\'")
-        + "','" + desc.replace(/'/g, "\\'") + "','" + emoji + "','" + userPhoto
-        + "','" + userName + "~" + userAge + "~" + userLoc + "~" + (currentUser.bio||'').replace(/'/g, "\\'") + "~" + (currentUser.interests||[]).join('|') + "~" + (currentUser.email||'') + "')"
+        "showDetail('" + esc(title) + "','" + esc(userName) + "','" + userAge + "','" + esc(userLoc)
+        + "','" + catName + "','" + pairType + "','" + esc(dateStr) + "','" + esc(venue)
+        + "','" + esc(desc) + "','" + emoji + "','" + esc(userPhoto)
+        + "','" + esc(userName) + "~" + userAge + "~" + esc(userLoc) + "~" + esc(currentUser.bio||'') + "~" + (currentUser.interests||[]).join('|') + "~" + esc(currentUser.email||'') + "')"
       );
     }
     // Persist edit to localStorage
@@ -9951,7 +9951,7 @@ function showMiniProfile(name, age, loc, bio, interests, photo, ownerEmail) {
 }
 
 // ── Utility ────────────────────────────────────────────────
-function esc(s) { return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/</g,'\\x3C').replace(/>/g,'\\x3E'); }
+function esc(s) { return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r\n|\r|\n/g,'\\n').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029').replace(/</g,'\\x3C').replace(/>/g,'\\x3E'); }
 function escAttr(s) { return esc(s).replace(/"/g,'&quot;'); }
 function _setOnlineUI() {
   var offline = !navigator.onLine;
