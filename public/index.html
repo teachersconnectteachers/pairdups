@@ -1689,6 +1689,15 @@ input[type=checkbox]:checked + span + span{transform:translateX(20px)}
     <button onclick="closeModal('modal-email-change')" style="width:100%;background:var(--pink-dark);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(214,35,95,0.35)">Got it</button>
   </div>
 </div>
+<div class="modal-bg" id="modal-confirm-signup" onclick="if(event.target===this)closeModal('modal-confirm-signup')" style="align-items:center;justify-content:center;z-index:300">
+  <div class="modal-card" style="max-width:360px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:44px;margin-bottom:10px">📧</div>
+    <div style="font-size:17px;font-weight:900;color:var(--dark);margin-bottom:10px">Confirm your email</div>
+    <p id="confirm-signup-msg" style="font-size:13px;color:var(--gray);line-height:1.6;margin:0 0 20px"></p>
+    <button id="resend-signup-btn" onclick="resendSignupConfirmation()" style="width:100%;background:var(--gray-light);color:var(--dark);border:none;border-radius:50px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:10px">Resend email</button>
+    <button onclick="closeModal('modal-confirm-signup');goToSignInAfterConfirm()" style="width:100%;background:var(--pink-dark);color:#fff;border:none;border-radius:50px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px rgba(214,35,95,0.35)">Go to Sign In</button>
+  </div>
+</div>
 <div class="modal-bg" id="modal-rename-filter" onclick="if(event.target===this)closeModal('modal-rename-filter')" style="align-items:center;justify-content:center;z-index:300">
   <div class="modal-card" style="max-width:340px;text-align:center;padding:28px 24px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="font-size:40px;margin-bottom:8px">✏️</div>
@@ -4466,6 +4475,39 @@ function showAuthPrompt(action) {
 
 // ── Auth ───────────────────────────────────────────────────
 function browseAnon() { isSignedIn=false; screenHistory=[]; goTo('screen-discover'); syncBookmarkIcons(); }
+
+// ── Email confirmation (new signups) ───────────────────────
+// With Supabase "Confirm email" ON, a new account has no authenticated session
+// until the email link is clicked. These helpers show a clear confirm-email
+// screen (with Resend) so the user doesn't try to set up a profile that can't
+// save yet. Root fix for the silent pre-confirmation write failures.
+var _pendingConfirmEmail = '';
+function showConfirmSignupModal(email) {
+  _pendingConfirmEmail = email || '';
+  var msgEl = document.getElementById('confirm-signup-msg');
+  if (msgEl) msgEl.innerHTML = 'We sent a confirmation link to <strong>' + email + '</strong>. Click the link to activate your account, then sign in. Be sure to check your spam folder if you don\'t see it.';
+  var btn = document.getElementById('resend-signup-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Resend email'; }
+  openModal('modal-confirm-signup');
+}
+async function resendSignupConfirmation() {
+  if (!_supabase || !_pendingConfirmEmail) { showToast('Please sign up again to resend the link.'); return; }
+  var btn = document.getElementById('resend-signup-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+  try {
+    var { error } = await _supabase.auth.resend({ type: 'signup', email: _pendingConfirmEmail });
+    if (error) { showToast(error.message || 'Could not resend right now. Please try again shortly.'); }
+    else { showToast('Confirmation email resent ✓'); }
+  } catch(e) { showToast('Could not resend right now. Please try again shortly.'); }
+  if (btn) { setTimeout(function(){ btn.disabled = false; btn.textContent = 'Resend email'; }, 3000); }
+}
+function goToSignInAfterConfirm() {
+  goTo('screen-signin');
+  if (_pendingConfirmEmail) {
+    var emailEl = document.querySelector('#screen-signin input[type=email]');
+    if (emailEl) emailEl.value = _pendingConfirmEmail;
+  }
+}
 async function signIn() {
   const emailEl = document.querySelector('#screen-signin input[type=email]');
   const pwEl    = document.querySelector('#screen-signin input[type=password]') ||
@@ -4487,8 +4529,15 @@ async function signIn() {
     showToast('Signing in...');
     const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pw });
     if (error) {
-      showToast(error.message || 'Sign in failed. Please try again.');
-      if (pwEl) { pwEl.style.borderColor='#DC2626'; setTimeout(()=>pwEl.style.borderColor='',1500); }
+      // If the account exists but the email hasn't been confirmed yet, guide
+      // the user to the confirm-email screen (with a Resend option) instead of
+      // showing the raw "Email not confirmed" error.
+      if (/not\s*confirmed/i.test(error.message || '') || error.code === 'email_not_confirmed') {
+        showConfirmSignupModal(email);
+      } else {
+        showToast(error.message || 'Sign in failed. Please try again.');
+        if (pwEl) { pwEl.style.borderColor='#DC2626'; setTimeout(()=>pwEl.style.borderColor='',1500); }
+      }
       return;
     }
     // Load profile from Supabase
@@ -4580,6 +4629,15 @@ async function register() {
         if (error.message.includes('already registered')) {
           showToast('An account with that email already exists. Sign in instead.');
         } else { showToast(error.message || 'Registration failed.'); }
+        return;
+      }
+      // When "Confirm email" is ON, signUp() returns NO session until the user
+      // clicks the confirmation link. Without an authenticated session, every
+      // write (profile fields, photo upload) silently fails with 0 rows, so we
+      // must NOT drop the user into the app yet. Show the confirm-email screen
+      // and stop here; they finish setup after confirming + signing in.
+      if (!data.session) {
+        showConfirmSignupModal(email);
         return;
       }
       if (data.user) {
