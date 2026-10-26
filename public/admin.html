@@ -146,6 +146,28 @@ a{color:var(--pink);text-decoration:none}
   </div>
 </div>
 
+<!-- EDIT USER -->
+<div class="admin-modal-bg" id="modal-edit-user" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="admin-modal" style="max-width:420px">
+    <h3>Edit User</h3>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:16px;line-height:1.5">Email and password aren't editable here — a user's email must be changed through the account email-change flow. Age is recalculated from the birthday.</p>
+    <input type="hidden" id="edit-user-id">
+    <label style="font-size:12px;font-weight:700;color:#1A1A2E;display:block;margin-bottom:4px">Name</label>
+    <input type="text" class="login-input" id="edit-user-name" placeholder="Name">
+    <label style="font-size:12px;font-weight:700;color:#1A1A2E;display:block;margin-bottom:4px">Location</label>
+    <input type="text" class="login-input" id="edit-user-loc" placeholder="City, State/Province">
+    <label style="font-size:12px;font-weight:700;color:#1A1A2E;display:block;margin-bottom:4px">Birthday</label>
+    <input type="date" class="login-input" id="edit-user-birthday">
+    <label style="font-size:12px;font-weight:700;color:#1A1A2E;display:block;margin-bottom:4px">Bio</label>
+    <textarea class="login-input" id="edit-user-bio" rows="3" placeholder="Bio" style="resize:vertical"></textarea>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-gray" onclick="document.getElementById('modal-edit-user').classList.remove('open')" style="flex:1;padding:12px">Cancel</button>
+      <button class="btn btn-pink" onclick="saveUserEdits()" style="flex:1;padding:12px">Save</button>
+    </div>
+    <div id="edit-user-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></div>
+  </div>
+</div>
+
 <!-- ADMIN APP -->
 <div id="admin-app">
   <!-- Sidebar -->
@@ -222,7 +244,7 @@ a{color:var(--pink);text-decoration:none}
         <button class="btn btn-pink" onclick="loadUsers()">Refresh</button>
       </div>
       <table class="data-table">
-        <thead><tr><th>User</th><th>Email</th><th>Location</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>User</th><th>Email</th><th>Location</th><th>Joined</th><th>Membership</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="users-body"></tbody>
       </table>
     </div>
@@ -772,9 +794,16 @@ function renderUsers(users) {
   tbody.innerHTML = users.map(function(u) {
     var status = u.is_blocked ? '<span class="badge badge-blocked">Blocked</span>' : '<span class="badge badge-active">Active</span>';
     var joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
-    var actions = u.is_blocked
+    var blockBtn = u.is_blocked
       ? '<button class="btn btn-green btn-sm" onclick="toggleUserBlock(\'' + u.id + '\',false)">Unblock</button>'
       : '<button class="btn btn-red btn-sm" onclick="toggleUserBlock(\'' + u.id + '\',true)">Block</button>';
+    var actions = '<button class="btn btn-gray btn-sm" onclick="openEditUser(\'' + u.id + '\')">Edit</button> ' + blockBtn;
+    var tier = (u.subscription_tier || 'free');
+    var tierSel = '<select onchange="setUserTier(\'' + u.id + '\',this.value)" style="padding:4px 6px;border:1px solid #E5E7EB;border-radius:6px;font-size:12px;font-family:inherit;background:#fff">'
+      + '<option value="free"' + (tier === 'free' ? ' selected' : '') + '>Free</option>'
+      + '<option value="premium"' + (tier === 'premium' ? ' selected' : '') + '>Premium</option>'
+      + '<option value="gold"' + (tier === 'gold' ? ' selected' : '') + '>Gold</option>'
+      + '</select>';
     return '<tr>'
       + '<td><div style="display:flex;align-items:center;gap:8px">'
       + (u.photo_url ? '<img src="' + u.photo_url + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover">' : '<div style="width:32px;height:32px;border-radius:50%;background:#F3F4F6"></div>')
@@ -782,6 +811,7 @@ function renderUsers(users) {
       + '<td style="font-size:12px">' + (u.email || '—') + '</td>'
       + '<td>' + (u.location || '—') + '</td>'
       + '<td>' + joined + '</td>'
+      + '<td>' + tierSel + '</td>'
       + '<td>' + status + '</td>'
       + '<td>' + actions + '</td>'
       + '</tr>';
@@ -805,6 +835,61 @@ async function toggleUserBlock(userId, block) {
   toast(block ? 'User blocked & listings hidden' : 'User unblocked');
   loadUsers();
   loadDashboard();
+}
+
+// Set a user's membership tier. Admin-granted tiers are permanent
+// (subscription_expires_at = null), same as a comp account. Uses the same
+// authenticated admin session + RLS as toggleUserBlock.
+async function setUserTier(userId, tier) {
+  if (['free','premium','gold'].indexOf(tier) < 0) { toast('Invalid tier'); return; }
+  var { error } = await sb.from('profiles').update({ subscription_tier: tier, subscription_expires_at: null }).eq('id', userId);
+  if (error) { toast('Error: ' + error.message); console.error('Set tier error:', error); return; }
+  toast('Membership set to ' + tier.charAt(0).toUpperCase() + tier.slice(1));
+  loadUsers();
+}
+
+// Open the Edit User modal pre-filled from the already-loaded user row.
+function openEditUser(userId) {
+  var u = (_allUsers || []).find(function(x) { return x.id === userId; });
+  if (!u) { toast('User not found — try Refresh'); return; }
+  document.getElementById('edit-user-id').value = u.id;
+  document.getElementById('edit-user-name').value = u.name || '';
+  document.getElementById('edit-user-loc').value = u.location || '';
+  document.getElementById('edit-user-birthday').value = u.birthday || '';
+  document.getElementById('edit-user-bio').value = u.bio || '';
+  var errEl = document.getElementById('edit-user-error'); if (errEl) errEl.style.display = 'none';
+  document.getElementById('modal-edit-user').classList.add('open');
+}
+
+// Save profile-field edits. Email/password are intentionally not editable here
+// (email must go through the auth email-change flow). Age is kept in sync with
+// the birthday, since age is a derived field in the app.
+async function saveUserEdits() {
+  var userId = document.getElementById('edit-user-id').value;
+  var name = document.getElementById('edit-user-name').value.trim();
+  var loc = document.getElementById('edit-user-loc').value.trim();
+  var birthday = document.getElementById('edit-user-birthday').value; // 'yyyy-mm-dd' or ''
+  var bio = document.getElementById('edit-user-bio').value.trim();
+  var update = { name: name, location: loc, bio: bio, birthday: birthday || null };
+  if (birthday) {
+    var d = new Date(birthday + 'T00:00:00');
+    if (!isNaN(d.getTime())) {
+      var now = new Date();
+      var age = now.getFullYear() - d.getFullYear();
+      var mo = now.getMonth() - d.getMonth();
+      if (mo < 0 || (mo === 0 && now.getDate() < d.getDate())) age--;
+      update.age = String(age);
+    }
+  }
+  var { error } = await sb.from('profiles').update(update).eq('id', userId);
+  if (error) {
+    var errEl = document.getElementById('edit-user-error');
+    if (errEl) { errEl.textContent = 'Error: ' + error.message; errEl.style.display = 'block'; }
+    console.error('Save user edits error:', error); return;
+  }
+  document.getElementById('modal-edit-user').classList.remove('open');
+  toast('User updated');
+  loadUsers();
 }
 
 // ── Listings ──────────────────────────────────────────────
