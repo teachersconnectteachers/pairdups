@@ -2871,7 +2871,14 @@ var _currentDetailPoster = {};   // stash poster info from detail/card for join 
 const SUPABASE_URL = 'https://phajurcdiotfvtcwvydk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoYWp1cmNkaW90ZnZ0Y3d2eWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDM3MDQsImV4cCI6MjA5MDIxOTcwNH0.-saSHBRbEXYhDbab9rFlDWnhv7B-Kw2-0Ygh7ucstg4';
 const _supabase = (typeof supabase !== 'undefined' && supabase.createClient)
-  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage
+      }
+    })
   : null;
 
 // ── OneSignal Push Notifications ──────────────────────────
@@ -10722,6 +10729,19 @@ function updateMyActivity() {
 
 // ── Shared: create a new listing from the Create-PairdUp form ─────
 // Extracted so both the normal create path and the duplicate-confirm modal can call it.
+function _resetCreateForm() {
+  document.getElementById('cf-title').value = '';
+  document.getElementById('cf-desc').value = '';
+  document.getElementById('cf-date').value = '';
+  document.getElementById('cf-time-hr').value = '';
+  document.getElementById('cf-time-min').value = '';
+  document.getElementById('cf-time-ampm').value = 'AM';
+  document.getElementById('cf-etime-hr').value = '';
+  document.getElementById('cf-etime-min').value = '';
+  document.getElementById('cf-etime-ampm').value = 'AM';
+  document.getElementById('cf-city').value = '';
+  document.getElementById('cf-venue').value = '';
+}
 function _createListingFromForm(title, desc, venue, dateVal, timeVal, endTimeVal, city, catName, pairType, lookingFor, groupType, dateStr, emoji, recurring, recurInterval, recurLimit) {
   if (!navigator.onLine) { showToast("You're offline. You can't post this right now — please reconnect and try again."); return; }
   var newId = 'user-' + Date.now();
@@ -10735,14 +10755,38 @@ function _createListingFromForm(title, desc, venue, dateVal, timeVal, endTimeVal
     userBio: currentUser.bio || '', userInterests: currentUser.interests || [],
     userFacePos: currentUser.facePos || 'center 20%', ownerEmail: currentUser.email || ''
   };
-  userListings.push(listingData);
-  _saveListings(userListings);
-  renderUserListing(listingData);
-  toggleMyListingsEmpty();
 
-  // Sync to Supabase
+  // Shared success path: show the new listing and celebrate — only runs once it's truly saved.
+  function _onListingCreated() {
+    userListings.push(listingData);
+    _saveListings(userListings);
+    renderUserListing(listingData);
+    toggleMyListingsEmpty();
+    _resetCreateForm();
+    applyCurrentCategoryFilter();
+    showToast('PairdUp posted! 🎉 Check Discover feed.');
+    awardXP(10, 'Posted a PairdUp');
+    showConfetti();
+    clearFormDirty();
+  }
+
+  // Signed-in users: save to Supabase FIRST, and only show success if it actually saved.
+  // Posting optimistically here used to make listings silently vanish when the database
+  // rejected the insert — e.g. an expired/unauthenticated session failing the "listings"
+  // RLS insert policy (Postgres error 42501). We now verify the session and surface failures.
   if (_supabase && currentUser.supabaseId) {
     (async function() {
+      // Confirm we still have a live, authenticated session for this exact user.
+      var sessionUserId = null;
+      try {
+        var { data: userData } = await _supabase.auth.getUser();
+        sessionUserId = userData && userData.user ? userData.user.id : null;
+      } catch(e) { sessionUserId = null; }
+      if (sessionUserId !== currentUser.supabaseId) {
+        console.log('[PairdUps] Listing insert blocked: no valid session (auth.uid mismatch)');
+        showToast('Your session has expired — please sign in again, then re-post your PairdUp.');
+        return;
+      }
       try {
         var { data: insertedRow, error: insertErr } = await _supabase.from('listings').insert({
           owner_id: currentUser.supabaseId, title: title,
@@ -10753,38 +10797,24 @@ function _createListingFromForm(title, desc, venue, dateVal, timeVal, endTimeVal
           recurring: recurring, recur_interval: recurInterval, recur_limit: recurLimit, recur_count: 0,
           is_active: true
         }).select().single();
-        if (insertErr) { console.log('[PairdUps] Listing insert error:', insertErr); }
-        else if (insertedRow) {
-          listingData.supabaseId = insertedRow.id;
-          _saveListings(userListings);
-          console.log('[PairdUps] Listing saved to Supabase:', insertedRow.id);
-        } else {
-          console.log('[PairdUps] Listing insert: no row returned');
+        if (insertErr || !insertedRow) {
+          console.log('[PairdUps] Listing insert error:', insertErr);
+          showToast("Couldn't post your PairdUp — please try again.");
+          return;
         }
-      } catch(e) { console.log('Listing sync error:', e); }
+        listingData.supabaseId = insertedRow.id;
+        _onListingCreated();
+        console.log('[PairdUps] Listing saved to Supabase:', insertedRow.id);
+      } catch(e) {
+        console.log('Listing sync error:', e);
+        showToast("Couldn't post your PairdUp — please try again.");
+      }
     })();
+    return;
   }
 
-  // Reset form
-  document.getElementById('cf-title').value = '';
-  document.getElementById('cf-desc').value = '';
-  document.getElementById('cf-date').value = '';
-  document.getElementById('cf-time-hr').value = '';
-  document.getElementById('cf-time-min').value = '';
-  document.getElementById('cf-time-ampm').value = 'AM';
-  document.getElementById('cf-etime-hr').value = '';
-  document.getElementById('cf-etime-min').value = '';
-  document.getElementById('cf-etime-ampm').value = 'AM';
-  document.getElementById('cf-city').value = '';
-  document.getElementById('cf-venue').value = '';
-
-  // Re-apply current category filter so new card shows correctly
-  applyCurrentCategoryFilter();
-
-  showToast('PairdUp posted! 🎉 Check Discover feed.');
-  awardXP(10, 'Posted a PairdUp');
-  showConfetti();
-  clearFormDirty();
+  // No Supabase session (local-only account): keep the original local-only behavior.
+  _onListingCreated();
 }
 
 // Duplicate-PairdUp modal continuation
