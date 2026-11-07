@@ -87,35 +87,35 @@ underway — see "Google Play submission progress" below.**
   `await _supabase.from('profiles').update({subscription_tier:'gold',subscription_expires_at:null}).eq('id',currentUser.supabaseId).select()`.
   (Fixing setTestTier to await is a queued minor fix.)
 
-## Queued code fixes before public launch (priority order)
+## Queued code fixes (status)
 
-1. **Silent write failure before email confirmation (onboarding data loss) —
-   IMPORTANT.** Before a new account confirms its email, its Supabase session
-   isn't fully authenticated, so ALL client writes to `profiles` and Storage
-   uploads silently fail (0 rows / "Upload failed", no real error) while the UI
-   updates optimistically. A real user can fill out their whole profile + photo,
-   hit Save, see it "work," then confirm their email, reload, and find the
-   profile empty — silent data loss during onboarding. This is the single root
-   cause behind BOTH the "Upload failed" photo bug and the "profile fields
-   revert" issue found Oct 23. Fix: until email is confirmed, clearly tell the
-   user to confirm first (banner + specific toast, not a generic "Upload
-   failed") and either block the writes or flush the locally-saved profile to
-   the server on confirmation. Keep the email-confirm security gate; just fix
-   the UX/persistence.
-2. **Edited-listing detail card not opening.** Some EDITED listings' detail/
-   summary card doesn't open on tap. Working hypothesis: the edit path doesn't
-   apply the same `escAttr` escaping the display path uses, so a quote/special
-   char in an edited field breaks the inline handler. Needs a broken-listing
-   repro + the console error to confirm.
-3. **Admin "edit user account" feature.** `admin.html` Users table currently has
-   only Block + delete-listings. Add admin controls to set a user's membership
-   tier (free/premium/gold) and edit account fields. (The reviewer demo
-   account's Gold was set as a one-off via an awaited console update — see
-   Membership mechanics.)
-4. **setTestTier await bug (minor, debug-only).** Add `await` so the debug tier
-   helper actually persists; it's not user-facing, so low priority.
+1. **Silent write failures (onboarding + listings data loss). ✅ FIXED.** Root
+   cause: without a fully authenticated Supabase session, client writes are
+   rejected while the UI updates optimistically, so data silently vanishes
+   (profiles: 0 rows; listings INSERT: RLS error 42501).
+   - *Onboarding/email-confirmation path* — fixed in **PR #27**: signup with
+     "Confirm email" ON now shows a "Confirm your email" modal instead of
+     dropping unconfirmed users into profile setup where writes fail.
+   - *Listing-create path* — fixed in **PR #31 (Nov 7)**: Supabase client now
+     initialized with `persistSession`/`autoRefreshToken`/`detectSessionInUrl`/
+     `storage` (rule #3); `_createListingFromForm()` verifies a live session
+     (`auth.getUser()` id == owner) and awaits the insert BEFORE celebrating,
+     and on failure shows a clear toast and leaves no ghost listing. Found via a
+     real tester (Brendan) whose posted PairdUp silently failed — Postgres 42501
+     in the Supabase logs. (The `listings` RLS INSERT policy is correct; the bug
+     was entirely client-side.)
+2. **Edited-listing detail card not opening. ✅ FIXED (PR #28).** The edit path
+   in `saveListing()` now uses the same `esc()` escaping as the display path,
+   and `esc()` was hardened to escape line terminators — multi-line descriptions
+   were breaking the inline onclick (`Uncaught SyntaxError`).
+3. **Admin "edit user account" feature. ✅ DONE (PR #29).** `admin.html` Users
+   table now has a membership-tier selector (free/premium/gold, permanent via
+   `subscription_expires_at=NULL`) and an Edit modal for name/location/birthday/
+   bio (email/password deliberately excluded to protect the email-reconcile gate).
+4. **setTestTier await bug (minor, debug-only). Open but moot** — the admin UI
+   (#3) now sets tiers reliably; the un-awaited debug helper is low priority.
 
-## Google Play submission progress (updated Oct 24, 2026)
+## Google Play submission progress (updated Nov 7, 2026)
 
 **Store assets — DONE (all created, delivered, saved on owner's PC):**
 - App icon (512 store + 1024 launcher), feature graphic (1024×500), 8 final
@@ -144,16 +144,34 @@ underway — see "Google Play submission progress" below.**
   interactions).
 - Ads = No; Advertising ID = No; Government apps = No; Financial features =
   None; Health = None.
+- Child Safety Standards: submitted. Published standards page live at
+  `pairdups.com/child-safety.html` (**PR #30**); in-app Report User / Report
+  listing / Block User satisfy the required reporting mechanism.
 
-**Remaining before the closed test can start:**
-- **Main store listing** page (separate from App content): upload icon, feature
-  graphic, 8 screenshots; paste short + full descriptions; pick app category
-  (leaning **Social** or **Lifestyle** — decide); set contact details.
-- **Stage 6:** generate/guard signing key, build signed release `.aab` in
-  Android Studio.
-- **Stage 7:** create closed-testing release, add ~12+ testers (Gmail `+`
-  aliases ok), run the mandatory ~14-day closed test + device verification via
-  the Play Console mobile app, then apply for production.
+**Closed test — LIVE (app APPROVED Oct 29, 2026):**
+- **Main store listing — DONE:** icon, feature graphic, 8 screenshots,
+  descriptions; category = **Social**; contact details set.
+- **Signing key + signed `.aab` — DONE:** upload key generated and backed up
+  (Carbonite + a `.jks` entry in Dashlane Secure Notes). Losing it = no future
+  updates.
+- **Closed-testing release — LIVE & APPROVED (Oct 29):** release "Available to
+  selected testers." Testers are managed by a **Google Group**
+  (`pairdups-testers@googlegroups.com`); the track is set to Google-Groups mode
+  (NOT an email list — the two are mutually exclusive, and switching to Groups
+  drops the old email-list testers unless they're added to the group). Group is
+  "anyone can join." Reviewer demo account (`fredhockey23+demo`) does NOT need to
+  be in the group — it's a `+` alias of the owner account, which is already a
+  member.
+- **Now recruiting toward 12 opted-in testers for 14 continuous days**, then
+  apply for production. CRITICAL distinction: *group join ≠ opt-in ≠ engagement.*
+  Google counts **opt-ins + real app sessions** (Android Vitals / installs), not
+  group membership. Monitor real engagement via Play Console Statistics (lags
+  ~2–3 days) and the app's own Supabase `auth.users` last-sign-in + `listings`
+  activity — NOT the group member count (browse-without-account testers are
+  real but invisible in `auth.users`). Considering a paid top-up (e.g. TesterBee,
+  ~$15 for 15) to reach 12 — buy engagement, not just opt-ins; never give any
+  service Google/Play Console account access (only the public group + opt-in
+  links). Reddit r/AndroidAppTesters + ACT Party used for free reciprocal swaps.
 
 ## Pre-launch checklist status (code)
 
@@ -198,12 +216,11 @@ push banners are absent until v1.1.
 - **Stage 5 — Store assets. DONE (Oct 23–24, 2026):** icon, feature graphic,
   8 screenshots, descriptions, privacy policy, content rating, data-safety — all
   complete. See "Google Play submission progress" above.
-- **Stage 6 — Signing key + release build. NEXT (after Main store listing).**
-  Generate the signing key (losing it = no future updates) and build a signed
-  release `.aab`.
-- **Stage 7 — Submit via Play Console. IN PROGRESS.** App created; App content
-  done. Remaining: Main store listing, upload `.aab`, closed test (~14 days,
-  min testers) + device verification, then apply for production.
+- **Stage 6 — Signing key + release build. DONE (Nov 2026):** upload key
+  generated and backed up; signed release `.aab` built in Android Studio.
+- **Stage 7 — Submit via Play Console. IN PROGRESS.** App APPROVED Oct 29;
+  closed test LIVE. Remaining: reach 12 opted-in testers for 14 continuous days
+  (recruiting via the Google Group), then apply for production.
 - **Stage 8 — Post-launch.** iOS via cloud Mac; updates repeat Stages 4→7.
 
 ## Test accounts
@@ -241,19 +258,25 @@ before editing `send-pairdups-email`, `manage-subscription`, or `stripe-webhook`
   listing are all wired up in-app (confirmed Oct 23 — this also satisfies
   Google's UGC report/block requirement). Content moderation on listings is
   still a possible add.
-- **Must-do before real users:** (1) Upgrade Supabase Free → Pro (the "Disk IO
-  Budget about to deplete" warning throttles throughput to 5 MB/s baseline; Pro
-  adds throughput + daily backups; verify pricing at upgrade time). The Disk IO
-  warning is a Free-tier throttle, not an outage — not the cause of the Oct 23
-  write issue (that was the pre-confirmation session issue above). (2) Test the
-  signup confirmation email end-to-end (web + native). (3) Verify welcome /
-  new-message / join-request emails fire from the native app flow.
+- **Must-do before real users:** (1) Upgrade Supabase Free → Pro. ✅ DONE
+  (Nov 5, 2026) — now on Pro + bumped compute (baseline disk IO 5→11 MB/s, daily
+  backups). NOTE: the "Disk IO Budget about to deplete" warning is a per-tier
+  BURST-budget heads-up, not an outage; it still appears under sustained IO. If
+  it recurs, don't just upsize compute — find the disk-heavy query (prime
+  suspect: the `profile_visitors` 401/RLS loop below) via Reports → Query
+  Performance. A separate "Unhealthy / connection timeout" outage on Nov 5 was
+  cleared by a project restart. (2) Test the signup confirmation email
+  end-to-end (web + native). (3) Verify welcome / new-message / join-request
+  emails fire from the native app flow.
 - **In-app Privacy Policy link UX** — Settings → Privacy Policy opens
   `pairdups.com/privacy.html` via `window.open` (leaves the app on mobile).
   Consider an in-app slide-up/webview post-launch. Google's requirement (an
   in-app link) is already satisfied — not a blocker.
-- **Watch item — emulator photo cropping:** listing card photos looked slightly
-  more cropped on the emulator; re-check face-framing on real devices.
+- **Photo cropping on cards — mostly resolved:** on a real device (S21+), one
+  tester's photo (Juan's) was cut off while others framed fine; fixed by
+  re-uploading/repositioning that photo. Photos are Supabase DATA, so a re-upload
+  reflects in the installed app immediately (no rebuild). Watch for recurrence
+  across device sizes — if several photos clip, revisit the card `object-position`.
 
 ## Environment values (stable)
 
