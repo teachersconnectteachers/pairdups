@@ -68,6 +68,15 @@ underway — see "Google Play submission progress" below.**
    accessibility for end users.
 7. **Avoid spaces in any filename that becomes a URL** (OneSignal images,
    Supabase Storage uploads, repo assets) — use dashes (`pear-logo.png`).
+8. **Do NOT add a www↔non-www redirect in `vercel.json`.** Vercel already
+   canonicalizes the custom domain at the platform level, so a repo redirect
+   fights Vercel's own primary-domain redirect → an infinite loop
+   (`ERR_TOO_MANY_REDIRECTS`) that takes the live site down. This happened
+   Nov 7, 2026 (added in PR #33, reverted in PR #34). To force a single canonical
+   host, set the **primary domain in the Vercel dashboard**, never a `vercel.json`
+   redirect. Also: a `permanent` (301) redirect is cached hard by browsers, so a
+   bad one keeps looping even after removal until the cache is cleared — prefer
+   `302`/temporary for any redirect you do add.
 
 ## Membership / tier mechanics (how Gold/Premium work)
 
