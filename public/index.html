@@ -10782,8 +10782,19 @@ function _createListingFromForm(title, desc, venue, dateVal, timeVal, endTimeVal
         var { data: userData } = await _supabase.auth.getUser();
         sessionUserId = userData && userData.user ? userData.user.id : null;
       } catch(e) { sessionUserId = null; }
+      // If the access token has simply lapsed (Supabase tokens expire ~hourly),
+      // refresh it and re-check before giving up — mirrors the refreshSession
+      // pattern used on tab-focus and in the auth guard. Only a genuinely
+      // unrecoverable session (signed out, or a different origin) falls through.
       if (sessionUserId !== currentUser.supabaseId) {
-        console.log('[PairdUps] Listing insert blocked: no valid session (auth.uid mismatch)');
+        try {
+          await _supabase.auth.refreshSession();
+          var { data: userData2 } = await _supabase.auth.getUser();
+          sessionUserId = userData2 && userData2.user ? userData2.user.id : null;
+        } catch(e2) { /* refresh failed — fall through to the sign-in prompt */ }
+      }
+      if (sessionUserId !== currentUser.supabaseId) {
+        console.log('[PairdUps] Listing insert blocked: no valid session after refresh');
         showToast('Your session has expired — please sign in again, then re-post your PairdUp.');
         return;
       }

@@ -3,6 +3,14 @@
   "buildCommand": null,
   "installCommand": null,
   "outputDirectory": "public",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.pairdups.com" }],
+      "destination": "https://pairdups.com/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/admin.html", "destination": "/admin.html" },
     { "source": "/((?!icons|manifest|sw|favicon|admin|robots|sitemap).*)", "destination": "/index.html" }
