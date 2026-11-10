@@ -4802,7 +4802,9 @@ async function doChangePassword() {
     }
   }
 }
-async function logOut() {
+var _signingOut = false;
+async function logOut(reason) {
+  _signingOut = true;
   if (_supabase) {
     try { await _supabase.auth.signOut({ scope: 'global' }); } catch(e) {}
   }
@@ -4856,7 +4858,8 @@ async function logOut() {
   stopChatPolling();
   syncBookmarkIcons();
   goTo('screen-welcome');
-  showToast('Signed out. See you soon! 👋');
+  showToast(reason || 'Signed out. See you soon! 👋');
+  _signingOut = false;
 }
 async function doCancelAccount() {
   closeModal('modal-cancel-account');
@@ -12860,6 +12863,11 @@ window.addEventListener('load', async function() {
     _supabase.auth.onAuthStateChange(function(event, session) {
       if (event === 'PASSWORD_RECOVERY') {
         setTimeout(function() { openModal('modal-change-password'); }, 500);
+      } else if (event === 'SIGNED_OUT' && isSignedIn && !_signingOut) {
+        // Session ended unexpectedly (refresh token expired/revoked, or signed
+        // out on another device). Clean up and send the user to the login
+        // screen instead of leaving them half-logged-in where writes fail.
+        logOut('Your session ended — please sign in again.');
       }
     });
   }
