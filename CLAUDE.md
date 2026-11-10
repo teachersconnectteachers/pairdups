@@ -123,6 +123,17 @@ underway — see "Google Play submission progress" below.**
    bio (email/password deliberately excluded to protect the email-reconcile gate).
 4. **setTestTier await bug (minor, debug-only). Open but moot** — the admin UI
    (#3) now sets tiers reliably; the un-awaited debug helper is low priority.
+5. **Session persistence + clean logout. ✅ DONE (PR #31, #33, #36).** With
+   `autoRefreshToken` on, access tokens (3600s) refresh silently, so signed-in
+   users stay logged in across visits — Supabase → Auth → Sessions confirmed at
+   Time-box = never, Inactivity = never, single-session off (leave these).
+   The listing-post path refreshes a lapsed token before giving up (PR #33).
+   When a session genuinely dies (refresh token revoked, or signed out on
+   another device), the `onAuthStateChange` listener catches `SIGNED_OUT` (when
+   `isSignedIn` and not a user-initiated sign-out, guarded by `_signingOut`) and
+   runs `logOut('Your session ended — please sign in again.')` to land the user
+   on the welcome/login screen — no more half-logged-in state where writes fail.
+   (Brendan's suggestion, Nov 9.)
 
 ## Google Play submission progress (updated Nov 7, 2026)
 
