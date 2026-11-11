@@ -297,6 +297,32 @@ before editing `send-pairdups-email`, `manage-subscription`, or `stripe-webhook`
   re-uploading/repositioning that photo. Photos are Supabase DATA, so a re-upload
   reflects in the installed app immediately (no rebuild). Watch for recurrence
   across device sizes — if several photos clip, revisit the card `object-position`.
+- **iOS / Apple App Store — parallel prep during the Google 14-day wait.**
+  Strategy stays Android-first, but the no-Mac groundwork can start now:
+  (1) VERIFY the existing Apple Developer account (from the shelved RVxplore
+  project — individual, in owner's name) is still active/paid ($99/yr; renew if
+  lapsed) at developer.apple.com / appstoreconnect.apple.com; (2) prep Apple-spec
+  assets (1024×1024 icon, no alpha; Apple screenshot sizes; privacy nutrition
+  labels; age rating) — descriptions / privacy policy / content reuse from
+  Android. The Mac-dependent part (`npx cap add ios`, Xcode signing/build,
+  TestFlight, App Store submission) needs a Mac or cloud Mac (MacinCloud /
+  Codemagic) — do it near/after the Android production launch so it doesn't split
+  focus during the closed test. Apple review is stricter than Google for
+  18+/dating-style UGC apps (wants reporting/blocking/moderation — already built,
+  so in good shape). Can reuse the `com.pairdups.app` identifier.
+- **Profile photo placeholders (v1.1 idea).** Replace the grey person-outline
+  default (e.g. Brendan uploaded no photo) with a nicer default: a curated set of
+  tasteful NON-face images (nature / restaurant) or a colored-initial avatar.
+  CAVEAT — on an activity-partner/dating app, real faces drive trust + responses,
+  so frame these as a placeholder that NUDGES toward a real photo ("Add a photo
+  to get more responses"), not a permanent substitute. Use properly-licensed images.
+- **Virtual profile backgrounds (Gold-tier perk, v1.1+).** Let users swap a poor
+  photo background (e.g. a kitchen) for a nice scene (nature / restaurant / lake),
+  Teams-style. Needs background segmentation — on-device ML (MediaPipe Selfie
+  Segmentation / TensorFlow.js) or a background-removal API (per-image cost);
+  single-photo segmentation can leave rough edges around hair, etc. Higher effort;
+  good candidate to gate behind Gold alongside custom theme colors (adds polish +
+  an upgrade incentive).
 
 ## Environment values (stable)
 
