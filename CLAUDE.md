@@ -192,6 +192,18 @@ underway — see "Google Play submission progress" below.**
   ~$15 for 15) to reach 12 — buy engagement, not just opt-ins; never give any
   service Google/Play Console account access (only the public group + opt-in
   links). Reddit r/AndroidAppTesters + ACT Party used for free reciprocal swaps.
+  **PROGRESS TRACKER location:** Play Console → **Dashboard → Production → "Apply
+  for access to production"** (NOT Publishing overview — there is no live progress
+  bar there, and it is checked at apply-time). It lists the 3 criteria and a line
+  like "12 testers have currently been opted in for N days continuously"; that
+  counter **resets to 0 if the opted-in count ever drops below 12**, and the
+  14-day clock starts when testers are actually opted in (not at publish).
+  **Status Nov 12, 2026:** 12+ opted in, **Day 6 of 14** (clock started ~Nov 6
+  from organic testers). Paid top-up PURCHASED: **12testers.io** Starter (15
+  testers, $19.99, runs Nov 10–~26) — buffer on top of organic testers.
+  ~**Nov 20** the greyed "Apply for production" button should unlock → then answer
+  Google's closed-test questions (how testers were recruited, what feedback they
+  gave, what changed). A "Preview questions" link sits on that same Apply screen.
 
 ## Pre-launch checklist status (code)
 
