@@ -96,6 +96,50 @@ underway — see "Google Play submission progress" below.**
   `await _supabase.from('profiles').update({subscription_tier:'gold',subscription_expires_at:null}).eq('id',currentUser.supabaseId).select()`.
   (Fixing setTestTier to await is a queued minor fix.)
 
+## Stripe billing & subscriptions (Nov 15, 2026 overhaul)
+
+All three Stripe edge functions live ONLY in the Supabase Dashboard (not the repo);
+deploy from there. `create-checkout` (new subscriptions), `manage-subscription`
+(cancel / reactivate / upgrade / downgrade / **preview**), `stripe-webhook` (keeps
+`profiles` in sync).
+
+- **SECURITY — Stripe secret key.** Rotated Nov 15 and moved OUT of the code into a
+  Supabase Edge Function secret `STRIPE_SECRET_KEY`; all three functions read it via
+  `Deno.env.get("STRIPE_SECRET_KEY")`. **Never hardcode a key again.** (It had been
+  hardcoded as `sk_live_…`; rotated with a 24h grace window.)
+- **Duplicate-subscription / random tier-flip bug — FIXED.** Root cause:
+  `create-checkout` made a NEW Stripe customer + subscription on every "upgrade," so
+  a user could hold several active subs at once, and `invoice.paid` set the tier from
+  whichever sub renewed last (the random Gold↔Premium flips). Three-part fix:
+  1. `stripe-webhook` `invoice.paid` ignores any subscription whose id ≠ the user's
+     stored `stripe_subscription_id` (safety net against flips).
+  2. `create-checkout` reuses one Stripe customer per user and refuses to create a
+     SECOND active subscription (returns `already_subscribed`).
+  3. `index.html` **(PR #40):** `subscribeToPlan()` routes an already-subscribed
+     user's upgrade through `manage-subscription` (price swap on the one sub) instead
+     of a fresh checkout. Keyed on `currentUser.stripeSubscriptionId`.
+- **Plan-change mechanics.** Upgrade = immediate price swap with
+  `proration_behavior: always_invoice` (Stripe charges the prorated difference now to
+  the card on file — no checkout page). Downgrade/cancel = scheduled at period end
+  (`proration_behavior: none`, keeps current tier until then). A downgrade "holding
+  Gold until month-end" is CORRECT, not a bug.
+- **Billing transparency (PR #41 + `manage-subscription` `preview` action + email
+  amounts).** Before an upgrade charges, the app shows a confirm popup with the exact
+  prorated amount ("about $X.XX today, then $9.99/mo starting <date>") and only
+  charges on Confirm; toasts and the plan_upgraded/downgraded/cancelled emails show
+  the amounts. **Stripe gotcha:** `invoices/upcoming` is DEPRECATED, and
+  `invoices/create_preview` did NOT return proration lines for our setup (only the
+  next recurring line). So the `preview` action computes the proration DIRECTLY:
+  `(new_price − old_price) × fraction_of_period_remaining` (matches Stripe's math
+  within a cent; Stripe still charges the exact amount via always_invoice). Displayed
+  as "about $X".
+- **Testing note.** The demo/reviewer account "Alex" (`fredhockey23+demo`) is
+  permanent Gold set in the DB (`subscription_tier=gold`, `subscription_expires_at=NULL`,
+  `pending_downgrade` null) with NO Stripe subscription — leave it; a downgrade tapped
+  on it just errors harmlessly ("No active subscription found"). Test billing with
+  Frederick (`fredhockey23@gmail.com`) only. Live-mode Stripe testing costs real
+  (refundable) money; there is no test-mode wiring.
+
 ## Queued code fixes (status)
 
 1. **Silent write failures (onboarding + listings data loss). ✅ FIXED.** Root
@@ -275,7 +319,9 @@ push banners are absent until v1.1.
 ## Edge functions
 
 Source in the repo may be stale — pull current source from the Supabase Dashboard
-before editing `send-pairdups-email`, `manage-subscription`, or `stripe-webhook`.
+before editing `send-pairdups-email`, `manage-subscription`, `stripe-webhook`, or
+`create-checkout`. The Stripe secret key is a Supabase secret (`STRIPE_SECRET_KEY`),
+read via `Deno.env.get` — never hardcode it. (See "Stripe billing & subscriptions".)
 
 ## Post-launch / backlog
 
