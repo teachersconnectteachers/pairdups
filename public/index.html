@@ -3591,6 +3591,7 @@ function updateAllTierBadges() {
 }
 
 var _selectedPlanChange = null;
+var _upgradePreview = null; // {amount, renewal} from the upgrade proration preview
 function showManagePlanModal() {
   var currentTier = getUserTier();
   _selectedPlanChange = null;
@@ -3742,7 +3743,7 @@ async function executePlanChange() {
             renewal_date: renewalDate
           })
         });
-        showToast('Subscription will be cancelled on ' + renewalDate + '. You keep all ' + (currentTier === 'gold' ? 'Gold' : 'Premium') + ' features until then! ✓');
+        showToast('Subscription will be cancelled on ' + renewalDate + ' — no further charges. You keep all ' + (currentTier === 'gold' ? 'Gold' : 'Premium') + ' features until then! ✓');
       } else if (action === 'downgrade') {
         // Send downgrade email with effective date
         fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
@@ -3757,10 +3758,13 @@ async function executePlanChange() {
             effective_date: renewalDate
           })
         });
-        showToast('Plan will change to Premium on ' + renewalDate + '. You keep all Gold features until then! ✓');
+        showToast('Plan will change to Premium on ' + renewalDate + ' ($4.99/mo after that). You keep all Gold features until then! ✓');
       } else if (action === 'upgrade') {
         // Upgrade is immediate
         currentUser.subscriptionTier = targetPlan;
+        var upName = targetPlan === 'gold' ? 'Gold' : 'Premium';
+        var upAmt = (_upgradePreview && _upgradePreview.amount) ? _upgradePreview.amount : '';
+        var upRen = (_upgradePreview && _upgradePreview.renewal) ? _upgradePreview.renewal : '';
         fetch('https://phajurcdiotfvtcwvydk.supabase.co/functions/v1/send-pairdups-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -3769,10 +3773,14 @@ async function executePlanChange() {
             to_email: currentUser.email,
             to_user_id: currentUser.supabaseId,
             to_name: currentUser.name || 'there',
-            plan_name: 'Gold'
+            plan_name: upName,
+            amount_charged: upAmt,
+            next_renewal_date: upRen
           })
         });
-        showToast('Upgraded to Gold! All Gold features are now active. 👑');
+        showToast(upAmt
+          ? 'Upgraded to ' + upName + (targetPlan === 'gold' ? ' 👑' : ' ⭐') + ' — about $' + upAmt + ' charged today.'
+          : 'Upgraded to ' + upName + '! All ' + upName + ' features are now active.' + (targetPlan === 'gold' ? ' 👑' : ' ⭐'));
       }
     } catch(e) { console.log('Plan change error:', e); showToast('Error processing plan change. Please try again.'); }
   }
@@ -3785,6 +3793,7 @@ async function executePlanChange() {
   renderPhotoGallery();
   loadProfileTheme();
   _selectedPlanChange = null;
+  _upgradePreview = null;
 }
 
 function showPlanFeaturesModal() {
@@ -3823,6 +3832,54 @@ function showAnalyticsUpsell() {
   showPremiumModal('📊 See how many people are viewing and bookmarking your PairdUps!');
 }
 
+// Show a confirmation with the exact prorated charge BEFORE upgrading (immediate charge).
+async function showUpgradeConfirm(plan) {
+  showToast('Calculating your prorated amount…');
+  var amountStr = '';   // e.g. "5.00"
+  var renewalStr = '';  // e.g. "December 15, 2025"
+  try {
+    var session = await _supabase.auth.getSession();
+    var token = session.data?.session?.access_token;
+    var res = await fetch(SUPABASE_URL + '/functions/v1/manage-subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'preview', user_id: currentUser.supabaseId, target_plan: plan })
+    });
+    var r = await res.json();
+    if (r && r.proration_available && typeof r.proration_amount === 'number' && r.proration_amount > 0) {
+      amountStr = (r.proration_amount / 100).toFixed(2);
+    }
+    if (r && r.next_renewal_date) {
+      renewalStr = new Date(r.next_renewal_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+  } catch(e) { console.log('[PairdUps] Upgrade preview error:', e); }
+
+  _upgradePreview = { amount: amountStr, renewal: renewalStr };
+  _selectedPlanChange = plan;
+
+  var planName = plan === 'gold' ? 'Gold' : 'Premium';
+  var monthly = plan === 'gold' ? '9.99' : '4.99';
+  var iconEl = document.getElementById('plan-change-icon');
+  var titleEl = document.getElementById('plan-change-title');
+  var msgEl = document.getElementById('plan-change-msg');
+  var btnEl = document.getElementById('plan-change-confirm-btn');
+  if (iconEl) iconEl.textContent = plan === 'gold' ? '👑' : '⭐';
+  if (titleEl) titleEl.textContent = 'Upgrade to ' + planName + '?';
+  if (msgEl) {
+    var chargedLine = amountStr
+      ? 'You\'ll be charged <strong>about $' + amountStr + '</strong> today — the prorated difference for the rest of your current billing period.'
+      : 'You\'ll be charged the <strong>prorated difference</strong> for the rest of your current billing period.';
+    msgEl.innerHTML = chargedLine + '<br><br>After that, <strong>$' + monthly + '/month</strong>'
+      + (renewalStr ? ', starting <strong>' + renewalStr + '</strong>' : '')
+      + '. Your upgrade takes effect immediately.';
+  }
+  if (btnEl) {
+    btnEl.textContent = 'Confirm & Upgrade to ' + planName;
+    btnEl.style.background = plan === 'gold' ? 'linear-gradient(135deg,#F59E0B,#FBBF24)' : 'var(--pink-dark)';
+  }
+  openModal('modal-confirm-plan');
+}
+
 async function subscribeToPlan(plan) {
   if (!isSignedIn || !currentUser.email) {
     showToast('Please sign in to subscribe.');
@@ -3839,6 +3896,14 @@ async function subscribeToPlan(plan) {
       showToast("You're already on the " + (plan === 'gold' ? 'Gold' : 'Premium') + ' plan.');
       return;
     }
+    var tierRank = { free: 0, premium: 1, gold: 2 };
+    if (tierRank[plan] > tierRank[curTier]) {
+      // Upgrade = an immediate prorated charge. Preview the amount and let the user
+      // confirm it BEFORE any money moves, instead of charging silently.
+      await showUpgradeConfirm(plan);
+      return;
+    }
+    // Downgrade reaching this path (rare) — hand to the normal plan-change flow.
     _selectedPlanChange = plan;
     await executePlanChange();
     return;
