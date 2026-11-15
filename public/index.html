@@ -3828,6 +3828,22 @@ async function subscribeToPlan(plan) {
     showToast('Please sign in to subscribe.');
     return;
   }
+
+  // If the user already has a live Stripe subscription, this is a plan CHANGE, not a
+  // new signup. Route it through manage-subscription (which swaps the price on the
+  // existing subscription) instead of create-checkout — otherwise Stripe creates a
+  // SECOND subscription, which double-bills the user and flips their tier between the two.
+  if (currentUser.stripeSubscriptionId) {
+    var curTier = getUserTier();
+    if (plan === curTier) {
+      showToast("You're already on the " + (plan === 'gold' ? 'Gold' : 'Premium') + ' plan.');
+      return;
+    }
+    _selectedPlanChange = plan;
+    await executePlanChange();
+    return;
+  }
+
   closeModal('modal-premium');
   showToast('Setting up checkout...');
   
@@ -3903,6 +3919,10 @@ async function loadSubscriptionStatus() {
       } catch(_emailRecErr) { console.log('[PairdUps] profiles.email reconcile exception:', _emailRecErr); }
       currentUser.subscriptionTier = profile.subscription_tier || 'free';
       currentUser.subscriptionExpires = profile.subscription_expires_at || null;
+      // Track whether the user has a live Stripe subscription. Plan CHANGES (upgrade/
+      // downgrade) must swap the price on this one subscription via manage-subscription;
+      // only users WITHOUT one go through create-checkout (which starts a new subscription).
+      currentUser.stripeSubscriptionId = profile.stripe_subscription_id || null;
       console.log('[PairdUps] Subscription:', currentUser.subscriptionTier, 'expires:', currentUser.subscriptionExpires, 'stripe_cust:', profile.stripe_customer_id, 'stripe_sub:', profile.stripe_subscription_id);
       // Hydrate cross-device settings from server (server wins on conflict)
       try {
