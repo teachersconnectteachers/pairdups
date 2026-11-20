@@ -179,7 +179,7 @@ deploy from there. `create-checkout` (new subscriptions), `manage-subscription`
    on the welcome/login screen — no more half-logged-in state where writes fail.
    (Brendan's suggestion, Nov 9.)
 
-## Google Play submission progress (updated Nov 7, 2026)
+## Google Play submission progress (updated Nov 20, 2026)
 
 **Store assets — DONE (all created, delivered, saved on owner's PC):**
 - App icon (512 store + 1024 launcher), feature graphic (1024×500), 8 final
@@ -249,6 +249,28 @@ deploy from there. `create-checkout` (new subscriptions), `manage-subscription`
   Google's closed-test questions (how testers were recruited, what feedback they
   gave, what changed). A "Preview questions" link sits on that same Apply screen.
 
+**Closed test COMPLETE — production application SUBMITTED (Nov 20, 2026):**
+- All 3 criteria checked (closed release published; 12+ testers opted in; 14
+  continuous days). "Apply for production" submitted Nov 20; Google's decision
+  typically takes up to ~7 days. Check status at Dashboard → Production (the
+  Apply card changes to an "in review" state) and the Play Console inbox / email.
+- Answers given honestly: recruited via friends/family, Reddit
+  r/AndroidAppTesters + reciprocal groups, AND a paid service (12testers.io).
+  "Changes made" answer (300-char limit) cited: listing-save confirmation,
+  session refresh + clean re-login, photo framing, single-subscription upgrades
+  with prorated-charge confirmation, payment keys moved to server secrets.
+- **v1.0.1 (versionCode 2) uploaded to Closed testing – Alpha Nov 20** — "In
+  review"; **Managed publishing is OFF**, so it rolls out to testers
+  automatically on approval. Contains all app-side fixes through PR #41 (the
+  original 1 (1.0) build predates them). Plan: verify 1.0.1 on a real phone, then
+  **promote this same release to Production** once production access is granted
+  (no re-upload needed).
+- Only Play warning on 1.0.1: "no deobfuscation file" — ignorable, because
+  `minifyEnabled false` (code isn't obfuscated).
+
+**Version history:** `1 (1.0)` — closed test, released Oct 29. `2 (1.0.1)` —
+closed test, Nov 20 (fixes PR #31–#41). **Next build must be `versionCode 3`.**
+
 ## Pre-launch checklist status (code)
 
 - [x] Items 1–12 complete (see git history / prior notes). Highlights: offline
@@ -295,9 +317,48 @@ push banners are absent until v1.1.
 - **Stage 6 — Signing key + release build. DONE (Nov 2026):** upload key
   generated and backed up; signed release `.aab` built in Android Studio.
 - **Stage 7 — Submit via Play Console. IN PROGRESS.** App APPROVED Oct 29;
-  closed test LIVE. Remaining: reach 12 opted-in testers for 14 continuous days
-  (recruiting via the Google Group), then apply for production.
+  closed test COMPLETED Nov 20 (12+ testers, 14 days); production access
+  APPLIED FOR Nov 20 (awaiting Google). v1.0.1 in review on the closed track.
+  Remaining: production approval → promote 1.0.1 to Production.
 - **Stage 8 — Post-launch.** iOS via cloud Mac; updates repeat Stages 4→7.
+
+### Releasing a new Android build (do this for ANY index.html change)
+
+**CRITICAL:** the Android app does NOT load pairdups.com live.
+`capacitor.config.ts` has `webDir: 'public'` and no `server.url`, so the `.aab`
+**bundles its own copy of `public/` at build time.** A merged PR to
+`public/index.html` reaches the website in ~30s but reaches Android users ONLY
+after a rebuild + Play release. (Supabase edge functions / DB changes are
+server-side and apply to the app immediately.) Watch for client↔server
+mismatches: e.g. the old 1.0 app sends existing subscribers to `create-checkout`,
+which the new backend refuses with `already_subscribed` → "Checkout setup failed".
+
+Owner's local project: `C:\Users\Windows\PairdUps-app` (a clone of this repo;
+Android Studio's built-in Terminal = PowerShell). Steps:
+1. Terminal: `git status` then `git pull`. (Local edits to
+   `android/app/capacitor.build.gradle`, `android/capacitor.settings.gradle`,
+   `package.json`, `package-lock.json` are normal setup changes — leave them.)
+2. `npx cap sync android` — copies `public/` into
+   `android\app\src\main\assets\public`. Verify the new code landed, e.g.
+   `Select-String -Path android\app\src\main\assets\public\index.html -Pattern "<newFunctionName>"`.
+3. Bump the version in **Gradle Scripts → `build.gradle (Module :app)`** →
+   `defaultConfig` (`versionCode` +1, `versionName`), then ≡ → File → **Sync
+   Project with Gradle Files** (no Build panel opening = success). NOTE: the
+   version bump is a LOCAL edit — the repo's copy of `android/app/build.gradle`
+   still says `versionCode 1`; trust Play Console's version history, not the repo.
+4. ≡ → **Build → Generate Signed App Bundle or APK…** (or Shift+Shift, type
+   "Generate Signed") → **Android App Bundle** → keystore `.jks` + passwords from
+   Dashlane → **release** → Create. Output:
+   `android\app\release\app-release.aab` (open with `explorer android\app\release`).
+5. Play Console → Test and release → Testing → Closed testing → Alpha →
+   **Create new release** (NOT "Promote release" on an old release page) → upload
+   the `.aab` → release notes inside the `<en-US>…</en-US>` tags → Next → Save and
+   publish. Release name auto-fills as "versionCode (versionName)".
+- **Don't accept tool upgrades right before a release** (Android Studio's "AGP
+  Upgrade Assistant" / "Gradle Daemon toolchain" / "new Gradle version" prompts,
+  npm's "new major version" notice). The harmless warnings
+  `MODULE_TYPELESS_PACKAGE_JSON` and "Using flatDir should be avoided" are
+  expected for this Capacitor project.
 
 ## Test accounts
 
