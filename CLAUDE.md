@@ -268,8 +268,20 @@ deploy from there. `create-checkout` (new subscriptions), `manage-subscription`
 - Only Play warning on 1.0.1: "no deobfuscation file" — ignorable, because
   `minifyEnabled false` (code isn't obfuscated).
 
+**PRODUCTION ACCESS GRANTED (email Nov 21, 2026).** v1.0.1 went live on the
+closed track Nov 20 and was verified on the owner's phone (Play Store → PairdUps →
+About this app → Version 1.0.1). **Production release SUBMITTED Nov 21:** promoted
+`2 (1.0.1)` (same tested bundle, no re-upload) → full rollout (100%), countries =
+**United States + Canada only** (deliberate: an activity app needs local density;
+pricing is USD; add more countries later in Production → Countries / regions — no
+rebuild needed). Public-launch release notes ("Welcome to PairdUps! …"). Managed
+publishing OFF → goes live automatically when Google approves. NOTE: each track
+has its OWN country list — the closed test (Alpha) is still 178 countries, left
+untouched. Once live, Stripe charges are real money: watch the Stripe dashboard.
+
 **Version history:** `1 (1.0)` — closed test, released Oct 29. `2 (1.0.1)` —
-closed test, Nov 20 (fixes PR #31–#41). **Next build must be `versionCode 3`.**
+closed test Nov 20 (fixes PR #31–#41); promoted to **Production** Nov 21.
+**Next build must be `versionCode 3`.**
 
 ## Pre-launch checklist status (code)
 
@@ -318,8 +330,8 @@ push banners are absent until v1.1.
   generated and backed up; signed release `.aab` built in Android Studio.
 - **Stage 7 — Submit via Play Console. IN PROGRESS.** App APPROVED Oct 29;
   closed test COMPLETED Nov 20 (12+ testers, 14 days); production access
-  APPLIED FOR Nov 20 (awaiting Google). v1.0.1 in review on the closed track.
-  Remaining: production approval → promote 1.0.1 to Production.
+  GRANTED Nov 21; v1.0.1 promoted to Production (US + Canada) and IN REVIEW
+  Nov 21. Remaining: Google's production review → live on the Play Store.
 - **Stage 8 — Post-launch.** iOS via cloud Mac; updates repeat Stages 4→7.
 
 ### Releasing a new Android build (do this for ANY index.html change)
